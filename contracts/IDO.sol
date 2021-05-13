@@ -14,13 +14,12 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
 
     constructor(
         string memory name_,
-        string memory symbol_,
-        uint256 cap_
+        string memory symbol_
     )
         public
         ERC20(name_, symbol_)
         ERC20Permit(name_)
-        ERC20Capped(cap_)
+        ERC20Capped(100 * 1000 * 1000)
     {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(OPERATOR_ROLE, _msgSender());

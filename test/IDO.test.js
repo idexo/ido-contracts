@@ -11,7 +11,7 @@ contract('::IDO', async accounts => {
   const symbol = 'IDO';
 
   beforeEach(async () => {
-    token = await IDO.new(name, symbol, 1000, {from: alice});
+    token = await IDO.new(name, symbol, {from: alice});
   });
 
   describe('#Role', async () => {
@@ -77,7 +77,7 @@ contract('::IDO', async accounts => {
         expect(balance.toString()).to.eq('500');
       });
       await truffleAssert.reverts(
-        token.mint(alice, 600, {from: bob}),
+        token.mint(alice, 100 * 1000 * 1000, {from: bob}),
         'revert ERC20Capped: cap exceeded'
       );
     });
