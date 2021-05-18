@@ -7,28 +7,33 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract StakeToken is Ownable {
+contract StakeToken is ERC721, Ownable {
     using Counters for Counters.Counter;
     using SafeMath for uint256;
 
-    Counters.Counter private _totalStakes;
+    Counters.Counter internal _tokenIds;
     struct Stake {
         uint256 amount;
         uint256 multiplier; // should be divided by 100
         uint256 depositedAt;
     }
 
-    mapping(address => mapping(uint256 => Stake)) internal _stakes;
-    mapping(address => uint256) internal _lastStakeIds;
+    mapping(uint256 => Stake) internal _stakes;
 
-    constructor() public {}
+    constructor(
+        string memory name_,
+        string memory symbol_
+    )
+        public
+        ERC721(name_, symbol_)
+    {}
 
-    modifier onlyStaker(
-        address account
-    ) {
-        require(_lastStakeIds[account] > 0, "StakeToken: not staker");
-        _;
-    }
+    // modifier onlyStaker(
+    //     address account
+    // ) {
+    //     require(_lastStakeIds[account] > 0, "StakeToken: not staker");
+    //     _;
+    // }
 
     function _getMultiplier()
         private
@@ -36,7 +41,7 @@ contract StakeToken is Ownable {
         returns (uint256)
     {
         // This part is hard-coded now and needs update
-        if (_totalStakes.current() <= 300) {
+        if (_tokenIds.current() <= 300) {
             return 120;
         } else {
             return 100;
@@ -53,26 +58,25 @@ contract StakeToken is Ownable {
         returns (uint256)
     {
         require(amount >= 0, "StakeToken: amount should not be 0");
-        _totalStakes.increment();
+        _tokenIds.increment();
         uint256 multiplier = _getMultiplier();
-        uint256 id = ++_lastStakeIds[account];
-        Stake storage newStake = _stakes[account][id];
+        super._mint(account, _tokenIds.current());
+        Stake storage newStake = _stakes[_tokenIds.current()];
         newStake.amount = amount;
         newStake.multiplier = multiplier;
         newStake.depositedAt = depositedAt;
 
-        return id;
+        return _tokenIds.current();
     }
 
-    // function burn(
-    //     uint256 stakeId
-    // )
-    //     internal
-    //     virtual
-    // {
-    //     // ERC721 checks if owner of stakeId exists in ownerOf method
-    //     require(_lastStakeIds[msg.sender] != 0, "StakeToken: no staker");
-    //     delete _stakes[stakeId];
-    //     super._burn(stakeId);
-    // }
+    function _burn(
+        uint256 stakeId
+    )
+        internal
+        virtual
+        override
+    {
+        require(_exists(stakeId), "StakeToken: stake not found");
+        super._burn(stakeId);
+    }
 }
