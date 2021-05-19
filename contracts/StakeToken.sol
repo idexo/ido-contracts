@@ -24,16 +24,8 @@ contract StakeToken is ERC721, Ownable {
         string memory name_,
         string memory symbol_
     )
-        public
         ERC721(name_, symbol_)
     {}
-
-    // modifier onlyStaker(
-    //     address account
-    // ) {
-    //     require(_lastStakeIds[account] > 0, "StakeToken: not staker");
-    //     _;
-    // }
 
     function _getMultiplier()
         private
@@ -41,8 +33,10 @@ contract StakeToken is ERC721, Ownable {
         returns (uint256)
     {
         // This part is hard-coded now and needs update
-        if (_tokenIds.current() <= 300) {
+        if (_tokenIds.current() < 300) {
             return 120;
+        } else if (300 <= _tokenIds.current() && _tokenIds.current() < 4000) {
+            return 110;
         } else {
             return 100;
         }
