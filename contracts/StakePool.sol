@@ -42,13 +42,14 @@ contract StakePool is StakeToken, AccessControl {
     }
 
     RevenueShareDeposit[] private _deposits;
-    RevenueShareDistribute[] private _distributes;
+    RevenueShareDistribute[] private _monthlyDistributes;
+    RevenueShareDistribute[] private _quarterlyDistributes;
+    RevenueShareDistribute[] private _yearlyDistributes;
     mapping(uint256 => uint256) private _stakeClaimShares;
 
     event Deposited(address indexed account, uint256 indexed stakeId, uint256 amount);
     event Withdrawn(address indexed account, uint256 indexed stakeId, uint256 amount);
     event EmergencyWithdrawn(address indexed account, uint256 indexed stakeId, uint256 amount);
-
 
     constructor(
         string memory stakeTokenName_,
@@ -56,7 +57,6 @@ contract StakePool is StakeToken, AccessControl {
         IDO ido_,
         IERC20 rewardToken_
     )
-        public
         StakeToken(stakeTokenName_, stakeTokenSymbol_)
     {
         _ido = ido_;
@@ -176,17 +176,60 @@ contract StakePool is StakeToken, AccessControl {
         onlyOperator
     {
         uint256 lastDistributeDate;
+        uint256 totalDistributeAmount;
+
+        // Monthly distribution
+        if (_monthlyDistributes.length == 0) {
+            lastDistributeDate = _deployedAt;
+        } else {
+            lastDistributeDate = _monthlyDistributes[_monthlyDistributes.length - 1].distributedAt;
+        }
+        require(lastDistributeDate + MONTH <= block.timestamp, "StakePool: less than a month from last distribution");
+        totalDistributeAmount = distributeToUsers(lastDistributeDate, _monthlyDistributionRatio);
+        _monthlyDistributes.push(RevenueShareDistribute({
+            amount: totalDistributeAmount,
+            distributedAt: block.timestamp
+        }));
+        // Quarterly distribution
+        if (_quarterlyDistributes.length == 0) {
+            lastDistributeDate = _deployedAt;
+        } else {
+            lastDistributeDate = _quarterlyDistributes[_quarterlyDistributes.length - 1].distributedAt;
+        }
+        require(lastDistributeDate + QUARTER <= block.timestamp, "StakePool: less than a quarter from last distribution");
+        totalDistributeAmount = distributeToUsers(lastDistributeDate, _quarterlyDistributionRatio);
+        _quarterlyDistributes.push(RevenueShareDistribute({
+            amount: totalDistributeAmount,
+            distributedAt: block.timestamp
+        }));
+        // Yearly distribution
+        if (_yearlyDistributes.length == 0) {
+            lastDistributeDate = _deployedAt;
+        } else {
+            lastDistributeDate = _yearlyDistributes[_yearlyDistributes.length - 1].distributedAt;
+        }
+        require(lastDistributeDate + YEAR <= block.timestamp, "StakePool: less than a year from last distribution");
+        totalDistributeAmount = distributeToUsers(lastDistributeDate, _yearlyDistributionRatio);
+        _yearlyDistributes.push(RevenueShareDistribute({
+            amount: totalDistributeAmount,
+            distributedAt: block.timestamp
+        }));
+    }
+
+    function distributeToUsers(
+        uint256 lastDistributeDate,
+        uint256 distributionRatio
+    )
+        public
+        onlyOperator
+        returns (uint256)
+    {
         uint256[] memory eligibleStakes;
         uint256 eligibleStakesCount;
         uint256 totalDistributeAmount;
-        RevenueShareDistribute storage lastDistribute;
 
-        lastDistribute = _distributes[_distributes.length - 1];
-        lastDistributeDate = lastDistribute.distributedAt;
-        require(lastDistributeDate + MONTH <= block.timestamp, "StakePool: less than a month from last distribution");
-        // Monthly distribution
         (eligibleStakes, eligibleStakesCount) = updateStakeClaimShares(lastDistributeDate);
-        totalDistributeAmount = sumDeposits(lastDistributeDate).mul(_monthlyDistributionRatio).div(100);
+        totalDistributeAmount = sumDeposits(lastDistributeDate).mul(distributionRatio).div(100);
         for (uint256 i = 0; i < eligibleStakesCount; i++) {
             uint256 stakeId = eligibleStakes[i];
             Stake storage stake = _stakes[stakeId];
@@ -196,13 +239,8 @@ contract StakePool is StakeToken, AccessControl {
             stake.depositedAt = block.timestamp;
             _rewardToken.transfer(ownerOf(stakeId), amountShare);
         }
-        _distributes.push(RevenueShareDistribute({
-            amount: totalDistributeAmount,
-            distributedAt: block.timestamp
-        }));
 
-        // Quarterly distribution
-
+        return totalDistributeAmount;
     }
 
     function sumDeposits(
