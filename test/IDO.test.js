@@ -1,4 +1,3 @@
-// import IDO from 'IDO';
 const { expect, assert} = require('chai');
 const truffleAssert = require('truffle-assertions');
 
@@ -47,6 +46,10 @@ contract('::IDO', async accounts => {
       await token.addOperator(carl);
       await token.pause({from: bob});
       expect(await token.paused()).to.eq(true);
+      await truffleAssert.reverts(
+        token.mint(alice, 1000),
+        'revert ERC20Pausable: token transfer while paused'
+      );
       await token.unpause({from: bob});
       expect(await token.paused()).to.eq(false);
     });

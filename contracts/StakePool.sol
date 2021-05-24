@@ -8,8 +8,9 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract StakePool is StakeToken, AccessControl {
+contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
     using Counters for Counters.Counter;
@@ -23,12 +24,12 @@ contract StakePool is StakeToken, AccessControl {
     uint256 private constant _monthlyDistributionRatio = 25;
     uint256 private constant _quarterlyDistributionRatio = 50;
     uint256 private constant _yearlyDistributionRatio = 25;
-
-    IDO private _ido;
-    IERC20 private _rewardToken;
     uint256 private _minimumStakeAmount = 2500;
-    uint256 private _deployedAt;
-    uint256 private _balanceOfRewardToken;
+
+    IDO public ido;
+    // Address of the reward ERC20 Token Contract
+    IERC20 public erc20;
+    uint256 public deployedAt;
 
     struct RevenueShareDeposit {
         address operator;
@@ -41,11 +42,11 @@ contract StakePool is StakeToken, AccessControl {
         uint256 distributedAt;
     }
 
-    RevenueShareDeposit[] private _deposits;
-    RevenueShareDistribute[] private _monthlyDistributes;
-    RevenueShareDistribute[] private _quarterlyDistributes;
-    RevenueShareDistribute[] private _yearlyDistributes;
-    mapping(uint256 => uint256) private _stakeClaimShares;
+    RevenueShareDeposit[] public deposits;
+    RevenueShareDistribute[] public monthlyDistributes;
+    RevenueShareDistribute[] public quarterlyDistributes;
+    RevenueShareDistribute[] public yearlyDistributes;
+    mapping(uint256 => uint256) public stakeClaimShares;
 
     event Deposited(address indexed account, uint256 indexed stakeId, uint256 amount);
     event Withdrawn(address indexed account, uint256 indexed stakeId, uint256 amount);
@@ -55,13 +56,13 @@ contract StakePool is StakeToken, AccessControl {
         string memory stakeTokenName_,
         string memory stakeTokenSymbol_,
         IDO ido_,
-        IERC20 rewardToken_
+        IERC20 erc20_
     )
         StakeToken(stakeTokenName_, stakeTokenSymbol_)
     {
-        _ido = ido_;
-        _rewardToken = rewardToken_;
-        _deployedAt = block.timestamp;
+        ido = ido_;
+        erc20 = erc20_;
+        deployedAt = block.timestamp;
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(OPERATOR_ROLE, msg.sender);
@@ -82,7 +83,9 @@ contract StakePool is StakeToken, AccessControl {
         return super.supportsInterface(interfaceId);
     }
 
-    /************************ ROLE MANAGEMENT **********************************/
+    /***********************|
+    |          Role         |
+    |______________________*/
 
     /**
      * @dev Restricted to members of the admin role.
@@ -104,7 +107,12 @@ contract StakePool is StakeToken, AccessControl {
      * @dev Add an account to the operator role.
      * @param account address
      */
-    function addOperator(address account) public onlyAdmin {
+    function addOperator(
+        address account
+    )
+        public
+        onlyAdmin
+    {
         grantRole(OPERATOR_ROLE, account);
     }
 
@@ -112,7 +120,12 @@ contract StakePool is StakeToken, AccessControl {
      * @dev Remove an account from the operator role.
      * @param account address
      */
-    function removeOperator(address account) public onlyAdmin {
+    function removeOperator(
+        address account
+    )
+        public
+        onlyAdmin
+    {
         revokeRole(OPERATOR_ROLE, account);
     }
 
@@ -120,21 +133,87 @@ contract StakePool is StakeToken, AccessControl {
      * @dev Check if an account is operator.
      * @param account address
      */
-    function checkOperator(address account) public view returns (bool) {
+    function checkOperator(
+        address account
+    )
+        public
+        view
+        returns (bool)
+    {
         return hasRole(OPERATOR_ROLE, account);
     }
 
-    /************************ ROLE MANAGEMENT **********************************/
+    /************************|
+    |          Stake         |
+    |_______________________*/
+
+    function deposit(
+        uint256 amount
+    )
+        public
+    {
+        require(amount >= _minimumStakeAmount, "StakePool: under minium stake amount");
+        _deposit(msg.sender, amount);
+    }
+
+    function withdraw(
+        uint256 stakeId,
+        uint256 amount
+    )
+        public
+    {
+        require(amount >= _minimumStakeAmount, "StakePool: under minium stake amount");
+        _withdraw(msg.sender, stakeId, amount);
+    }
+
+    function _deposit(
+        address account,
+        uint256 amount
+    )
+        internal
+        nonReentrant
+    {
+        require(ido.transferFrom(account, address(this), amount), "StakePool: transfer IDO from caller to stake pool failed");
+        uint256 stakeId = mint(account, amount, block.timestamp);
+
+        emit Deposited(account, stakeId, amount);
+    }
+
+    function _withdraw(
+        address account,
+        uint256 stakeId,
+        uint256 amount
+    )
+        internal
+        nonReentrant
+    {
+        require(stakes[stakeId].amount != 0, "StakePool: stake id not found");
+        Stake storage stake = stakes[stakeId];
+        require(amount <= stake.amount, "StakePool: insufficient funds");
+        require(ido.transfer(account, amount), "StakePool: transfer IDO from stake pool to caller failed");
+        if (amount == stake.amount) {
+            burn(stakeId);
+        } else {
+            stake.amount = stake.amount.sub(amount);
+        }
+
+        emit Withdrawn(account, stakeId, amount);
+    }
+
+    /********************************|
+    |          Revenue Share         |
+    |_______________________________*/
 
     function depositRevenueShare(
         uint256 amount
     )
-        external
+        public
         onlyOperator
     {
         require(amount >= 0, "StakePool: amount should not be zero");
-        require(_rewardToken.transfer(address(this), amount), "StakePool: revenue share deposit failed");
-        _deposits.push(RevenueShareDeposit({
+        erc20.safeTransfer(address(this), amount);
+        // require(erc20.transfer(address(this), amount), "StakePool: revenue share deposit failed");
+        deposits.push(RevenueShareDeposit({
             operator: msg.sender,
             amount: amount,
             depositedAt: block.timestamp
@@ -155,7 +234,7 @@ contract StakePool is StakeToken, AccessControl {
 
         for (uint256 i = 1; i <= _tokenIds.current(); i++) {
             if (_exists(i)) {
-                Stake storage stake = _stakes[i];
+                Stake storage stake = stakes[i];
                 if (stake.depositedAt <= fromDate) {
                     totalStakeClaim = totalStakeClaim.add(stake.amount * stake.multiplier);
                     eligibleStakes[eligibleStakesCount++] = i;
@@ -164,12 +243,13 @@ contract StakePool is StakeToken, AccessControl {
         }
 
         for (uint256 i = 0; i < eligibleStakesCount; i++) {
-            Stake storage stake = _stakes[eligibleStakes[i]];
-            _stakeClaimShares[eligibleStakes[i]] = (stake.amount * stake.multiplier * 100).div(totalStakeClaim);
+            Stake storage stake = stakes[eligibleStakes[i]];
+            stakeClaimShares[eligibleStakes[i]] = (stake.amount * stake.multiplier * 100).div(totalStakeClaim);
         }
 
         return (eligibleStakes, eligibleStakesCount);
     }
+
 
     function distribute()
         public
@@ -179,41 +259,59 @@ contract StakePool is StakeToken, AccessControl {
         uint256 totalDistributeAmount;
 
         // Monthly distribution
-        if (_monthlyDistributes.length == 0) {
-            lastDistributeDate = _deployedAt;
+        if (monthlyDistributes.length == 0) {
+            lastDistributeDate = deployedAt;
         } else {
-            lastDistributeDate = _monthlyDistributes[_monthlyDistributes.length - 1].distributedAt;
+            lastDistributeDate = monthlyDistributes[monthlyDistributes.length - 1].distributedAt;
         }
         require(lastDistributeDate + MONTH <= block.timestamp, "StakePool: less than a month from last distribution");
         totalDistributeAmount = distributeToUsers(lastDistributeDate, _monthlyDistributionRatio);
-        _monthlyDistributes.push(RevenueShareDistribute({
+        monthlyDistributes.push(RevenueShareDistribute({
             amount: totalDistributeAmount,
             distributedAt: block.timestamp
         }));
         // Quarterly distribution
-        if (_quarterlyDistributes.length == 0) {
-            lastDistributeDate = _deployedAt;
+        if (quarterlyDistributes.length == 0) {
+            lastDistributeDate = deployedAt;
         } else {
-            lastDistributeDate = _quarterlyDistributes[_quarterlyDistributes.length - 1].distributedAt;
+            lastDistributeDate = quarterlyDistributes[quarterlyDistributes.length - 1].distributedAt;
         }
         require(lastDistributeDate + QUARTER <= block.timestamp, "StakePool: less than a quarter from last distribution");
         totalDistributeAmount = distributeToUsers(lastDistributeDate, _quarterlyDistributionRatio);
-        _quarterlyDistributes.push(RevenueShareDistribute({
+        quarterlyDistributes.push(RevenueShareDistribute({
             amount: totalDistributeAmount,
             distributedAt: block.timestamp
         }));
         // Yearly distribution
-        if (_yearlyDistributes.length == 0) {
-            lastDistributeDate = _deployedAt;
+        if (yearlyDistributes.length == 0) {
+            lastDistributeDate = deployedAt;
         } else {
-            lastDistributeDate = _yearlyDistributes[_yearlyDistributes.length - 1].distributedAt;
+            lastDistributeDate = yearlyDistributes[yearlyDistributes.length - 1].distributedAt;
         }
         require(lastDistributeDate + YEAR <= block.timestamp, "StakePool: less than a year from last distribution");
         totalDistributeAmount = distributeToUsers(lastDistributeDate, _yearlyDistributionRatio);
-        _yearlyDistributes.push(RevenueShareDistribute({
+        yearlyDistributes.push(RevenueShareDistribute({
             amount: totalDistributeAmount,
             distributedAt: block.timestamp
         }));
+    }
+
+    function sumDeposits(
+        uint256 fromDate
+    )
+        public
+        view
+        onlyOperator
+        returns (uint256)
+    {
+        uint256 totalDepositAmount = 0;
+        for (uint256 i = 0; i < deposits.length; i++) {
+            if (deposits[i].depositedAt >= fromDate ) {
+                totalDepositAmount = totalDepositAmount.add(deposits[i].amount);
+            }
+        }
+
+        return totalDepositAmount;
     }
 
     function distributeToUsers(
@@ -232,71 +330,14 @@ contract StakePool is StakeToken, AccessControl {
         totalDistributeAmount = sumDeposits(lastDistributeDate).mul(distributionRatio).div(100);
         for (uint256 i = 0; i < eligibleStakesCount; i++) {
             uint256 stakeId = eligibleStakes[i];
-            Stake storage stake = _stakes[stakeId];
-            uint256 stakeClaimShare = _stakeClaimShares[stakeId];
+            Stake storage stake = stakes[stakeId];
+            uint256 stakeClaimShare = stakeClaimShares[stakeId];
             uint256 amountShare = totalDistributeAmount.mul(stakeClaimShare).div(100);
-            require(amountShare <= _rewardToken.balanceOf(address(this)), "StakePool: insufficient funds");
+            require(amountShare <= erc20.balanceOf(address(this)), "StakePool: insufficient funds");
             stake.depositedAt = block.timestamp;
-            _rewardToken.transfer(ownerOf(stakeId), amountShare);
+            erc20.safeTransfer(ownerOf(stakeId), amountShare);
         }
 
         return totalDistributeAmount;
-    }
-
-    function sumDeposits(
-        uint256 fromDate
-    )
-        public
-        view
-        onlyOperator
-        returns (uint256)
-    {
-        uint256 totalDepositAmount = 0;
-        for (uint256 i = 0; i < _deposits.length; i++) {
-            if (_deposits[i].depositedAt >= fromDate ) {
-                totalDepositAmount = totalDepositAmount.add(_deposits[i].amount);
-            }
-        }
-
-        return totalDepositAmount;
-    }
-
-    function updateBalanceOfRewardToken()
-        public
-        onlyOperator
-    {
-        _balanceOfRewardToken = _rewardToken.balanceOf(address(this));
-    }
-
-
-    function deposit(
-        uint256 amount
-    )
-        public
-    {
-        require(amount >= _minimumStakeAmount, "StakePool: under minium stake amount");
-        require(_ido.transferFrom(msg.sender, address(this), amount), "StakePool: transfer IDO from caller to stake pool failed");
-        uint256 stakeId = _mint(msg.sender, amount, block.timestamp);
-
-        emit Deposited(msg.sender, stakeId, amount);
-    }
-
-    function withdraw(
-        uint256 stakeId,
-        uint256 amount
-    )
-        public
-    {
-        require(amount >= _minimumStakeAmount, "StakePool: under minium stake amount");
-        Stake storage stake = _stakes[stakeId];
-        require(amount <= stake.amount, "StakePool: insufficient funds");
-        if (amount == stake.amount) {
-            _burn(stakeId);
-        } else {
-            stake.amount = stake.amount.sub(amount);
-        }
-        _ido.transferFrom(address(this), msg.sender, amount);
-
-        emit Withdrawn(msg.sender, stakeId, amount);
     }
 }
