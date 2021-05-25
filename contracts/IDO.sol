@@ -10,13 +10,12 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl {
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    uint256 constant HUNDRED_MILLION = 100 * 1000 * 1000;
+    uint256 constant HUNDRED_MILLION = 100 * 1000 * 1000 * 1000000000000000000;
 
     constructor(
         string memory name_,
         string memory symbol_
     )
-        public
         ERC20(name_, symbol_)
         ERC20Permit(name_)
         ERC20Capped(HUNDRED_MILLION)
@@ -161,17 +160,32 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
 
     /**
      * @dev Mint a new token.
-     * @param recipient address
+     * @param account address
      * @param amount uint256
      */
     function mint(
-        address recipient,
+        address account,
         uint256 amount
     )
         public
         onlyOperator
     {
-        _mint(recipient, amount);
+        _mint(account, amount);
+    }
+
+    /**
+     * @dev Burn tokens.
+     * @param account address
+     * @param amount uint256
+     */
+    function burn(
+        address account,
+        uint256 amount
+    )
+        public
+        onlyOperator
+    {
+        _burn(account, amount);
     }
 
     function _mint(

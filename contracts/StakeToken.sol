@@ -11,14 +11,14 @@ contract StakeToken is ERC721, Ownable {
     using Counters for Counters.Counter;
     using SafeMath for uint256;
 
-    Counters.Counter internal _tokenIds;
+    Counters.Counter public _tokenIds;
     struct Stake {
         uint256 amount;
         uint256 multiplier; // should be divided by 100
         uint256 depositedAt;
     }
 
-    mapping(uint256 => Stake) internal _stakes;
+    mapping(uint256 => Stake) public stakes;
 
     constructor(
         string memory name_,
@@ -27,8 +27,8 @@ contract StakeToken is ERC721, Ownable {
         ERC721(name_, symbol_)
     {}
 
-    function _getMultiplier()
-        private
+    function getMultiplier()
+        public
         view
         returns (uint256)
     {
@@ -42,20 +42,20 @@ contract StakeToken is ERC721, Ownable {
         }
     }
 
-    function _mint(
+    function mint(
         address account,
         uint256 amount,
         uint256 depositedAt
     )
-        internal
+        public
         virtual
         returns (uint256)
     {
-        require(amount >= 0, "StakeToken: amount should not be 0");
+        require(amount > 0, "StakeToken: amount should not be 0");
         _tokenIds.increment();
-        uint256 multiplier = _getMultiplier();
+        uint256 multiplier = getMultiplier();
         super._mint(account, _tokenIds.current());
-        Stake storage newStake = _stakes[_tokenIds.current()];
+        Stake storage newStake = stakes[_tokenIds.current()];
         newStake.amount = amount;
         newStake.multiplier = multiplier;
         newStake.depositedAt = depositedAt;
@@ -63,12 +63,11 @@ contract StakeToken is ERC721, Ownable {
         return _tokenIds.current();
     }
 
-    function _burn(
+    function burn(
         uint256 stakeId
     )
-        internal
+        public
         virtual
-        override
     {
         require(_exists(stakeId), "StakeToken: stake not found");
         super._burn(stakeId);
