@@ -1,5 +1,11 @@
 const { expect, assert} = require('chai');
 const truffleAssert = require('truffle-assertions');
+const {
+  BN,
+  constants,
+  expectEvent,
+  expectRevert
+} = require('@openzeppelin/test-helpers');
 
 const IDO = artifacts.require('IDO');
 
@@ -94,17 +100,102 @@ contract('::IDO', async accounts => {
     });
   });
 
-  describe('Ownership', async () => {
-    it('should transfer only by admin', async () => {
-      await token.transferOwnership(bob);
-      expect(await token.owner()).to.eq(bob);
-    });
-    describe('reverts if', async () => {
-      it('transfer by non-admin', async () => {
-        await truffleAssert.reverts(
-          token.transferOwnership(bob, {from: bob}),
-          'revert IDO: not admin'
+  describe('#Ownership', async () => {
+    describe('##Propose', async () => {
+      it('should propose a new owner', async () => {
+        expectEvent(
+          await token.proposeNewOwnership(bob),
+          'OwnershipProposed',
+          {
+            currentOwner: alice,
+            proposedOwner: bob
+          }
         );
+      });
+      describe('reverts if', async () => {
+        it('propose a zero address', async () => {
+          await expectRevert(
+            token.proposeNewOwnership(constants.ZERO_ADDRESS),
+            'IDO: new owner address should not be 0'
+          );
+        });
+        it('caller is not owner', async () => {
+          await expectRevert(
+            token.proposeNewOwnership(bob, {from: carl}),
+            'Ownable: caller is not the owner'
+          );
+        });
+      });
+    });
+    describe('##Accept', async () => {
+      beforeEach(async () => {
+        await token.proposeNewOwnership(bob, {from: alice});
+      });
+      it('should be accepted by a newly proposed owner', async () => {
+        expectEvent(
+          await token.acceptOwnership(true, {from: bob}),
+          'OwnershipProposalAccepted',
+          {
+            currentOwner: alice,
+            proposedOwner: bob
+          }
+        );
+      });
+      it('should be rejected by a newly proposed owner', async () => {
+        expectEvent(
+          await token.acceptOwnership(false, {from: bob}),
+          'OwnershipProposalRejected',
+          {
+            currentOwner: alice,
+            proposedOwner: bob
+          }
+        );
+      });
+      describe('reverts if', async () => {
+        it('there is no ownership proposal', async () => {
+          await token.acceptOwnership(true, {from: bob});
+          await expectRevert(
+            token.acceptOwnership(true, {from: carl}),
+            'IDO: no new ownership proposal'
+          );
+        });
+        it('caller is not proposed owner', async () => {
+          await expectRevert(
+            token.acceptOwnership(true, {from: carl}),
+            'IDO: not proposed owner'
+          );
+        });
+      });
+    });
+    describe('##Transfer', async () => {
+      it('should transfer', async () => {
+        await token.proposeNewOwnership(bob, {from: alice});
+        await token.acceptOwnership(true, {from: bob});
+        expectEvent(
+          await token.transferOwnership(bob),
+          'OwnershipTransferred',
+          {
+            previousOwner: alice,
+            newOwner: bob
+          }
+        );
+      });
+      describe('reverts if', async () => {
+        it('there is no ownership proposal accepted', async () => {
+          await token.proposeNewOwnership(bob, {from: alice});
+          await expectRevert(
+            token.transferOwnership(bob),
+            'IDO: no ownership proposal accepted'
+          );
+        });
+        it('caller is not owner', async () => {
+          await token.proposeNewOwnership(bob, {from: alice});
+          await token.acceptOwnership(true, {from: bob});
+          await expectRevert(
+            token.transferOwnership(bob, {from: carl}),
+            'Ownable: caller is not the owner'
+          );
+        });
       });
     });
   });
