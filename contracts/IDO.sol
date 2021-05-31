@@ -12,6 +12,21 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     uint256 constant HUNDRED_MILLION = 100 * 1000 * 1000 * 1000000000000000000;
 
+    enum OwnershipStatus {PROPOSAL, PROPOSAL_ACCEPT, PROPOSAL_REJECT, TRANSFER}
+    struct OwnershipParam {
+        address oldValue;
+        address newValue;
+        OwnershipStatus status;
+        uint256 timestamp;
+    }
+
+    // The address for contract owner.
+    OwnershipParam private _ownershipParam;
+
+    event OwnershipProposed(address indexed currentOwner, address indexed proposedOwner);
+    event OwnershipProposalAccepted(address indexed currentOwner, address indexed proposedOwner);
+    event OwnershipProposalRejected(address indexed currentOwner, address indexed proposedOwner);
+
     constructor(
         string memory name_,
         string memory symbol_
@@ -23,7 +38,15 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(OPERATOR_ROLE, _msgSender());
         _setupRole(PAUSER_ROLE, _msgSender());
+
+        _ownershipParam.newValue = _msgSender();
+        _ownershipParam.status = OwnershipStatus.TRANSFER;
+        _ownershipParam.timestamp = block.timestamp;
     }
+
+    /***********************|
+    |          Role         |
+    |______________________*/
 
     /**
      * @dev Restricted to members of the admin role.
@@ -135,6 +158,54 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
         return hasRole(PAUSER_ROLE, account);
     }
 
+    /****************************|
+    |          Ownership         |
+    |___________________________*/
+
+    /**
+     * @dev Propose a new ownership for the contract.
+     * Called by current owner.
+     * @param account address newly proposed owner address
+     */
+    function proposeNewOwnership(
+        address account
+    )
+        public
+        onlyOwner
+    {
+        require(account != address(0), "IDO: new owner address should not be 0");
+        _ownershipParam.newValue = account;
+        _ownershipParam.status = OwnershipStatus.PROPOSAL;
+        _ownershipParam.timestamp = 0;
+
+        emit OwnershipProposed(owner(), account);
+    }
+
+    /**
+     * @dev Accept a new ownership.
+     * Called by newly proposed owner.
+     * @param accepted bool flag that shows if a newly proposed owner accepted.
+     */
+
+    function acceptOwnership(
+        bool accepted
+    )
+        public
+    {
+        require(_ownershipParam.status == OwnershipStatus.PROPOSAL, "IDO: no new ownership proposal");
+        require(_ownershipParam.newValue == _msgSender(), "IDO: not proposed owner");
+        if (accepted) {
+            _ownershipParam.oldValue = owner();
+            _ownershipParam.status = OwnershipStatus.PROPOSAL_ACCEPT;
+            emit OwnershipProposalAccepted(owner(), _msgSender());
+        } else {
+            _ownershipParam.newValue = owner();
+            _ownershipParam.status = OwnershipStatus.PROPOSAL_REJECT;
+            emit OwnershipProposalRejected(owner(), _msgSender());
+        }
+        _ownershipParam.timestamp = block.timestamp;
+    }
+
     /**
      * @dev Transfer ownership to a new address.
      * @dev Restricted to admin.
@@ -145,9 +216,11 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
     )
         public
         override
-        onlyAdmin
+        onlyOwner
     {
-        renounceRole(DEFAULT_ADMIN_ROLE, owner());
+        require(_ownershipParam.status == OwnershipStatus.PROPOSAL_ACCEPT, "IDO: no ownership proposal accepted");
+
+        revokeRole(DEFAULT_ADMIN_ROLE, owner());
         _setupRole(DEFAULT_ADMIN_ROLE, newOwner);
         if (!hasRole(OPERATOR_ROLE, newOwner)) {
             _setupRole(OPERATOR_ROLE, newOwner);
@@ -155,8 +228,13 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
         if (!hasRole(PAUSER_ROLE, newOwner)) {
             _setupRole(PAUSER_ROLE, newOwner);
         }
+        _ownershipParam.status = OwnershipStatus.TRANSFER;
         super.transferOwnership(newOwner);
     }
+
+    /************************|
+    |          Token         |
+    |_______________________*/
 
     /**
      * @dev Mint a new token.
@@ -217,6 +295,21 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
     }
 
     /**
+     * @dev Get chain id.
+     */
+    function getChainId()
+        external
+        view
+        returns (uint256)
+    {
+        return block.chainid;
+    }
+
+    /******************************|
+    |          Pausability         |
+    |_____________________________*/
+
+    /**
      * @dev Pause.
      */
     function pause()
@@ -234,16 +327,5 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
         onlyPauser
     {
         super._unpause();
-    }
-
-    /**
-     * @dev Get chain id.
-     */
-    function getChainId()
-        external
-        view
-        returns (uint256)
-    {
-        return block.chainid;
     }
 }
