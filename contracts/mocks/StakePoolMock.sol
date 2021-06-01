@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import "./IDO.sol";
-import "./StakeToken.sol";
+import "../IDO.sol";
+import "../StakeToken.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -16,10 +16,14 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
     using Counters for Counters.Counter;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-    uint256 public MONTH = 31 days;
-    uint256 public QUARTER = MONTH.mul(3);
-    uint256 public YEAR = 365 days;
     uint256 public decimals = 18;
+    // Intervals are shortened. month -> day, quarter -> week, year -> month
+    uint256 public MONTH = 1 days;
+    uint256 public QUARTER = 7 days;
+    uint256 public YEAR = 31 days;
+    // uint256 public MONTH = 31 days;
+    // uint256 public QUARTER = MONTH.mul(3);
+    // uint256 public YEAR = 365 days;
 
     uint256 private constant _monthlyDistributionRatio = 25;
     uint256 private constant _quarterlyDistributionRatio = 50;

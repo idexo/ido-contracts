@@ -14,6 +14,7 @@ contract('::IDO', async accounts => {
   const [alice, bob, carl] = accounts;
   const name = 'Idexo Token';
   const symbol = 'IDO';
+  const decimals = 18;
 
   beforeEach(async () => {
     token = await IDO.new(name, symbol, {from: alice});
@@ -53,7 +54,7 @@ contract('::IDO', async accounts => {
       await token.pause({from: bob});
       expect(await token.paused()).to.eq(true);
       await truffleAssert.reverts(
-        token.mint(alice, 1000),
+        token.mint(alice, new BN(1000).mul(new BN(10).pow(new BN(decimals)))),
         'revert ERC20Pausable: token transfer while paused'
       );
       await token.unpause({from: bob});
@@ -79,17 +80,17 @@ contract('::IDO', async accounts => {
         expect(balance.toString()).to.eq('10');
       });
     });
-    // it('shoule not mint when exceeded cap', async () => {
-    //   await token.addOperator(bob);
-    //   await token.mint(alice, 500, {from: bob});
-    //   await token.balanceOf(alice).then(balance => {
-    //     expect(balance.toString()).to.eq('500');
-    //   });
-    //   await truffleAssert.reverts(
-    //     token.mint(alice, 100 * 1000 * 1000 * 1000000000000000000, {from: bob}),
-    //     'revert ERC20Capped: cap exceeded'
-    //   );
-    // });
+    it('shoule not mint when exceeded cap', async () => {
+      await token.addOperator(bob);
+      await token.mint(alice, new BN(500), {from: bob});
+      await token.balanceOf(alice).then(balance => {
+        expect(balance.toString()).to.eq('500');
+      });
+      await truffleAssert.reverts(
+        token.mint(alice, new BN(100 * 1000 * 1000).mul(new BN(10).pow(new BN(decimals))), {from: bob}),
+        'revert ERC20Capped: cap exceeded'
+      );
+    });
     describe('reverts if', async () => {
       it('mint a new token by non-operator', async () => {
         await truffleAssert.reverts(

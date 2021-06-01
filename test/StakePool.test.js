@@ -25,6 +25,7 @@ contract('::StakePool', async accounts => {
   const stakeTokenSymbol = 'IDS';
   const erc20Name = 'USD Tether';
   const erc20Symbol = 'USDT';
+  const decimals = 18;
 
   beforeEach(async () => {
     ido = await IDO.new(idoName, idoSymbol, {from: alice});
@@ -61,23 +62,23 @@ contract('::StakePool', async accounts => {
 
   describe('#Stake', async () => {
     beforeEach(async () => {
-      await ido.mint(alice, 4000);
-      await ido.approve(stakePool.address, 10000, {from: alice});
+      await ido.mint(alice, new BN(4000).mul(new BN(10).pow(new BN(decimals))));
+      await ido.approve(stakePool.address, new BN(10000).mul(new BN(10).pow(new BN(decimals))), {from: alice});
     });
     describe('##deposit', async () => {
       it('should deposit', async () => {
-        await stakePool.deposit(2800, {from: alice});
+        await stakePool.deposit(new BN(2800).mul(new BN(10).pow(new BN(decimals))), {from: alice});
         await stakePool.stakes(1).then(stake => {
-          expect(stake.amount.toNumber()).to.eq(2800);
-          expect(stake.multiplier.toNumber()).to.eq(120);
+          expect(stake.amount.toString()).to.eq('2800000000000000000000');
+          expect(stake.multiplier.toString()).to.eq('120');
         });
         const aliceIDOBalance = await ido.balanceOf(alice);
-        expect(aliceIDOBalance.toNumber()).to.eq(1200);
+        expect(aliceIDOBalance.toString()).to.eq('1200000000000000000000');
       });
       describe('reverts if', async () => {
         it('stake amount is lower than minimum amount', async () => {
           await truffleAssert.reverts(
-            stakePool.deposit(2300, {from: alice}),
+            stakePool.deposit(new BN(2300).mul(new BN(10).pow(new BN(decimals))), {from: alice}),
             'revert StakePool: under minium stake amount'
           );
         });
@@ -85,17 +86,17 @@ contract('::StakePool', async accounts => {
     });
     describe('##withdraw', async () => {
       it('should withdraw', async () => {
-        await stakePool.deposit(2800, {from: alice});
-        await stakePool.withdraw(1, 2600, {from: alice});
+        await stakePool.deposit(new BN(2800).mul(new BN(10).pow(new BN(decimals))), {from: alice});
+        await stakePool.withdraw(1, new BN(2600).mul(new BN(10).pow(new BN(decimals))), {from: alice});
         await stakePool.stakes(1).then(stake => {
-          expect(stake.amount.toNumber()).to.eq(200);
+          expect(stake.amount.toString()).to.eq('200000000000000000000');
         });
       });
       describe('reverts if', async () => {
         it('withdraw amount is lower than minimum amount', async () => {
-          await stakePool.deposit(2800, {from: alice});
+          await stakePool.deposit(new BN(2800).mul(new BN(10).pow(new BN(decimals))), {from: alice});
           await truffleAssert.reverts(
-            stakePool.withdraw(1, 2300, {from: alice}),
+            stakePool.withdraw(1, new BN(2300).mul(new BN(10).pow(new BN(decimals))), {from: alice}),
             'revert StakePool: under minium stake amount'
           );
         });
@@ -106,25 +107,24 @@ contract('::StakePool', async accounts => {
   describe('#Revenue Share', async () => {
     describe('##deposit', async () => {
       beforeEach(async () => {
-        await erc20.mint(alice, 10000);
-        await erc20.approve(stakePool.address, 10000, {from: alice});
+        await erc20.mint(alice, new BN(10000).mul(new BN(10).pow(new BN(decimals))));
+        await erc20.approve(stakePool.address, new BN(10000).mul(new BN(10).pow(new BN(decimals))), {from: alice});
         await stakePool.addOperator(alice);
       });
       it('should deposit', async () => {
-        await stakePool.depositRevenueShare(4000, {from: alice});
+        await stakePool.depositRevenueShare(new BN(4000).mul(new BN(10).pow(new BN(decimals))), {from: alice});
         await erc20.balanceOf(alice).then(balance => {
-          expect(balance.toNumber()).to.eq(6000);
+          expect(balance.toString()).to.eq('6000000000000000000000');
         });
-        // expect(await erc20.balanceOf(alice)).to.equal(BigNumber.from(6000));
         await stakePool.deposits(0).then(deposit => {
           expect(deposit.operator).to.eq(alice);
-          expect(deposit.amount.toNumber()).to.eq(4000);
+          expect(deposit.amount.toString()).to.eq('4000000000000000000000');
         });
       });
       describe('reverts if', async () => {
         it('deposit amount is 0', async () => {
           await truffleAssert.reverts(
-            stakePool.depositRevenueShare(0, {from: alice}),
+            stakePool.depositRevenueShare(new BN(0), {from: alice}),
             'revert StakePool: amount should not be zero'
             );
           });
@@ -133,29 +133,29 @@ contract('::StakePool', async accounts => {
     describe('##distribute', async () => {
       beforeEach(async () => {
         // Deposit stake
-        await erc20.mint(alice, 20000);
-        await erc20.approve(stakePool.address, 20000, {from: alice});
-        await erc20.mint(bob, 10000);
-        await erc20.approve(stakePool.address, 10000, {from: bob});
-        await ido.mint(alice, 10000);
-        await ido.approve(stakePool.address, 10000, {from: alice});
-        await ido.mint(bob, 10000);
-        await ido.approve(stakePool.address, 10000, {from: bob});
+        await erc20.mint(alice, new BN(20000).mul(new BN(10).pow(new BN(decimals))));
+        await erc20.approve(stakePool.address, new BN(20000).mul(new BN(10).pow(new BN(decimals))), {from: alice});
+        await erc20.mint(bob, new BN(10000).mul(new BN(10).pow(new BN(decimals))));
+        await erc20.approve(stakePool.address, new BN(10000).mul(new BN(10).pow(new BN(decimals))), {from: bob});
+        await ido.mint(alice, new BN(10000).mul(new BN(10).pow(new BN(decimals))));
+        await ido.approve(stakePool.address, new BN(10000).mul(new BN(10).pow(new BN(decimals))), {from: alice});
+        await ido.mint(bob, new BN(10000).mul(new BN(10).pow(new BN(decimals))));
+        await ido.approve(stakePool.address, new BN(10000).mul(new BN(10).pow(new BN(decimals))), {from: bob});
         await stakePool.addOperator(alice);
       });
-      it('asdf', async () => {
+      it('distribute', async () => {
         // After 5 days
         timeTraveler.advanceTime(time.duration.days(5));
-        await stakePool.deposit(3000, {from: alice});
+        await stakePool.deposit(new BN(3000).mul(new BN(10).pow(new BN(decimals))), {from: alice});
         // After 1 day
         timeTraveler.advanceTime(time.duration.days(1));
-        await stakePool.deposit(6000, {from: bob});
+        await stakePool.deposit(new BN(6000).mul(new BN(10).pow(new BN(decimals))), {from: bob});
         // After 10 days
         timeTraveler.advanceTime(time.duration.days(10));
-        await stakePool.depositRevenueShare(4000, {from: alice});
+        await stakePool.depositRevenueShare(new BN(4000).mul(new BN(10).pow(new BN(decimals))), {from: alice});
         // After 1 day
         timeTraveler.advanceTime(time.duration.days(1));
-        await stakePool.depositRevenueShare(4500, {from: alice});
+        await stakePool.depositRevenueShare(new BN(4500).mul(new BN(10).pow(new BN(decimals))), {from: alice});
         // After 15 days (1 month passed)
         timeTraveler.advanceTime(time.duration.days(15));
         expectEvent(
@@ -167,27 +167,27 @@ contract('::StakePool', async accounts => {
         );
         // After 10 days
         timeTraveler.advanceTime(time.duration.days(10));
-        await stakePool.depositRevenueShare(4000, {from: alice});
+        await stakePool.depositRevenueShare(new BN(4000).mul(new BN(10).pow(new BN(decimals))), {from: alice});
         // After 1 days
         timeTraveler.advanceTime(time.duration.days(1));
-        await stakePool.depositRevenueShare(4500, {from: alice});
+        await stakePool.depositRevenueShare(new BN(4500).mul(new BN(10).pow(new BN(decimals))), {from: alice});
         // After 21 days (2 months passed)
         timeTraveler.advanceTime(time.duration.days(15));
         expectEvent(
           await stakePool.distribute({from: alice}),
           'MonthlyDistributed',
           {
-            amount: new BN(2122),
+            amount: new BN(2122875).mul(new BN(10).pow(new BN(15))),
           }
         );
         await erc20.balanceOf(stakePool.address).then(bn => {
-          expect(bn.toNumber()).to.eq(14878);
+          expect(bn.toString()).to.eq('10631375000000000000000');
         });
         await erc20.balanceOf(alice).then(bn => {
-          expect(bn.toNumber()).to.eq(3707);
+          expect(bn.toString()).to.eq('5122875000000000000000');
         });
         await erc20.balanceOf(bob).then(bn => {
-          expect(bn.toNumber()).to.eq(11415);
+          expect(bn.toString()).to.eq('14245750000000000000000');
         });
       });
     });
