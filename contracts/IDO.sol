@@ -27,12 +27,9 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
     event OwnershipProposalAccepted(address indexed currentOwner, address indexed proposedOwner);
     event OwnershipProposalRejected(address indexed currentOwner, address indexed proposedOwner);
 
-    constructor(
-        string memory name_,
-        string memory symbol_
-    )
-        ERC20(name_, symbol_)
-        ERC20Permit(name_)
+    constructor()
+        ERC20("Idexo Community", "IDO")
+        ERC20Permit("Idexo Community")
         ERC20Capped(HUNDRED_MILLION)
     {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());

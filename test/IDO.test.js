@@ -12,12 +12,10 @@ const IDO = artifacts.require('IDO');
 contract('::IDO', async accounts => {
   let token;
   const [alice, bob, carl] = accounts;
-  const name = 'Idexo Token';
-  const symbol = 'IDO';
   const decimals = 18;
 
   beforeEach(async () => {
-    token = await IDO.new(name, symbol, {from: alice});
+    token = await IDO.new({from: alice});
   });
 
   describe('#Role', async () => {
