@@ -173,7 +173,7 @@ contract('::IDO', async accounts => {
         await token.proposeNewOwnership(bob, {from: alice});
         await token.acceptOwnership(true, {from: bob});
         expectEvent(
-          await token.transferOwnership(bob),
+          await token.transferOwnership(),
           'OwnershipTransferred',
           {
             previousOwner: alice,
@@ -185,7 +185,7 @@ contract('::IDO', async accounts => {
         it('there is no ownership proposal accepted', async () => {
           await token.proposeNewOwnership(bob, {from: alice});
           await expectRevert(
-            token.transferOwnership(bob),
+            token.transferOwnership(),
             'IDO: no ownership proposal accepted'
           );
         });
@@ -193,7 +193,7 @@ contract('::IDO', async accounts => {
           await token.proposeNewOwnership(bob, {from: alice});
           await token.acceptOwnership(true, {from: bob});
           await expectRevert(
-            token.transferOwnership(bob, {from: carl}),
+            token.transferOwnership({from: carl}),
             'Ownable: caller is not the owner'
           );
         });

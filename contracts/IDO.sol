@@ -209,16 +209,13 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
     /**
      * @dev Transfer ownership to a new address.
      * @dev Restricted to admin.
-     * @param newOwner address
      */
-    function transferOwnership(
-        address newOwner
-    )
+    function transferOwnership()
         public
-        override
         onlyOwner
     {
         require(_ownershipParam.status == OwnershipStatus.PROPOSAL_ACCEPT, "IDO: no ownership proposal accepted");
+        address newOwner = _ownershipParam.newValue;
 
         revokeRole(DEFAULT_ADMIN_ROLE, owner());
         _setupRole(DEFAULT_ADMIN_ROLE, newOwner);
