@@ -13,6 +13,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
     uint256 constant HUNDRED_MILLION = 100 * 1000 * 1000 * 10 ** 18;
 
     enum OwnershipStatus {PROPOSAL, PROPOSAL_ACCEPT, PROPOSAL_REJECT, TRANSFER}
+
     struct OwnershipParam {
         address oldValue;
         address newValue;
@@ -49,7 +50,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
      * @dev Restricted to members of the admin role.
      */
     modifier onlyAdmin() {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "IDO: not admin");
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "IDO#onlyAdmin: CALLER_NO_ADMIN_ROLE");
         _;
     }
 
@@ -57,7 +58,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
      * @dev Restricted to members of the operator role.
      */
     modifier onlyOperator() {
-        require(hasRole(OPERATOR_ROLE, _msgSender()), "IDO: not operator");
+        require(hasRole(OPERATOR_ROLE, _msgSender()), "IDO#onlyOperator: CALLER_NO_OPERATOR_ROLE");
         _;
     }
 
@@ -65,7 +66,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
      * @dev Restricted to members of the pauser role.
      */
     modifier onlyPauser() {
-        require(hasRole(PAUSER_ROLE, _msgSender()), "IDO: not pauser");
+        require(hasRole(PAUSER_ROLE, _msgSender()), "IDO#onlyPauser: CALLER_NO_PAUSER_ROLE");
         _;
     }
 
@@ -79,7 +80,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
         public
         onlyAdmin
     {
-        require(!hasRole(OPERATOR_ROLE, account), "IDO: already operator");
+        require(!hasRole(OPERATOR_ROLE, account), "IDO#addOperator: ALREADY_OERATOR_ROLE");
         grantRole(OPERATOR_ROLE, account);
     }
 
@@ -93,7 +94,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
         public
         onlyAdmin
     {
-        require(hasRole(OPERATOR_ROLE, account), "IDO: not operator");
+        require(hasRole(OPERATOR_ROLE, account), "IDO#removeOperator: NO_OPERATOR_ROLE");
         revokeRole(OPERATOR_ROLE, account);
         if (hasRole(PAUSER_ROLE, account)) {
             revokeRole(PAUSER_ROLE, account);
@@ -124,7 +125,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
         public
         onlyAdmin
     {
-        require(!hasRole(PAUSER_ROLE, account), "IDO: already pauser");
+        require(!hasRole(PAUSER_ROLE, account), "IDO#addPauser: ALREADY_PAUSER_ROLE");
         if (!hasRole(OPERATOR_ROLE, account)) {
             grantRole(OPERATOR_ROLE, account);
         }
@@ -141,7 +142,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
         public
         onlyAdmin
     {
-        require(hasRole(PAUSER_ROLE, account), "IDO: not pauser");
+        require(hasRole(PAUSER_ROLE, account), "IDO#removePauser: NO_PAUSER_ROLE");
         revokeRole(PAUSER_ROLE, account);
     }
 
@@ -170,7 +171,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
         public
         onlyOwner
     {
-        require(account != address(0), "IDO: new owner address should not be 0");
+        require(account != address(0), "IDO#proposeNewOwnership: ZERO_ADDRESS");
         _ownershipParam.newValue = account;
         _ownershipParam.status = OwnershipStatus.PROPOSAL;
         _ownershipParam.timestamp = 0;
@@ -189,8 +190,8 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
     )
         public
     {
-        require(_ownershipParam.status == OwnershipStatus.PROPOSAL, "IDO: no new ownership proposal");
-        require(_ownershipParam.newValue == _msgSender(), "IDO: not proposed owner");
+        require(_ownershipParam.status == OwnershipStatus.PROPOSAL, "IDO#acceptOwnership: NO_NEW_OWNERSHIP_PROPOSAL");
+        require(_ownershipParam.newValue == _msgSender(), "IDO#acceptOwnership: NO_PROPOSED_OWNER");
         if (accepted) {
             _ownershipParam.oldValue = owner();
             _ownershipParam.status = OwnershipStatus.PROPOSAL_ACCEPT;
@@ -211,7 +212,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
         public
         onlyOwner
     {
-        require(_ownershipParam.status == OwnershipStatus.PROPOSAL_ACCEPT, "IDO: no ownership proposal accepted");
+        require(_ownershipParam.status == OwnershipStatus.PROPOSAL_ACCEPT, "IDO#transferOwnership: NO_ACCEPTED_OWNERSHIP_PROPOSAL");
         address newOwner = _ownershipParam.newValue;
 
         revokeRole(DEFAULT_ADMIN_ROLE, owner());

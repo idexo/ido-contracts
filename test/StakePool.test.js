@@ -19,8 +19,6 @@ contract('::StakePool', async accounts => {
   let erc20;
 
   const [alice, bob, carl] = accounts;
-  const idoName = 'Idexo Token';
-  const idoSymbol = 'IDO';
   const stakeTokenName = 'Idexo Stake Token';
   const stakeTokenSymbol = 'IDS';
   const erc20Name = 'USD Tether';
@@ -28,7 +26,7 @@ contract('::StakePool', async accounts => {
   const decimals = 18;
 
   beforeEach(async () => {
-    ido = await IDO.new(idoName, idoSymbol, {from: alice});
+    ido = await IDO.new({from: alice});
     erc20 = await ERC20.new(erc20Name, erc20Symbol, {from: alice});
     stakePool = await StakePool.new(stakeTokenName, stakeTokenSymbol, ido.address, erc20.address, {from: alice});
   });
@@ -47,14 +45,14 @@ contract('::StakePool', async accounts => {
       it('add operator by non-admin', async () => {
         await truffleAssert.reverts(
           stakePool.addOperator(bob, {from: bob}),
-          'revert StakePool: not admin'
+          'revert StakePool#onlyAdmin: CALLER_NO_ADMIN_ROLE'
         );
       });
       it('remove operator by non-admin', async () => {
         await stakePool.addOperator(bob);
         await truffleAssert.reverts(
           stakePool.removeOperator(bob, {from: bob}),
-          'revert StakePool: not admin'
+          'revert StakePool#onlyAdmin: CALLER_NO_ADMIN_ROLE'
         );
       });
     });
@@ -79,7 +77,7 @@ contract('::StakePool', async accounts => {
         it('stake amount is lower than minimum amount', async () => {
           await truffleAssert.reverts(
             stakePool.deposit(new BN(2300).mul(new BN(10).pow(new BN(decimals))), {from: alice}),
-            'revert StakePool: under minium stake amount'
+            'revert StakePool#deposit: UNDER_MINIMUN_STAKE_AMOUNT'
           );
         });
       });
@@ -97,7 +95,7 @@ contract('::StakePool', async accounts => {
           await stakePool.deposit(new BN(2800).mul(new BN(10).pow(new BN(decimals))), {from: alice});
           await truffleAssert.reverts(
             stakePool.withdraw(1, new BN(2300).mul(new BN(10).pow(new BN(decimals))), {from: alice}),
-            'revert StakePool: under minium stake amount'
+            'revert StakePool#withdraw: UNDER_MINIMUN_STAKE_AMOUNT'
           );
         });
       });
@@ -109,7 +107,7 @@ contract('::StakePool', async accounts => {
       beforeEach(async () => {
         await erc20.mint(alice, new BN(10000).mul(new BN(10).pow(new BN(decimals))));
         await erc20.approve(stakePool.address, new BN(10000).mul(new BN(10).pow(new BN(decimals))), {from: alice});
-        await stakePool.addOperator(alice);
+        // await stakePool.addOperator(alice);
       });
       it('should deposit', async () => {
         await stakePool.depositRevenueShare(new BN(4000).mul(new BN(10).pow(new BN(decimals))), {from: alice});
@@ -125,7 +123,7 @@ contract('::StakePool', async accounts => {
         it('deposit amount is 0', async () => {
           await truffleAssert.reverts(
             stakePool.depositRevenueShare(new BN(0), {from: alice}),
-            'revert StakePool: amount should not be zero'
+            'revert StakePool#depositRevenueShare: ZERO_AMOUNT'
             );
           });
         });
@@ -141,7 +139,7 @@ contract('::StakePool', async accounts => {
         await ido.approve(stakePool.address, new BN(10000).mul(new BN(10).pow(new BN(decimals))), {from: alice});
         await ido.mint(bob, new BN(10000).mul(new BN(10).pow(new BN(decimals))));
         await ido.approve(stakePool.address, new BN(10000).mul(new BN(10).pow(new BN(decimals))), {from: bob});
-        await stakePool.addOperator(alice);
+        // await stakePool.addOperator(alice);
       });
       it('distribute', async () => {
         // After 5 days
@@ -181,7 +179,7 @@ contract('::StakePool', async accounts => {
           }
         );
         await erc20.balanceOf(stakePool.address).then(bn => {
-          expect(bn.toString()).to.eq('10631375000000000000000');
+          expect(bn.toString()).to.eq('14877125000000000000000');
         });
         await erc20.balanceOf(alice).then(bn => {
           expect(bn.toString()).to.eq('5122875000000000000000');

@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
+contract StakePoolMock is StakeToken, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
     using Counters for Counters.Counter;

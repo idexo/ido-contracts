@@ -97,7 +97,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
      * @dev Restricted to members of the admin role.
      */
     modifier onlyAdmin() {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "StakePool: not admin");
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "StakePool#onlyAdmin: CALLER_NO_ADMIN_ROLE");
         _;
     }
 
@@ -105,13 +105,13 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
      * @dev Restricted to members of the operator role.
      */
     modifier onlyOperator() {
-        require(hasRole(OPERATOR_ROLE, msg.sender), "StakePool: not operator");
+        require(hasRole(OPERATOR_ROLE, msg.sender), "StakePool#onlyOperator: CALLER_NO_OPERATOR_ROLE");
         _;
     }
 
     /**
      * @dev Add an account to the operator role.
-     * @param account address
+     * @param account address of recipient.
      */
     function addOperator(
         address account
@@ -119,12 +119,13 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
         public
         onlyAdmin
     {
+        require(!hasRole(OPERATOR_ROLE, account), "StakePool#addOperator: ALREADY_OERATOR_ROLE");
         grantRole(OPERATOR_ROLE, account);
     }
 
     /**
      * @dev Remove an account from the operator role.
-     * @param account address
+     * @param account address.
      */
     function removeOperator(
         address account
@@ -132,12 +133,13 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
         public
         onlyAdmin
     {
+        require(hasRole(OPERATOR_ROLE, account), "StakePool#removeOperator: NO_OPERATOR_ROLE");
         revokeRole(OPERATOR_ROLE, account);
     }
 
     /**
      * @dev Check if an account is operator.
-     * @param account address
+     * @param account address of operator being checked.
      */
     function checkOperator(
         address account
@@ -155,23 +157,25 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
 
     /**
      * @dev Deposit stake to the pool.
-     * @param amount uint256
+     * @param amount deposit amount.
      */
     function deposit(
         uint256 amount
     )
         public
     {
-        require(amount >= _minimumStakeAmount, "StakePool: under minium stake amount");
+        require(amount >= _minimumStakeAmount, "StakePool#deposit: UNDER_MINIMUN_STAKE_AMOUNT");
         _deposit(msg.sender, amount);
     }
 
     /**
      * @dev Withdraw from the pool.
+
      * If amount is less than amount of the stake, cut off amount.
      * If amount is equal to amount of the stake, burn the stake.
-     * @param stakeId uint256
-     * @param amount uint256
+
+     * @param stakeId id of Stake that is being withdrawn.
+     * @param amount withdraw amount.
      */
     function withdraw(
         uint256 stakeId,
@@ -179,14 +183,14 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
     )
         public
     {
-        require(amount >= _minimumStakeAmount, "StakePool: under minium stake amount");
+        require(amount >= _minimumStakeAmount, "StakePool#withdraw: UNDER_MINIMUN_STAKE_AMOUNT");
         _withdraw(msg.sender, stakeId, amount);
     }
 
     /**
      * @dev Deposit stake to the pool.
-     * @param account address recipient
-     * @param amount uint256
+     * @param account address of recipient.
+     * @param amount deposit amount.
      */
     function _deposit(
         address account,
@@ -195,7 +199,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
         internal
         nonReentrant
     {
-        require(ido.transferFrom(account, address(this), amount), "StakePool: transfer IDO from caller to stake pool failed");
+        require(ido.transferFrom(account, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
         uint256 stakeId = mint(account, amount, block.timestamp);
 
         emit Deposited(account, stakeId, amount);
@@ -203,10 +207,12 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
 
     /**
      * @dev If amount is less than amount of the stake, cut off amount.
+
      * If amount is equal to amount of the stake, burn the stake.
-     * @param account address recipient
-     * @param stakeId uint256
-     * @param amount uint256
+
+     * @param account address whose stake is being withdrawn.
+     * @param stakeId id of stake that is being withdrawn.
+     * @param amount withdraw amount.
      */
     function _withdraw(
         address account,
@@ -216,10 +222,10 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
         internal
         nonReentrant
     {
-        require(stakes[stakeId].amount != 0, "StakePool: stake id not found");
+        require(stakes[stakeId].amount != 0, "StakePool#_withdraw: STAKE_ID_NOT_FOUND");
         Stake storage stake = stakes[stakeId];
-        require(amount <= stake.amount, "StakePool: insufficient funds");
-        require(ido.transfer(account, amount), "StakePool: transfer IDO from stake pool to caller failed");
+        require(amount <= stake.amount, "StakePool#_withdraw: INSUFFICIENT_FUNDS");
+        require(ido.transfer(account, amount), "StakePool#_withdraw: TRANSFER_FAILED");
         if (amount == stake.amount) {
             burn(stakeId);
         } else {
@@ -235,7 +241,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
 
     /**
      * @dev Deposit revenue shares to the pool.
-     * @param amount uint256
+     * @param amount deposit amount.
      */
     function depositRevenueShare(
         uint256 amount
@@ -243,14 +249,14 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
         public
         onlyOperator
     {
-        require(amount > 0, "StakePool: amount should not be zero");
+        require(amount > 0, "StakePool#depositRevenueShare: ZERO_AMOUNT");
         _depositRevenueShare(msg.sender, amount);
     }
 
     /**
      * @dev Deposit revenue shares to the pool.
-     * @param account address who deposits
-     * @param amount uint256
+     * @param account address who deposits to the pool.
+     * @param amount deposit amount.
      */
     function _depositRevenueShare(
         address account,
@@ -268,8 +274,10 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
 
     /**
      * @dev Select eligible stakes that have been in the pool from fromDate and to toDate, and update their claim shares.
-     * toDate is the current timestamp.
-     * @param fromDate uint256
+
+     * `toDate` is the current timestamp.
+
+     * @param fromDate timestamp when update calculation begin.
      */
     function updateStakeClaimShares(
         uint256 fromDate
@@ -278,7 +286,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
         onlyOperator
         returns (uint256[] memory, uint256)
     {
-        require(fromDate <= block.timestamp, "StakePool: not past date");
+        require(fromDate <= block.timestamp, "StakePool#updateStakeClaimShares: NO_PAST_DATE");
         uint256[] memory eligibleStakes = new uint256[](_tokenIds.current());
         uint256 eligibleStakesCount = 0;
         uint256 totalStakeClaim = 0;
@@ -303,8 +311,9 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
 
     /**
      * @dev Distribute revenue shares to stake holders.
-     * Currently this function should be called by operator periodically (once a month).
-     * Need to integrate with crons.
+
+     * Currently this function should be called by operator manually and periodically (once a month).
+     * May need handling with crons.
      */
     function distribute()
         public
@@ -362,8 +371,9 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
 
     /**
      * @dev Calculate sum of revenue share deposits to the pool.
-     * toDate is the current timestamp.
-     * @param fromDate uint256
+
+     * `toDate` is the current timestamp.
+     * @param fromDate timestamp when sum calculation begin.
      */
     function sumDeposits(
         uint256 fromDate
@@ -385,8 +395,8 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
 
     /**
      * @dev Distribute revenue share to eligible stake holders according to specific conditions.
-     * @param lastDistributeDate uint256
-     * @param distributionRatio uint256 check above
+     * @param lastDistributeDate timestamp when the last distribution was done.
+     * @param distributionRatio monthly, quarterly or yearly distribution ratio.
      */
     function _distributeToUsers(
         uint256 lastDistributeDate,
@@ -406,7 +416,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
             uint256 stakeId = eligibleStakes[i];
             uint256 stakeClaimShare = stakeClaimShares[stakeId];
             uint256 amountShare = availableDistributeAmount.mul(stakeClaimShare).div(1000);
-            require(amountShare <= erc20.balanceOf(address(this)), "StakePool: insufficient funds");
+            require(amountShare <= erc20.balanceOf(address(this)), "StakePool#_distributeToUsers: INSUFFICIENT FUNDS");
             erc20.safeTransfer(ownerOf(stakeId), amountShare);
             totalDistributeAmount = totalDistributeAmount.add(amountShare);
         }

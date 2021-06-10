@@ -32,14 +32,14 @@ contract('::IDO', async accounts => {
       it('add operator by non-admin', async () => {
         await truffleAssert.reverts(
           token.addOperator(bob, {from: bob}),
-          'revert IDO: not admin'
+          'revert IDO#onlyAdmin: CALLER_NO_ADMIN_ROLE'
         );
       });
       it('remove operator by non-admin', async () => {
         await token.addOperator(bob);
         await truffleAssert.reverts(
           token.removeOperator(bob, {from: bob}),
-          'revert IDO: not admin'
+          'revert IDO#onlyAdmin: CALLER_NO_ADMIN_ROLE'
         );
       });
     });
@@ -64,7 +64,7 @@ contract('::IDO', async accounts => {
         await token.addOperator(carl);
         await truffleAssert.reverts(
           token.pause({from: carl}),
-          'revert IDO: not pauser'
+          'revert IDO#onlyPauser: CALLER_NO_PAUSER_ROLE'
         );
       });
     });
@@ -93,7 +93,7 @@ contract('::IDO', async accounts => {
       it('mint a new token by non-operator', async () => {
         await truffleAssert.reverts(
           token.mint(alice, 10, {from: bob}),
-          'revert IDO: not operator'
+          'revert IDO#onlyOperator: CALLER_NO_OPERATOR_ROLE'
         );
       });
     });
@@ -115,7 +115,7 @@ contract('::IDO', async accounts => {
         it('propose a zero address', async () => {
           await expectRevert(
             token.proposeNewOwnership(constants.ZERO_ADDRESS),
-            'IDO: new owner address should not be 0'
+            'IDO#proposeNewOwnership: ZERO_ADDRESS'
           );
         });
         it('caller is not owner', async () => {
@@ -155,13 +155,13 @@ contract('::IDO', async accounts => {
           await token.acceptOwnership(true, {from: bob});
           await expectRevert(
             token.acceptOwnership(true, {from: carl}),
-            'IDO: no new ownership proposal'
+            'IDO#acceptOwnership: NO_NEW_OWNERSHIP_PROPOSAL'
           );
         });
         it('caller is not proposed owner', async () => {
           await expectRevert(
             token.acceptOwnership(true, {from: carl}),
-            'IDO: not proposed owner'
+            'IDO#acceptOwnership: NO_PROPOSED_OWNER'
           );
         });
       });
@@ -184,7 +184,7 @@ contract('::IDO', async accounts => {
           await token.proposeNewOwnership(bob, {from: alice});
           await expectRevert(
             token.transferOwnership(),
-            'IDO: no ownership proposal accepted'
+            'IDO#transferOwnership: NO_ACCEPTED_OWNERSHIP_PROPOSAL'
           );
         });
         it('caller is not owner', async () => {

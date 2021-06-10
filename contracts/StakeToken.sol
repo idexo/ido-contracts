@@ -14,7 +14,7 @@ contract StakeToken is ERC721, Ownable {
     Counters.Counter public _tokenIds;
     struct Stake {
         uint256 amount;
-        uint256 multiplier; // should be divided by 100
+        uint256 multiplier; // should be divided by 100.
         uint256 depositedAt;
     }
 
@@ -27,12 +27,19 @@ contract StakeToken is ERC721, Ownable {
         ERC721(name_, symbol_)
     {}
 
+    /**
+     * @dev Returns StakeToken multiplier.
+     *
+     * 0 < `tokenId` <300: 120.
+     * 300 <= `tokenId` <4000: 110.
+     * 4000 <= `tokenId`: 100.
+     */
     function getMultiplier()
         public
         view
         returns (uint256)
     {
-        // This part is hard-coded now and needs update
+        // This part is hard-coded now and may need update.
         if (_tokenIds.current() < 300) {
             return 120;
         } else if (300 <= _tokenIds.current() && _tokenIds.current() < 4000) {
@@ -42,6 +49,12 @@ contract StakeToken is ERC721, Ownable {
         }
     }
 
+    /**
+     * @dev Mint a new StakeToken.
+     * @param account address of recipient.
+     * @param amount mint amount.
+     * @param depositedAt timestamp when stake was deposited.
+     */
     function mint(
         address account,
         uint256 amount,
@@ -51,7 +64,7 @@ contract StakeToken is ERC721, Ownable {
         virtual
         returns (uint256)
     {
-        require(amount > 0, "StakeToken: amount should not be 0");
+        require(amount > 0, "StakeToken#mint: ZERO_AMOUNT");
         _tokenIds.increment();
         uint256 multiplier = getMultiplier();
         super._mint(account, _tokenIds.current());
@@ -63,13 +76,17 @@ contract StakeToken is ERC721, Ownable {
         return _tokenIds.current();
     }
 
+    /**
+     * @dev Burn stakeToken.
+     * @param stakeId id of buring token.
+     */
     function burn(
         uint256 stakeId
     )
         public
         virtual
     {
-        require(_exists(stakeId), "StakeToken: stake not found");
+        require(_exists(stakeId), "StakeToken#burn: STAKE_NOT_FOUND");
         super._burn(stakeId);
     }
 }
