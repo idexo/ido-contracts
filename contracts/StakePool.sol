@@ -164,7 +164,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
     )
         public
     {
-        require(amount >= _minimumStakeAmount, "StakePool#deposit: UNDER_MINIMUN_STAKE_AMOUNT");
+        require(amount >= _minimumStakeAmount, "StakePool#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
         _deposit(msg.sender, amount);
     }
 
@@ -183,7 +183,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
     )
         public
     {
-        require(amount >= _minimumStakeAmount, "StakePool#withdraw: UNDER_MINIMUN_STAKE_AMOUNT");
+        require(amount >= _minimumStakeAmount, "StakePool#withdraw: UNDER_MINIMUM_STAKE_AMOUNT");
         _withdraw(msg.sender, stakeId, amount);
     }
 
