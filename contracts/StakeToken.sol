@@ -11,14 +11,15 @@ contract StakeToken is ERC721, Ownable {
     using Counters for Counters.Counter;
     using SafeMath for uint256;
 
-    Counters.Counter public _tokenIds;
+    Counters.Counter internal _tokenIds;
     struct Stake {
         uint256 amount;
         uint256 multiplier; // should be divided by 100.
         uint256 depositedAt;
     }
 
-    mapping(uint256 => Stake) public stakes;
+    mapping(uint256 => Stake) internal _stakes;
+    mapping(address => uint256[]) internal _stakerToIds;
 
     constructor(
         string memory name_,
@@ -68,10 +69,11 @@ contract StakeToken is ERC721, Ownable {
         _tokenIds.increment();
         uint256 multiplier = getMultiplier();
         super._mint(account, _tokenIds.current());
-        Stake storage newStake = stakes[_tokenIds.current()];
+        Stake storage newStake = _stakes[_tokenIds.current()];
         newStake.amount = amount;
         newStake.multiplier = multiplier;
         newStake.depositedAt = depositedAt;
+        _stakerToIds[account].push(_tokenIds.current());
 
         return _tokenIds.current();
     }
@@ -87,6 +89,63 @@ contract StakeToken is ERC721, Ownable {
         virtual
     {
         require(_exists(stakeId), "StakeToken#burn: STAKE_NOT_FOUND");
+        address stakeOwner = ownerOf(stakeId);
         super._burn(stakeId);
+        delete _stakes[stakeId];
+        uint256[] storage stakeIds = _stakerToIds[stakeOwner];
+        for (uint256 i = 0; i < stakeIds.length; i++) {
+            if (stakeIds[i] == stakeId) {
+                if (i != stakeIds.length - 1) {
+                    stakeIds[i] = stakeIds[stakeIds.length - 1];
+                }
+                stakeIds.pop();
+                break;
+            }
+        }
+    }
+
+    /**
+     * @dev Get token id array owned by wallet address.
+     * @param account address
+     */
+    function getTokenId(
+        address account
+    )
+        public
+        view
+        returns (uint256[] memory)
+    {
+        require(account != address(0), "StakeToken#getTokenId: ZERO_ADDRESS");
+        return _stakerToIds[account];
+    }
+
+    /**
+     * @dev Check if wallet address owns any tokens.
+     * @param account address
+     */
+    function isTokenHolder(
+        address account
+    )
+        public
+        view
+        returns (bool)
+    {
+        require(account != address(0), "StakeToken#isTokenHolder: ZERO_ADDRESS");
+        return balanceOf(account) > 0;
+    }
+
+    /**
+     * @dev Return stake info from `stakeId`.
+     * @param stakeId uint256
+     */
+    function getStake(
+        uint256 stakeId
+    )
+        public
+        view
+        returns (uint256, uint256, uint256)
+    {
+        require(_exists(stakeId), "StakeToken#getStake: STAKE_NOT_FOUND");
+        return (_stakes[stakeId].amount, _stakes[stakeId].multiplier, _stakes[stakeId].depositedAt);
     }
 }

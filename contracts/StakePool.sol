@@ -222,8 +222,8 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
         internal
         nonReentrant
     {
-        require(stakes[stakeId].amount != 0, "StakePool#_withdraw: STAKE_ID_NOT_FOUND");
-        Stake storage stake = stakes[stakeId];
+        require(_stakes[stakeId].amount != 0, "StakePool#_withdraw: STAKE_ID_NOT_FOUND");
+        Stake storage stake = _stakes[stakeId];
         require(amount <= stake.amount, "StakePool#_withdraw: INSUFFICIENT_FUNDS");
         require(ido.transfer(account, amount), "StakePool#_withdraw: TRANSFER_FAILED");
         if (amount == stake.amount) {
@@ -293,7 +293,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
 
         for (uint256 i = 1; i <= _tokenIds.current(); i++) {
             if (_exists(i)) {
-                Stake storage stake = stakes[i];
+                Stake storage stake = _stakes[i];
                 if (stake.depositedAt <= fromDate) {
                     totalStakeClaim = totalStakeClaim.add(stake.amount * stake.multiplier);
                     eligibleStakes[eligibleStakesCount++] = i;
@@ -302,7 +302,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
         }
 
         for (uint256 i = 0; i < eligibleStakesCount; i++) {
-            Stake storage stake = stakes[eligibleStakes[i]];
+            Stake storage stake = _stakes[eligibleStakes[i]];
             stakeClaimShares[eligibleStakes[i]] = (stake.amount * stake.multiplier * 1000).div(totalStakeClaim);
         }
 

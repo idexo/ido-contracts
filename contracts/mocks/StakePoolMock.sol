@@ -220,8 +220,8 @@ contract StakePoolMock is StakeToken, AccessControl, ReentrancyGuard {
         internal
         nonReentrant
     {
-        require(stakes[stakeId].amount != 0, "StakePool: stake id not found");
-        Stake storage stake = stakes[stakeId];
+        require(_stakes[stakeId].amount != 0, "StakePool: stake id not found");
+        Stake storage stake = _stakes[stakeId];
         require(amount <= stake.amount, "StakePool: insufficient funds");
         require(ido.transfer(account, amount), "StakePool: transfer IDO from stake pool to caller failed");
         if (amount == stake.amount) {
@@ -289,7 +289,7 @@ contract StakePoolMock is StakeToken, AccessControl, ReentrancyGuard {
 
         for (uint256 i = 1; i <= _tokenIds.current(); i++) {
             if (_exists(i)) {
-                Stake storage stake = stakes[i];
+                Stake storage stake = _stakes[i];
                 if (stake.depositedAt <= fromDate) {
                     totalStakeClaim = totalStakeClaim.add(stake.amount * stake.multiplier);
                     eligibleStakes[eligibleStakesCount++] = i;
@@ -298,7 +298,7 @@ contract StakePoolMock is StakeToken, AccessControl, ReentrancyGuard {
         }
 
         for (uint256 i = 0; i < eligibleStakesCount; i++) {
-            Stake storage stake = stakes[eligibleStakes[i]];
+            Stake storage stake = _stakes[eligibleStakes[i]];
             stakeClaimShares[eligibleStakes[i]] = (stake.amount * stake.multiplier * 1000).div(totalStakeClaim);
         }
 

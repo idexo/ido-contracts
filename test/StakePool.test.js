@@ -66,9 +66,9 @@ contract('::StakePool', async accounts => {
     describe('##deposit', async () => {
       it('should deposit', async () => {
         await stakePool.deposit(new BN(2800).mul(new BN(10).pow(new BN(decimals))), {from: alice});
-        await stakePool.stakes(1).then(stake => {
-          expect(stake.amount.toString()).to.eq('2800000000000000000000');
-          expect(stake.multiplier.toString()).to.eq('120');
+        await stakePool.getStake(1).then(res => {
+          expect(res[0].toString()).to.eq('2800000000000000000000');
+          expect(res[1].toString()).to.eq('120');
         });
         const aliceIDOBalance = await ido.balanceOf(alice);
         expect(aliceIDOBalance.toString()).to.eq('1200000000000000000000');
@@ -86,8 +86,8 @@ contract('::StakePool', async accounts => {
       it('should withdraw', async () => {
         await stakePool.deposit(new BN(2800).mul(new BN(10).pow(new BN(decimals))), {from: alice});
         await stakePool.withdraw(1, new BN(2600).mul(new BN(10).pow(new BN(decimals))), {from: alice});
-        await stakePool.stakes(1).then(stake => {
-          expect(stake.amount.toString()).to.eq('200000000000000000000');
+        await stakePool.getStake(1).then(res => {
+          expect(res[0].toString()).to.eq('200000000000000000000');
         });
       });
       describe('reverts if', async () => {
