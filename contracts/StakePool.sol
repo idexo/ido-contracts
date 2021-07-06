@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import "./IDO.sol";
-import "./StakeToken.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "./StakeToken.sol";
+import "./interfaces/IStakePool.sol";
 
-contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
+contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
     using Counters for Counters.Counter;
@@ -27,7 +27,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
     uint256 private _minimumStakeAmount = 2500 * 10 ** decimals;
 
     // Address of the IDO Token Contract.
-    IDO public ido;
+    IERC20 public ido;
     // Address of the reward ERC20 Token Contract.
     IERC20 public erc20;
     // Timestamp when stake pool was deployed to mainnet.
@@ -61,7 +61,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
     constructor(
         string memory stakeTokenName_,
         string memory stakeTokenSymbol_,
-        IDO ido_,
+        IERC20 ido_,
         IERC20 erc20_
     )
         StakeToken(stakeTokenName_, stakeTokenSymbol_)
@@ -83,7 +83,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
         public
         view
         virtual
-        override(ERC721, AccessControl)
+        override(IERC165, AccessControl)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
@@ -117,6 +117,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
         address account
     )
         public
+        override
         onlyAdmin
     {
         require(!hasRole(OPERATOR_ROLE, account), "StakePool#addOperator: ALREADY_OERATOR_ROLE");
@@ -131,6 +132,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
         address account
     )
         public
+        override
         onlyAdmin
     {
         require(hasRole(OPERATOR_ROLE, account), "StakePool#removeOperator: NO_OPERATOR_ROLE");
@@ -145,6 +147,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
         address account
     )
         public
+        override
         view
         returns (bool)
     {
@@ -163,6 +166,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
         uint256 amount
     )
         public
+        override
     {
         require(amount >= _minimumStakeAmount, "StakePool#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
         _deposit(msg.sender, amount);
@@ -182,6 +186,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
         uint256 amount
     )
         public
+        override
     {
         require(amount >= _minimumStakeAmount, "StakePool#withdraw: UNDER_MINIMUM_STAKE_AMOUNT");
         _withdraw(msg.sender, stakeId, amount);
@@ -247,6 +252,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
         uint256 amount
     )
         public
+        override
         onlyOperator
     {
         require(amount > 0, "StakePool#depositRevenueShare: ZERO_AMOUNT");
@@ -283,6 +289,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
         uint256 fromDate
     )
         public
+        override
         onlyOperator
         returns (uint256[] memory, uint256)
     {
@@ -317,6 +324,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
      */
     function distribute()
         public
+        override
         onlyOperator
     {
         uint256 lastDistributeDate;
@@ -379,6 +387,7 @@ contract StakePool is StakeToken, AccessControl, ReentrancyGuard {
         uint256 fromDate
     )
         public
+        override
         view
         onlyOperator
         returns (uint256)

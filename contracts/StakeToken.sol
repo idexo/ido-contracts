@@ -6,8 +6,9 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "./interfaces/IStakeToken.sol";
 
-contract StakeToken is ERC721, Ownable {
+contract StakeToken is IStakeToken, ERC721, Ownable {
     using Counters for Counters.Counter;
     using SafeMath for uint256;
 
@@ -37,6 +38,7 @@ contract StakeToken is ERC721, Ownable {
      */
     function getMultiplier()
         public
+        override
         view
         returns (uint256)
     {
@@ -62,6 +64,7 @@ contract StakeToken is ERC721, Ownable {
         uint256 depositedAt
     )
         public
+        override
         virtual
         returns (uint256)
     {
@@ -86,6 +89,7 @@ contract StakeToken is ERC721, Ownable {
         uint256 stakeId
     )
         public
+        override
         virtual
     {
         require(_exists(stakeId), "StakeToken#burn: STAKE_NOT_FOUND");
@@ -112,6 +116,7 @@ contract StakeToken is ERC721, Ownable {
         address account
     )
         public
+        override
         view
         returns (uint256[] memory)
     {
@@ -127,6 +132,7 @@ contract StakeToken is ERC721, Ownable {
         address account
     )
         public
+        override
         view
         returns (bool)
     {
@@ -142,6 +148,7 @@ contract StakeToken is ERC721, Ownable {
         uint256 stakeId
     )
         public
+        override
         view
         returns (uint256, uint256, uint256)
     {

@@ -3,6 +3,7 @@ pragma solidity 0.8.4;
 
 import "../IDO.sol";
 import "../StakeToken.sol";
+import "../interfaces/IStakePool.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -10,7 +11,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract StakePoolMock is StakeToken, AccessControl, ReentrancyGuard {
+contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
     using Counters for Counters.Counter;
@@ -87,7 +88,7 @@ contract StakePoolMock is StakeToken, AccessControl, ReentrancyGuard {
         public
         view
         virtual
-        override(ERC721, AccessControl)
+        override(IERC165, AccessControl)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
@@ -121,6 +122,7 @@ contract StakePoolMock is StakeToken, AccessControl, ReentrancyGuard {
         address account
     )
         public
+        override
         onlyAdmin
     {
         grantRole(OPERATOR_ROLE, account);
@@ -134,6 +136,7 @@ contract StakePoolMock is StakeToken, AccessControl, ReentrancyGuard {
         address account
     )
         public
+        override
         onlyAdmin
     {
         revokeRole(OPERATOR_ROLE, account);
@@ -147,6 +150,7 @@ contract StakePoolMock is StakeToken, AccessControl, ReentrancyGuard {
         address account
     )
         public
+        override
         view
         returns (bool)
     {
@@ -165,6 +169,7 @@ contract StakePoolMock is StakeToken, AccessControl, ReentrancyGuard {
         uint256 amount
     )
         public
+        override
     {
         require(amount >= _minimumStakeAmount, "StakePool: under minium stake amount");
         _deposit(msg.sender, amount);
@@ -182,6 +187,7 @@ contract StakePoolMock is StakeToken, AccessControl, ReentrancyGuard {
         uint256 amount
     )
         public
+        override
     {
         require(amount >= _minimumStakeAmount, "StakePool: under minium stake amount");
         _withdraw(msg.sender, stakeId, amount);
@@ -245,6 +251,7 @@ contract StakePoolMock is StakeToken, AccessControl, ReentrancyGuard {
         uint256 amount
     )
         public
+        override
         onlyOperator
     {
         require(amount > 0, "StakePool: amount should not be zero");
@@ -279,6 +286,7 @@ contract StakePoolMock is StakeToken, AccessControl, ReentrancyGuard {
         uint256 fromDate
     )
         public
+        override
         onlyOperator
         returns (uint256[] memory, uint256)
     {
@@ -312,6 +320,7 @@ contract StakePoolMock is StakeToken, AccessControl, ReentrancyGuard {
      */
     function distribute()
         public
+        override
         onlyOperator
     {
         uint256 lastDistributeDate;
@@ -373,6 +382,7 @@ contract StakePoolMock is StakeToken, AccessControl, ReentrancyGuard {
         uint256 fromDate
     )
         public
+        override
         view
         onlyOperator
         returns (uint256)
