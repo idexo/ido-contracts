@@ -126,9 +126,81 @@ contract Voting is Ownable, AccessControl {
         return hasRole(OPERATOR_ROLE, account);
     }
 
+    /*****************************|
+    |          Stake Pool         |
+    |____________________________*/
+
+    /**
+     * @dev Add a new stake pool.
+     * @param _sPool new stake pool address.
+     */
+    function addStakePool(
+        address _sPool
+    )
+        external
+        onlyOperator
+    {
+        require(_sPool != address(0), "Voting#addStakePool: STAKE_POOL_ADDRESS_INVALID");
+        for (uint256 i = 0; i < stakePools.length; i++) {
+            require(address(stakePools[i]) != _sPool, "Voting#addStakePool: STAKE_POOL_ADDRESS_ALREADY_FOUND");
+        }
+        stakePools.push(IStakePool(_sPool));
+    }
+
+    /**
+     * @dev Remove from stake pool addresses.
+     * @param _sPool stake pool address.
+     */
+    function removeStakePool(
+        address _sPool
+    )
+        external
+        onlyOperator
+    {
+        bool isDeleted;
+        require(_sPool != address(0), "Voting#removeStakePool: STAKE_POOL_ADDRESS_INVALID");
+        for (uint256 i = 0; i < stakePools.length; i++) {
+            if (address(stakePools[i]) == _sPool) {
+                if (i != stakePools.length - 1) {
+                    stakePools[i] = stakePools[stakePools.length - 1];
+                }
+                stakePools.pop();
+                isDeleted = true;
+                break;
+            }
+        }
+        require(isDeleted, "Voting#removeStakePool: STAKE_POOL_ADDRESS_NOT_FOUND");
+    }
+
+    /**
+     * @dev Return array of stake pool address.
+     */
+    function getStakePools()
+        external
+        view
+        returns (address[] memory)
+    {
+        address[] memory sPoolAddrs = new address[](stakePools.length);
+        for (uint256 i = 0; i < stakePools.length; i++) {
+            sPoolAddrs[i] = address(stakePools[i]);
+        }
+        return sPoolAddrs;
+    }
+
     /***********************|
     |          Poll         |
     |______________________*/
+
+    /*
+	 * Modifier that checks for a valid poll ID.
+	 */
+	modifier validPoll(
+        uint256 _pollId
+    )
+	{
+		require(_pollId > 0 && _pollId <= pollIds.current(), "Voting#validPoll: POLL_ID_INVALID");
+		_;
+	}
 
     /* GETTERS */
 
@@ -166,17 +238,6 @@ contract Voting is Ownable, AccessControl {
         Poll memory poll = polls[_pollId];
         return (poll.yesVotes, poll.noVotes);
     }
-
-    /*
-	 * Modifier that checks for a valid poll ID.
-	 */
-	modifier validPoll(
-        uint256 _pollId
-    )
-	{
-		require(_pollId > 0 && _pollId <= pollIds.current(), "Voting#validPoll: POLL_ID_INVALID");
-		_;
-	}
 
     /**
 	 * @dev Create a new poll.
@@ -279,6 +340,11 @@ contract Voting is Ownable, AccessControl {
         } else {
             poll.noVotes = poll.noVotes.add(w);
         }
+
+        Voter storage voter = voters[_pollId][_msgSender()];
+        voter.voted = true;
+        voter.vote = _vote;
+        voter.weight = w;
 
         emit VoteCasted(_msgSender(), _pollId, _vote, w);
     }
