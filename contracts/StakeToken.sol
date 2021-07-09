@@ -27,7 +27,7 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
         string memory symbol_
     )
         ERC721(name_, symbol_)
-    {}
+    { }
 
     /**
      * @dev Returns StakeToken multiplier.

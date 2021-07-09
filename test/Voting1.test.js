@@ -116,7 +116,7 @@ contract('Voting1', async accounts => {
     });
     it('createPoll castVote getWeight checkIfVoted endPoll', async () => {
       await voting1.createPoll('Solana Integration', new BN(30), {from: bob});
-      await voting1.getPollInfo(1).then(res => {
+      await voting1.getPoll(1).then(res => {
         expect(res[0]).to.eq('Solana Integration');
         expect(res[2].sub(res[1]).toString()).to.eq(time.duration.days(7).toString());
         expect(res[3].toString()).to.eq('30');
@@ -133,9 +133,9 @@ contract('Voting1', async accounts => {
       );
       expect(await voting1.checkIfVoted(1, alice)).to.eq(true);
       await voting1.castVote(1, false, {from: bob});
-      await voting1.getPollVotes(1, {from: bob}).then(res => {
-        expect(res[0].toString()).to.eq('14400000000000000000000');
-        expect(res[1].toString()).to.eq('25200000000000000000000');
+      await voting1.getPollForOperator(1, {from: bob}).then(res => {
+        expect(res[8].toString()).to.eq('14400000000000000000000');
+        expect(res[9].toString()).to.eq('25200000000000000000000');
       });
       await timeTraveler.advanceTime(time.duration.days(7));
       expectEvent(
@@ -177,7 +177,7 @@ contract('Voting1', async accounts => {
         );
         await voting1.createPoll('Solana Integration', new BN(30), {from: bob});
         await expectRevert(
-          voting1.getPollInfo(2),
+          voting1.getPoll(2),
           'Voting1#validPoll: POLL_ID_INVALID'
         );
         await expectRevert(

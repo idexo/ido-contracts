@@ -26,8 +26,17 @@ interface IStakePool is IStakeToken {
     )
         external;
 
-    function withdraw(
+    function withdrawStake(
         uint256 stakeId,
+        uint256 amount
+    )
+        external;
+
+    function getUnlockedRevenueShare()
+        external
+        returns (uint256);
+
+    function withdrawRevenueShare(
         uint256 amount
     )
         external;

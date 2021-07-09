@@ -55,6 +55,8 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
     RevenueShareDistribute[] public yearlyDistributes;
     // stake id => stake claim share.
     mapping(uint256 => uint256) public stakeClaimShares;
+    // account => reward amount that staker can withdraw.
+    mapping(address => uint256) private _unlockedRevenueShares;
 
     event Deposited(address indexed account, uint256 indexed stakeId, uint256 amount);
     event Withdrawn(address indexed account, uint256 indexed stakeId, uint256 amount);
@@ -177,20 +179,22 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
 
     /**
      * @dev Withdraw from the pool.
+
      * If amount is less than amount of the stake, cut off amount.
      * If amount is equal to amount of the stake, burn the stake.
-     * @param stakeId uint256
-     * @param amount uint256
+
+     * @param stakeId id of Stake that is being withdrawn.
+     * @param amount withdraw amount.
      */
-    function withdraw(
+    function withdrawStake(
         uint256 stakeId,
         uint256 amount
     )
         public
         override
     {
-        require(amount >= _minimumStakeAmount, "StakePool: under minium stake amount");
-        _withdraw(msg.sender, stakeId, amount);
+        require(amount >= _minimumStakeAmount, "StakePool#withdraw: UNDER_MINIMUM_STAKE_AMOUNT");
+        _withdrawStake(msg.sender, stakeId, amount);
     }
 
     /**
@@ -218,7 +222,7 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
      * @param stakeId uint256
      * @param amount uint256
      */
-    function _withdraw(
+    function _withdrawStake(
         address account,
         uint256 stakeId,
         uint256 amount
@@ -242,6 +246,27 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
     /********************************|
     |          Revenue Share         |
     |_______________________________*/
+
+    function getUnlockedRevenueShare()
+        public
+        override
+        view
+        returns (uint256)
+    {
+        require(isTokenHolder(_msgSender()), "StakePool#getUnlockedRevenueShare: CALLER_NO_TOKEN_OWNER");
+        return _unlockedRevenueShares[_msgSender()];
+    }
+
+    function withdrawRevenueShare(
+        uint256 amount
+    )
+        external
+        override
+    {
+        require(isTokenHolder(_msgSender()), "StakePool#getUnlockedRevenueShare: CALLER_NO_TOKEN_OWNER");
+        require(_unlockedRevenueShares[_msgSender()] >= amount, "StakePool#getUnlockedRevenueShare: INSUFFICIENT_FUNDS");
+        erc20.transfer(_msgSender(), amount);
+    }
 
     /**
      * @dev Deposit revenue shares to the pool.

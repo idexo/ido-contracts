@@ -85,7 +85,7 @@ contract('::StakePool', async accounts => {
     describe('##withdraw', async () => {
       it('should withdraw', async () => {
         await stakePool.deposit(new BN(2800).mul(new BN(10).pow(new BN(decimals))), {from: alice});
-        await stakePool.withdraw(1, new BN(2600).mul(new BN(10).pow(new BN(decimals))), {from: alice});
+        await stakePool.withdrawStake(1, new BN(2600).mul(new BN(10).pow(new BN(decimals))), {from: alice});
         await stakePool.getStake(1).then(res => {
           expect(res[0].toString()).to.eq('200000000000000000000');
         });
@@ -94,7 +94,7 @@ contract('::StakePool', async accounts => {
         it('withdraw amount is lower than minimum amount', async () => {
           await stakePool.deposit(new BN(2800).mul(new BN(10).pow(new BN(decimals))), {from: alice});
           await truffleAssert.reverts(
-            stakePool.withdraw(1, new BN(2300).mul(new BN(10).pow(new BN(decimals))), {from: alice}),
+            stakePool.withdrawStake(1, new BN(2300).mul(new BN(10).pow(new BN(decimals))), {from: alice}),
             'revert StakePool#withdraw: UNDER_MINIMUM_STAKE_AMOUNT'
           );
         });

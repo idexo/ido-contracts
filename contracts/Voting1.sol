@@ -282,11 +282,12 @@ contract Voting1 is Ownable, AccessControl {
     /* GETTERS */
 
     /**
-     * @dev Return poll info except for yesVotes and noVotes.
+     * @dev Return poll info.
+     * Except for yesVotes and noVotes.
      *
      * @param _pollId poll id
      */
-    function getPollInfo(
+    function getPoll(
         uint256 _pollId
     )
         public
@@ -299,21 +300,61 @@ contract Voting1 is Ownable, AccessControl {
     }
 
     /**
-     * @dev Return poll yesVotes and noVotes.
+     * @dev Return poll all info.
+     * Only accessible by operators.
      *
      * @param _pollId poll id
      */
-    function getPollVotes(
+    function getPollForOperator(
         uint256 _pollId
     )
         public
         view
         onlyOperator
         validPoll(_pollId)
-        returns (uint256, uint256)
+        returns (string memory, uint256, uint256, uint256, PollStatus, address, address[] memory, bool, uint256, uint256)
     {
         Poll memory poll = _polls[_pollId];
-        return (poll.yesVotes, poll.noVotes);
+        return (poll.description, poll.startTime, poll.endTime, poll.minimumStakeTimeInDays, poll.status, poll.creator, poll.voters, poll.reachedMinimumVotes, poll.yesVotes, poll.noVotes);
+    }
+
+    /**
+     * @dev Return `_voter` info for `_pollId` poll.
+     * Except for yes/no result.
+     *
+     * @param _pollId poll id
+     * @param _voter address of voter
+     */
+    function getVoter(
+        uint256 _pollId,
+        address _voter
+    )
+        public
+        view
+        validPoll(_pollId)
+        returns (bool, uint256)
+    {
+        return (_voters[_pollId][_voter].voted, _voters[_pollId][_voter].weight);
+    }
+
+    /**
+     * @dev Return `_voter` all info for `_pollId` poll.
+     * Only accessible by operators.
+     *
+     * @param _pollId poll id
+     * @param _voter address of voter
+     */
+    function getVoterForOperator(
+        uint256 _pollId,
+        address _voter
+    )
+        public
+        view
+        onlyOperator
+        validPoll(_pollId)
+        returns (bool, bool, uint256)
+    {
+        return (_voters[_pollId][_voter].voted, _voters[_pollId][_voter].vote, _voters[_pollId][_voter].weight);
     }
 
     /**
@@ -418,6 +459,7 @@ contract Voting1 is Ownable, AccessControl {
         } else {
             poll.noVotes = poll.noVotes.add(w);
         }
+        poll.voters.push(_msgSender());
 
         Voter storage voter = _voters[_pollId][_msgSender()];
         voter.voted = true;
