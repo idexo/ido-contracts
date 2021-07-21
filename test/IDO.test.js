@@ -100,102 +100,31 @@ contract('::IDO', async accounts => {
   });
 
   describe('#Ownership', async () => {
-    describe('##Propose', async () => {
-      it('should propose a new owner', async () => {
-        expectEvent(
-          await token.proposeNewOwnership(bob),
-          'OwnershipProposed',
-          {
-            currentOwner: alice,
-            proposedOwner: bob
-          }
-        );
-      });
-      describe('reverts if', async () => {
-        it('propose a zero address', async () => {
-          await expectRevert(
-            token.proposeNewOwnership(constants.ZERO_ADDRESS),
-            'IDO#proposeNewOwnership: ZERO_ADDRESS'
-          );
-        });
-        it('caller is not owner', async () => {
-          await expectRevert(
-            token.proposeNewOwnership(bob, {from: carl}),
-            'Ownable: caller is not the owner'
-          );
-        });
-      });
+    it('should transfer ownership', async () => {
+      await token.transferOwnership(bob);
+      await token.acceptOwnership({from: bob});
+      expect(await token.owner()).to.eq(bob);
     });
-    describe('##Accept', async () => {
-      beforeEach(async () => {
-        await token.proposeNewOwnership(bob, {from: alice});
-      });
-      it('should be accepted by a newly proposed owner', async () => {
-        expectEvent(
-          await token.acceptOwnership(true, {from: bob}),
-          'OwnershipProposalAccepted',
-          {
-            currentOwner: alice,
-            proposedOwner: bob
-          }
+    describe('reverts if', async () => {
+      it('non-owner call transferOwnership', async () => {
+        await expectRevert(
+          token.transferOwnership(bob, {from: carl}),
+          'IDO#onlyOwner: CALLER_NO_OWNER'
         );
       });
-      it('should be rejected by a newly proposed owner', async () => {
-        expectEvent(
-          await token.acceptOwnership(false, {from: bob}),
-          'OwnershipProposalRejected',
-          {
-            currentOwner: alice,
-            proposedOwner: bob
-          }
+      it('call transferOwnership with zero address', async () => {
+        await expectRevert(
+          token.transferOwnership(constants.ZERO_ADDRESS),
+          'IDO#transferOwnership: INVALID_ADDRESS'
         );
       });
-      describe('reverts if', async () => {
-        it('there is no ownership proposal', async () => {
-          await token.acceptOwnership(true, {from: bob});
-          await expectRevert(
-            token.acceptOwnership(true, {from: carl}),
-            'IDO#acceptOwnership: NO_NEW_OWNERSHIP_PROPOSAL'
-          );
-        });
-        it('caller is not proposed owner', async () => {
-          await expectRevert(
-            token.acceptOwnership(true, {from: carl}),
-            'IDO#acceptOwnership: NO_PROPOSED_OWNER'
-          );
-        });
-      });
-    });
-    describe('##Transfer', async () => {
-      it('should transfer', async () => {
-        await token.proposeNewOwnership(bob, {from: alice});
-        await token.acceptOwnership(true, {from: bob});
-        expectEvent(
-          await token.transferOwnership(),
-          'OwnershipTransferred',
-          {
-            previousOwner: alice,
-            newOwner: bob
-          }
+      it('non new owner call acceptOwnership', async () => {
+        await token.transferOwnership(bob);
+        await expectRevert(
+          token.acceptOwnership({from: carl}),
+          'IDO#acceptOwnership: CALLER_NO_NEW_OWNER'
         );
-      });
-      describe('reverts if', async () => {
-        it('there is no ownership proposal accepted', async () => {
-          await token.proposeNewOwnership(bob, {from: alice});
-          await expectRevert(
-            token.transferOwnership(),
-            'IDO#transferOwnership: NO_ACCEPTED_OWNERSHIP_PROPOSAL'
-          );
-        });
-        it('caller is not owner', async () => {
-          await token.proposeNewOwnership(bob, {from: alice});
-          await token.acceptOwnership(true, {from: bob});
-          await expectRevert(
-            token.transferOwnership({from: carl}),
-            'Ownable: caller is not the owner'
-          );
-        });
-      });
+      })
     });
   });
 });

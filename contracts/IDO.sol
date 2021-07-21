@@ -7,26 +7,15 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl {
+contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
+    address private _owner;
+    address private _newOwner;
+
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    uint256 constant HUNDRED_MILLION = 100 * 1000 * 1000 * 10 ** 18;
+    uint256 public constant HUNDRED_MILLION = 100 * 1000 * 1000 * 10 ** 18;
 
-    enum OwnershipStatus {PROPOSAL, PROPOSAL_ACCEPT, PROPOSAL_REJECT, TRANSFER}
-
-    struct OwnershipParam {
-        address oldValue;
-        address newValue;
-        OwnershipStatus status;
-        uint256 timestamp;
-    }
-
-    // The address for contract owner.
-    OwnershipParam private _ownershipParam;
-
-    event OwnershipProposed(address indexed currentOwner, address indexed proposedOwner);
-    event OwnershipProposalAccepted(address indexed currentOwner, address indexed proposedOwner);
-    event OwnershipProposalRejected(address indexed currentOwner, address indexed proposedOwner);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     constructor()
         ERC20("Idexo Community", "IDO")
@@ -37,9 +26,77 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
         _setupRole(OPERATOR_ROLE, _msgSender());
         _setupRole(PAUSER_ROLE, _msgSender());
 
-        _ownershipParam.newValue = _msgSender();
-        _ownershipParam.status = OwnershipStatus.TRANSFER;
-        _ownershipParam.timestamp = block.timestamp;
+        _owner = _msgSender();
+        emit OwnershipTransferred(address(0), _msgSender());
+    }
+
+    /****************************|
+    |          Ownership         |
+    |___________________________*/
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(owner() == _msgSender(), "IDO#onlyOwner: CALLER_NO_OWNER");
+        _;
+    }
+
+    /**
+     * @dev Return the address of the current owner.
+     */
+    function owner()
+        public
+        view
+        virtual
+        returns (address)
+    {
+        return _owner;
+    }
+
+    /**
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions anymore. Can only be called by the current owner.
+     *
+     * NOTE: Renouncing ownership will leave the contract without an owner,
+     * thereby removing any functionality that is only available to the owner.
+     */
+    function renounceOwnership()
+        external
+        onlyOwner
+    {
+        emit OwnershipTransferred(_owner, address(0));
+        _owner = address(0);
+    }
+
+    /**
+     * @dev Transfer the contract ownership.
+     * The new owner still needs to accept the transfer.
+     * can only be called by the contract owner.
+     *
+     * @param newOwner new contract owner.
+     */
+    function transferOwnership(
+        address newOwner
+    )
+        external
+        onlyOwner
+    {
+        require(newOwner != address(0), "IDO#transferOwnership: INVALID_ADDRESS");
+        require(newOwner != owner(), "IDO#transferOwnership: OWNERSHIP_SELF_TRANSFER");
+        _newOwner = newOwner;
+    }
+
+    /**
+     * @dev The new owner accept an ownership transfer.
+     */
+    function acceptOwnership()
+        external
+    {
+        require(_msgSender() == _newOwner, "IDO#acceptOwnership: CALLER_NO_NEW_OWNER");
+        emit OwnershipTransferred(owner(), _newOwner);
+        _owner = _newOwner;
+        _newOwner = address(0);
     }
 
     /***********************|
@@ -156,77 +213,6 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
         return hasRole(PAUSER_ROLE, account);
     }
 
-    /****************************|
-    |          Ownership         |
-    |___________________________*/
-
-    /**
-     * @dev Propose a new ownership for the contract.
-     * Called by current owner.
-     * @param account address newly proposed owner address
-     */
-    function proposeNewOwnership(
-        address account
-    )
-        public
-        onlyOwner
-    {
-        require(account != address(0), "IDO#proposeNewOwnership: ZERO_ADDRESS");
-        _ownershipParam.newValue = account;
-        _ownershipParam.status = OwnershipStatus.PROPOSAL;
-        _ownershipParam.timestamp = 0;
-
-        emit OwnershipProposed(owner(), account);
-    }
-
-    /**
-     * @dev Accept a new ownership.
-     * Called by newly proposed owner.
-     * @param accepted bool flag that shows if a newly proposed owner accepted.
-     */
-
-    function acceptOwnership(
-        bool accepted
-    )
-        public
-    {
-        require(_ownershipParam.status == OwnershipStatus.PROPOSAL, "IDO#acceptOwnership: NO_NEW_OWNERSHIP_PROPOSAL");
-        require(_ownershipParam.newValue == _msgSender(), "IDO#acceptOwnership: NO_PROPOSED_OWNER");
-        if (accepted) {
-            _ownershipParam.oldValue = owner();
-            _ownershipParam.status = OwnershipStatus.PROPOSAL_ACCEPT;
-            emit OwnershipProposalAccepted(owner(), _msgSender());
-        } else {
-            _ownershipParam.newValue = owner();
-            _ownershipParam.status = OwnershipStatus.PROPOSAL_REJECT;
-            emit OwnershipProposalRejected(owner(), _msgSender());
-        }
-        _ownershipParam.timestamp = block.timestamp;
-    }
-
-    /**
-     * @dev Transfer ownership to a new address.
-     * @dev Restricted to admin.
-     */
-    function transferOwnership()
-        public
-        onlyOwner
-    {
-        require(_ownershipParam.status == OwnershipStatus.PROPOSAL_ACCEPT, "IDO#transferOwnership: NO_ACCEPTED_OWNERSHIP_PROPOSAL");
-        address newOwner = _ownershipParam.newValue;
-
-        revokeRole(DEFAULT_ADMIN_ROLE, owner());
-        _setupRole(DEFAULT_ADMIN_ROLE, newOwner);
-        if (!hasRole(OPERATOR_ROLE, newOwner)) {
-            _setupRole(OPERATOR_ROLE, newOwner);
-        }
-        if (!hasRole(PAUSER_ROLE, newOwner)) {
-            _setupRole(PAUSER_ROLE, newOwner);
-        }
-        _ownershipParam.status = OwnershipStatus.TRANSFER;
-        super.transferOwnership(newOwner);
-    }
-
     /************************|
     |          Token         |
     |_______________________*/
@@ -240,7 +226,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
         address account,
         uint256 amount
     )
-        public
+        external
         onlyOperator
     {
         _mint(account, amount);
@@ -255,7 +241,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
         address account,
         uint256 amount
     )
-        public
+        external
         onlyOperator
     {
         _burn(account, amount);
@@ -268,9 +254,8 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
         internal
         override(ERC20, ERC20Capped)
     {
-        super._mint(recipient, amount);
+        ERC20Capped._mint(recipient, amount);
     }
-
 
     /**
      * @dev ERC20Pausable._beforeTokenTransfer(from, to, amount) override.
@@ -286,7 +271,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, Ownable, AccessControl 
         internal
         override(ERC20, ERC20Pausable)
     {
-        super._beforeTokenTransfer(from, to, amount);
+        ERC20Pausable._beforeTokenTransfer(from, to, amount);
     }
 
     /**

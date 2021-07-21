@@ -46,18 +46,6 @@ interface IStakePool is IStakeToken {
     )
         external;
 
-    function updateStakeClaimShares(
-        uint256 fromDate
-    )
-        external
-        returns (uint256[] memory, uint256);
-
     function distribute()
         external;
-
-    function sumDeposits(
-        uint256 fromDate
-    )
-        external
-        returns (uint256);
 }
