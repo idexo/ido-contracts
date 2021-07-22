@@ -7,7 +7,10 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
+/**
+ * Able to set name and symbol when deploying.
+ */
+contract IDO1 is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
     address private _owner;
     address private _newOwner;
 
@@ -17,9 +20,12 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-    constructor()
-        ERC20("Idexo Token", "IDO")
-        ERC20Permit("Idexo Token")
+    constructor(
+        string memory name,
+        string memory symbol
+    )
+        ERC20(name, symbol)
+        ERC20Permit(name)
         ERC20Capped(HUNDRED_MILLION)
     {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
@@ -38,7 +44,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(owner() == _msgSender(), "IDO#onlyOwner: CALLER_NO_OWNER");
+        require(owner() == _msgSender(), "IDO1#onlyOwner: CALLER_NO_OWNER");
         _;
     }
 
@@ -82,8 +88,8 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
         external
         onlyOwner
     {
-        require(newOwner != address(0), "IDO#transferOwnership: INVALID_ADDRESS");
-        require(newOwner != owner(), "IDO#transferOwnership: OWNERSHIP_SELF_TRANSFER");
+        require(newOwner != address(0), "IDO1#transferOwnership: INVALID_ADDRESS");
+        require(newOwner != owner(), "IDO1#transferOwnership: OWNERSHIP_SELF_TRANSFER");
         _newOwner = newOwner;
     }
 
@@ -93,7 +99,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
     function acceptOwnership()
         external
     {
-        require(_msgSender() == _newOwner, "IDO#acceptOwnership: CALLER_NO_NEW_OWNER");
+        require(_msgSender() == _newOwner, "IDO1#acceptOwnership: CALLER_NO_NEW_OWNER");
         emit OwnershipTransferred(owner(), _newOwner);
         _owner = _newOwner;
         _newOwner = address(0);
@@ -107,7 +113,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
      * @dev Restricted to members of the admin role.
      */
     modifier onlyAdmin() {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "IDO#onlyAdmin: CALLER_NO_ADMIN_ROLE");
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "IDO1#onlyAdmin: CALLER_NO_ADMIN_ROLE");
         _;
     }
 
@@ -115,7 +121,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
      * @dev Restricted to members of the operator role.
      */
     modifier onlyOperator() {
-        require(hasRole(OPERATOR_ROLE, _msgSender()), "IDO#onlyOperator: CALLER_NO_OPERATOR_ROLE");
+        require(hasRole(OPERATOR_ROLE, _msgSender()), "IDO1#onlyOperator: CALLER_NO_OPERATOR_ROLE");
         _;
     }
 
@@ -123,7 +129,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
      * @dev Restricted to members of the pauser role.
      */
     modifier onlyPauser() {
-        require(hasRole(PAUSER_ROLE, _msgSender()), "IDO#onlyPauser: CALLER_NO_PAUSER_ROLE");
+        require(hasRole(PAUSER_ROLE, _msgSender()), "IDO1#onlyPauser: CALLER_NO_PAUSER_ROLE");
         _;
     }
 
@@ -137,7 +143,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
         public
         onlyAdmin
     {
-        require(!hasRole(OPERATOR_ROLE, account), "IDO#addOperator: ALREADY_OERATOR_ROLE");
+        require(!hasRole(OPERATOR_ROLE, account), "IDO1#addOperator: ALREADY_OERATOR_ROLE");
         grantRole(OPERATOR_ROLE, account);
     }
 
@@ -151,7 +157,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
         public
         onlyAdmin
     {
-        require(hasRole(OPERATOR_ROLE, account), "IDO#removeOperator: NO_OPERATOR_ROLE");
+        require(hasRole(OPERATOR_ROLE, account), "IDO1#removeOperator: NO_OPERATOR_ROLE");
         revokeRole(OPERATOR_ROLE, account);
         if (hasRole(PAUSER_ROLE, account)) {
             revokeRole(PAUSER_ROLE, account);
@@ -182,7 +188,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
         public
         onlyAdmin
     {
-        require(!hasRole(PAUSER_ROLE, account), "IDO#addPauser: ALREADY_PAUSER_ROLE");
+        require(!hasRole(PAUSER_ROLE, account), "IDO1#addPauser: ALREADY_PAUSER_ROLE");
         if (!hasRole(OPERATOR_ROLE, account)) {
             grantRole(OPERATOR_ROLE, account);
         }
@@ -199,7 +205,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
         public
         onlyAdmin
     {
-        require(hasRole(PAUSER_ROLE, account), "IDO#removePauser: NO_PAUSER_ROLE");
+        require(hasRole(PAUSER_ROLE, account), "IDO1#removePauser: NO_PAUSER_ROLE");
         revokeRole(PAUSER_ROLE, account);
     }
 
