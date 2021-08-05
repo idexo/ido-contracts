@@ -14,8 +14,8 @@ import "../interfaces/IStakePool.sol";
  * Mock version of StakePool.
  * Distribution intervals are shortened for testing.
  * MONTH -> 1 day.
- * QUARTER -> 1 week.
- * YEAR -> 1 month.
+ * QUARTER -> 3 days.
+ * YEAR -> 12 days.
  */
 
 contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
@@ -26,8 +26,8 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     uint256 public constant MONTH = 1 days;
-    uint256 public constant QUARTER = 7 days;
-    uint256 public constant YEAR = 31 days;
+    uint256 public constant QUARTER = 3 days;
+    uint256 public constant YEAR = 12 days;
 
     uint256 private constant _monthlyDistributionRatio = 25;
     uint256 private constant _quarterlyDistributionRatio = 50;
