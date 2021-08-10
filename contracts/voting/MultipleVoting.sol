@@ -6,57 +6,63 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/IStakePool.sol";
+import "../interfaces/IStakePool.sol";
 
-contract Voting is Ownable, AccessControl {
+/**
+ * Voting contract that offers multiple options to voters.
+ */
+
+contract MultipleVoting is Ownable, AccessControl {
     using SafeMath for uint256;
     using Counters for Counters.Counter;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-    Counters.Counter private _pollIds;
+    Counters.Counter public pollIds;
     IStakePool[] private _stakePools;
 
     /* EVENTS  */
-    event VoteCasted(address indexed voter, uint256 pollID, bool vote, uint256 weight);
-	event PollCreated(address indexed creator, uint256 pollID, string description, uint256 votingTimeInDays);
-	event PollStatusUpdated(uint256 pollID, PollStatus status);
+    event VoteCasted(address indexed voter, uint256 pollID, uint256 vote, uint256 weight);
+	event PollCreated(address indexed creator, uint256 pollID, uint256 votingTimeInDays);
+	event PollEnded(uint256 pollID, uint256 winningOptionID);
 
     /* Determine the current state of a poll */
 	enum PollStatus {
         IN_PROGRESS,
-        PASSED,
-        REJECTED
+        ENDED
     }
 
     /* POLL */
     struct Poll {
-		uint256 yesVotes;
-		uint256 noVotes;
-		uint256 startTime;
-		uint256 endTime;
-        uint256 minimumStakeTimeInDays;
-		string description;
-		PollStatus status;
-		address creator;
-		address[] voters;
+		uint256 startTime; // poll start timestamp
+		uint256 endTime; // poll end timestamp
+        uint256 minimumStakeTimeInDays; // number of days that implies how long stakers should remain staked in StakePools to be able to vote
+		string description; // poll description
+        string[] options; // poll option string
+		PollStatus status; // poll status (IN_PROGRESS, ENDED)
+		address creator; // poll creator address
+		address[] voters; // poll voter address array
 	}
 
     /* VOTER */
     struct Voter {
-        bool voted;
-        bool vote;
-        uint256 weight;
+        bool voted; // true implies voter already voted
+        uint256 vote; // vote option index
+        uint256 weight; // voter's voting weight (derived from StakePool)
     }
 
+    // poll id => poll info
     mapping(uint256 => Poll) private _polls;
+    // poll id => voter address => voting info
     mapping(uint256 => mapping(address => Voter)) private _voters;
+    // poll id => option id => vote cast number
+    mapping(uint256 => mapping(uint256 => uint256)) private _votes;
 
     constructor(
         address[] memory stakePools_
     )
     {
         for (uint256 i = 0; i < stakePools_.length; i++) {
-            require(stakePools_[i] != address(0), "Voting#constructor: STAKE_POOL_ADDRESS_INVALID");
+            require(stakePools_[i] != address(0), "MultipleVoting#constructor: STAKE_POOL_ADDRESS_INVALID");
             _stakePools.push(IStakePool(stakePools_[i]));
         }
 
@@ -72,7 +78,7 @@ contract Voting is Ownable, AccessControl {
      * @dev Restricted to members of the admin role.
      */
     modifier onlyAdmin() {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Voting#onlyAdmin: CALLER_NO_ADMIN_ROLE");
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "MultipleVoting#onlyAdmin: CALLER_NO_ADMIN_ROLE");
         _;
     }
 
@@ -80,7 +86,7 @@ contract Voting is Ownable, AccessControl {
      * @dev Restricted to members of the operator role.
      */
     modifier onlyOperator() {
-        require(hasRole(OPERATOR_ROLE, _msgSender()), "Voting#onlyOperator: CALLER_NO_OPERATOR_ROLE");
+        require(hasRole(OPERATOR_ROLE, _msgSender()), "MultipleVoting#onlyOperator: CALLER_NO_OPERATOR_ROLE");
         _;
     }
 
@@ -94,7 +100,7 @@ contract Voting is Ownable, AccessControl {
         public
         onlyAdmin
     {
-        require(!hasRole(OPERATOR_ROLE, account), "Voting#addOperator: ALREADY_OERATOR_ROLE");
+        require(!hasRole(OPERATOR_ROLE, account), "MultipleVoting#addOperator: ALREADY_OERATOR_ROLE");
         grantRole(OPERATOR_ROLE, account);
     }
 
@@ -108,7 +114,7 @@ contract Voting is Ownable, AccessControl {
         public
         onlyAdmin
     {
-        require(hasRole(OPERATOR_ROLE, account), "Voting#removeOperator: NO_OPERATOR_ROLE");
+        require(hasRole(OPERATOR_ROLE, account), "MultipleVoting#removeOperator: NO_OPERATOR_ROLE");
         revokeRole(OPERATOR_ROLE, account);
     }
 
@@ -140,9 +146,9 @@ contract Voting is Ownable, AccessControl {
         external
         onlyOperator
     {
-        require(_sPool != address(0), "Voting#addStakePool: STAKE_POOL_ADDRESS_INVALID");
+        require(_sPool != address(0), "MultipleVoting#addStakePool: STAKE_POOL_ADDRESS_INVALID");
         for (uint256 i = 0; i < _stakePools.length; i++) {
-            require(address(_stakePools[i]) != _sPool, "Voting#addStakePool: STAKE_POOL_ADDRESS_ALREADY_FOUND");
+            require(address(_stakePools[i]) != _sPool, "MultipleVoting#addStakePool: STAKE_POOL_ADDRESS_ALREADY_FOUND");
         }
         _stakePools.push(IStakePool(_sPool));
     }
@@ -158,7 +164,7 @@ contract Voting is Ownable, AccessControl {
         onlyOperator
     {
         bool isDeleted;
-        require(_sPool != address(0), "Voting#removeStakePool: STAKE_POOL_ADDRESS_INVALID");
+        require(_sPool != address(0), "MultipleVoting#removeStakePool: STAKE_POOL_ADDRESS_INVALID");
         for (uint256 i = 0; i < _stakePools.length; i++) {
             if (address(_stakePools[i]) == _sPool) {
                 if (i != _stakePools.length - 1) {
@@ -169,7 +175,7 @@ contract Voting is Ownable, AccessControl {
                 break;
             }
         }
-        require(isDeleted, "Voting#removeStakePool: STAKE_POOL_ADDRESS_NOT_FOUND");
+        require(isDeleted, "MultipleVoting#removeStakePool: STAKE_POOL_ADDRESS_NOT_FOUND");
     }
 
     /**
@@ -198,7 +204,7 @@ contract Voting is Ownable, AccessControl {
         uint256 _pollId
     )
 	{
-		require(_pollId > 0 && _pollId <= _pollIds.current(), "Voting#validPoll: POLL_ID_INVALID");
+		require(_pollId > 0 && _pollId <= pollIds.current(), "MultipleVoting#validPoll: POLL_ID_INVALID");
 		_;
 	}
 
@@ -206,9 +212,10 @@ contract Voting is Ownable, AccessControl {
 
     /**
      * @dev Return poll info.
-     * Except for yesVotes and noVotes.
+     * Except for voting result.
      *
      * @param _pollId poll id
+     * @return description string, option string array, poll startTime, endTime, minimumStakeTimeInDays, status(IN_PROGRESS, ENDED), creator address, voter address array
      */
     function getPoll(
         uint256 _pollId
@@ -216,17 +223,18 @@ contract Voting is Ownable, AccessControl {
         public
         view
         validPoll(_pollId)
-        returns (string memory, uint256, uint256, uint256, PollStatus, address, address[] memory)
+        returns (string memory, string[] memory, uint256, uint256, uint256, PollStatus, address, address[] memory)
     {
         Poll memory poll = _polls[_pollId];
-        return (poll.description, poll.startTime, poll.endTime, poll.minimumStakeTimeInDays, poll.status, poll.creator, poll.voters);
+        return (poll.description, poll.options, poll.startTime, poll.endTime, poll.minimumStakeTimeInDays, poll.status, poll.creator, poll.voters);
     }
 
     /**
-     * @dev Return poll all info.
+     * @dev Return poll all info including voting result.
      * Only accessible by operators.
      *
      * @param _pollId poll id
+     * @return description string, option string array, poll startTime, endTime, minimumStakeTimeInDays, status(IN_PROGRESS, ENDED), creator address, voter address array, voting option result
      */
     function getPollForOperator(
         uint256 _pollId
@@ -235,15 +243,19 @@ contract Voting is Ownable, AccessControl {
         view
         onlyOperator
         validPoll(_pollId)
-        returns (string memory, uint256, uint256, uint256, PollStatus, address, address[] memory, uint256, uint256)
+        returns (string memory, string[] memory, uint256, uint256, uint256, PollStatus, address, address[] memory, uint256[] memory)
     {
         Poll memory poll = _polls[_pollId];
-        return (poll.description, poll.startTime, poll.endTime, poll.minimumStakeTimeInDays, poll.status, poll.creator, poll.voters, poll.yesVotes, poll.noVotes);
+        uint256[] memory votes = new uint256[](poll.options.length);
+        for (uint256 i = 0; i < votes.length; i++) {
+            votes[i] = _votes[_pollId][i];
+        }
+        return (poll.description, poll.options, poll.startTime, poll.endTime, poll.minimumStakeTimeInDays, poll.status, poll.creator, poll.voters, votes);
     }
 
     /**
      * @dev Return `_voter` info for `_pollId` poll.
-     * Except for yes/no result.
+     * Except for voting option.
      *
      * @param _pollId poll id
      * @param _voter address of voter
@@ -275,7 +287,7 @@ contract Voting is Ownable, AccessControl {
         view
         onlyOperator
         validPoll(_pollId)
-        returns (bool, bool, uint256)
+        returns (bool, uint256, uint256)
     {
         return (_voters[_pollId][_voter].voted, _voters[_pollId][_voter].vote, _voters[_pollId][_voter].weight);
     }
@@ -289,6 +301,7 @@ contract Voting is Ownable, AccessControl {
 	 */
     function createPoll(
         string memory _description,
+        string[] memory _options,
         uint256 _durationTimeInDays,
         uint256 _minimumStakeTimeInDays
     )
@@ -296,19 +309,21 @@ contract Voting is Ownable, AccessControl {
         onlyOperator
         returns (uint256)
     {
-        require(bytes(_description).length > 0, "Voting#createPoll: DESCRIPTION_INVALID");
-        require(_durationTimeInDays > 0, "Voting#createPoll: DURATION_TIME_INVALID");
+        require(bytes(_description).length > 0, "MultipleVoting#createPoll: DESCRIPTION_INVALID");
+        require(_options.length > 1, "MultipleVoting#createPoll: OPTIONS_INVALID");
+        require(_durationTimeInDays > 0, "MultipleVoting#createPoll: DURATION_TIME_INVALID");
 
-        _pollIds.increment();
-        Poll storage poll = _polls[_pollIds.current()];
+        pollIds.increment();
+        Poll storage poll = _polls[pollIds.current()];
         poll.startTime = block.timestamp;
         poll.endTime = block.timestamp.add(_durationTimeInDays.mul(1 days));
         poll.minimumStakeTimeInDays = _minimumStakeTimeInDays;
         poll.description = _description;
+        poll.options = _options;
         poll.creator = _msgSender();
 
-        emit PollCreated(_msgSender(), _pollIds.current(), _description, _durationTimeInDays);
-        return _pollIds.current();
+        emit PollCreated(_msgSender(), pollIds.current(),_durationTimeInDays);
+        return pollIds.current();
     }
 
     /**
@@ -323,16 +338,21 @@ contract Voting is Ownable, AccessControl {
         onlyOperator
         validPoll(_pollId)
     {
+        uint256 winningOptionId;
+        uint256 maxVotes;
         Poll storage poll = _polls[_pollId];
-        require(block.timestamp >= poll.endTime, "Voting#endPoll: VOTING_PERIOD_NOT_EXPIRED");
-        require(poll.status == PollStatus.IN_PROGRESS, "Voting#endPoll: POLL_ALREADY_ENDED");
-        if (poll.yesVotes > poll.noVotes) {
-            poll.status = PollStatus.PASSED;
-        } else {
-            poll.status = PollStatus.REJECTED;
+        require(block.timestamp >= poll.endTime, "MultipleVoting#endPoll: VOTING_PERIOD_NOT_EXPIRED");
+        require(poll.status == PollStatus.IN_PROGRESS, "MultipleVoting#endPoll: POLL_ALREADY_ENDED");
+        poll.status = PollStatus.ENDED;
+        // decide winning option
+        for (uint256 i = 0; i < poll.options.length; i++) {
+            if (maxVotes < _votes[_pollId][i]) {
+                maxVotes = _votes[_pollId][i];
+                winningOptionId = i;
+            }
         }
 
-        emit PollStatusUpdated(_pollId, poll.status);
+        emit PollEnded(_pollId, winningOptionId);
     }
 
     /**
@@ -361,33 +381,29 @@ contract Voting is Ownable, AccessControl {
 	 * @dev User vote `_vote` for `_pollId`.
      *
      * @param _pollId poll id.
-     * @param _vote bool.
+     * @param _optionId voting option id.
 	 */
     function castVote(
         uint256 _pollId,
-        bool _vote
+        uint256 _optionId
     )
         external
         validPoll(_pollId)
     {
         Poll storage poll = _polls[_pollId];
-        require(poll.status == PollStatus.IN_PROGRESS, "Voting#castVote: POLL_ALREADY_ENDED");
-        require(block.timestamp < poll.endTime, "Voting#castVote: VOTING_PERIOD_EXPIRED");
-        require(!checkIfVoted(_pollId, _msgSender()), "Voting#castVote: USER_ALREADY_VOTED");
+        require(poll.status == PollStatus.IN_PROGRESS, "MultipleVoting#castVote: POLL_ALREADY_ENDED");
+        require(block.timestamp < poll.endTime, "MultipleVoting#castVote: VOTING_PERIOD_EXPIRED");
+        require(!checkIfVoted(_pollId, _msgSender()), "MultipleVoting#castVote: USER_ALREADY_VOTED");
 
         uint256 w = getWeight(_pollId, _msgSender());
-        if (_vote) {
-            poll.yesVotes = poll.yesVotes.add(w);
-        } else {
-            poll.noVotes = poll.noVotes.add(w);
-        }
+        _votes[_pollId][_optionId]++;
 
         Voter storage voter = _voters[_pollId][_msgSender()];
         voter.voted = true;
-        voter.vote = _vote;
+        voter.vote = _optionId;
         voter.weight = w;
 
-        emit VoteCasted(_msgSender(), _pollId, _vote, w);
+        emit VoteCasted(_msgSender(), _pollId, _optionId, w);
     }
 
     /*****************************|
@@ -408,10 +424,10 @@ contract Voting is Ownable, AccessControl {
         validPoll(_pollId)
         returns (uint256)
     {
-        require(_account != address(0), "Voting#getWeight: ACCOUNT_INVALID");
+        require(_account != address(0), "MultipleVoting#getWeight: ACCOUNT_INVALID");
         uint256 w = 0; // total weight
         Poll memory poll = _polls[_pollId];
-        require(poll.status == PollStatus.IN_PROGRESS, "Voting#getWeight: POLL_ALREADY_ENDED");
+        require(poll.status == PollStatus.IN_PROGRESS, "MultipleVoting#getWeight: POLL_ALREADY_ENDED");
 
         for (uint256 i = 0; i < _stakePools.length; i++) {
             IStakePool sPool = _stakePools[i];

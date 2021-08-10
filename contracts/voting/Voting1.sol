@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/IStakePool.sol";
+import "../interfaces/IStakePool.sol";
 
 /**
  If total votes of poll reach threshold `_pollMinimumVotes`, poll endures `_pollDurationInDays`.
