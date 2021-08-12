@@ -10,18 +10,16 @@ const {
   expectEvent,
   expectRevert
 } = require('@openzeppelin/test-helpers');
+const { toWei } = require('web3-utils');
 const time = require('./helpers/time');
 const timeTraveler = require('ganache-time-traveler');
-
-const weiAmount = amount =>
-  new BN(amount).mul(new BN(10).pow(new BN(18)));
 
 contract('Voting', async accounts => {
   let ido, erc20;
   let voting, sPool1, sPool2, sPool3;
   const [alice, bob, carol] = accounts;
 
-  beforeEach(async () => {
+  before(async () => {
     ido = await ERC20.new('Idexo Community', 'IDO');
     erc20 = await ERC20.new('USD Tether', 'USDT');
     sPool1 = await StakePool.new('Idexo Stake Token', 'IDS', ido.address, erc20.address);
@@ -36,7 +34,6 @@ contract('Voting', async accounts => {
       expect(await voting.checkOperator(bob)).to.eq(true);
     });
     it('should remove operator', async () => {
-      await voting.addOperator(bob);
       await voting.removeOperator(bob);
       expect(await voting.checkOperator(bob)).to.eq(false);
     });
@@ -58,9 +55,6 @@ contract('Voting', async accounts => {
   });
 
   describe('#StakePool', async () => {
-    beforeEach(async () => {
-      await voting.addOperator(bob);
-    });
     it('addStakePool', async () => {
       await voting.addStakePool(sPool3.address, {from: bob});
       await voting.getStakePools().then(res => {
@@ -71,9 +65,9 @@ contract('Voting', async accounts => {
       });
     });
     it('removeStakePool', async () => {
-      await voting.removeStakePool(sPool2.address, {from: bob});
+      await voting.removeStakePool(sPool3.address, {from: bob});
       await voting.getStakePools().then(res => {
-        expect(res.length).to.eq(1);
+        expect(res.length).to.eq(2);
         expect(res[0]).to.eq(sPool1.address);
       });
     });
@@ -88,7 +82,7 @@ contract('Voting', async accounts => {
           'Voting#addStakePool: STAKE_POOL_ADDRESS_INVALID'
         );
         await expectRevert(
-          voting.addStakePool(sPool2.address, {from: bob}),
+          voting.addStakePool(sPool1.address, {from: bob}),
           'Voting#addStakePool: STAKE_POOL_ADDRESS_ALREADY_FOUND'
         );
         await expectRevert(
@@ -100,23 +94,22 @@ contract('Voting', async accounts => {
   });
 
   describe('#Poll', async () => {
-    beforeEach(async () => {
-      await ido.mint(alice, weiAmount(10000000));
-      await ido.mint(bob, weiAmount(10000000));
-      await ido.approve(sPool1.address, weiAmount(10000000));
-      await ido.approve(sPool2.address, weiAmount(10000000));
-      await ido.approve(sPool1.address, weiAmount(10000000), {from: bob});
-      await ido.approve(sPool2.address, weiAmount(10000000), {from: bob});
-      await sPool1.deposit(weiAmount(4000));
-      await sPool1.deposit(weiAmount(7000), {from: bob});
-      await sPool2.deposit(weiAmount(8000));
-      await sPool2.deposit(weiAmount(14000), {from: bob});
-      await voting.addOperator(bob);
+    before(async () => {
+      await ido.mint(alice, toWei(new BN(10000000)));
+      await ido.mint(bob, toWei(new BN(10000000)));
+      await ido.approve(sPool1.address, toWei(new BN(10000000)));
+      await ido.approve(sPool2.address, toWei(new BN(10000000)));
+      await ido.approve(sPool1.address, toWei(new BN(10000000)), {from: bob});
+      await ido.approve(sPool2.address, toWei(new BN(10000000)), {from: bob});
+      await sPool1.deposit(toWei(new BN(4000)));
+      await sPool1.deposit(toWei(new BN(7000)), {from: bob});
+      await sPool2.deposit(toWei(new BN(8000)));
+      await sPool2.deposit(toWei(new BN(14000)), {from: bob});
       await timeTraveler.advanceTime(time.duration.months(1));
     });
     it('createPoll castVote getWeight checkIfVoted endPoll', async () => {
       await voting.createPoll('Solana Integration', new BN(3), new BN(30), {from: bob});
-      await voting.getPoll(1).then(res => {
+      await voting.getPollInfo(1).then(res => {
         expect(res[0]).to.eq('Solana Integration');
         expect(res[2].sub(res[1]).toString()).to.eq(time.duration.days(3).toString());
         expect(res[3].toString()).to.eq('30');
@@ -124,7 +117,7 @@ contract('Voting', async accounts => {
         expect(res[5]).to.eq(bob);
       });
       await voting.getWeight.call(1, alice).then(res => {
-        expect(res.toString()).to.eq('14400000000000000000000');
+        expect(res.toString()).to.eq('12000000000000000000000');
       });
       expect(await voting.checkIfVoted(1, alice)).to.eq(false);
       expectEvent(
@@ -133,14 +126,15 @@ contract('Voting', async accounts => {
       );
       expect(await voting.checkIfVoted(1, alice)).to.eq(true);
       await voting.castVote(1, false, {from: bob});
-      await voting.getPollForOperator(1, {from: bob}).then(res => {
-        expect(res[7].toString()).to.eq('14400000000000000000000');
-        expect(res[8].toString()).to.eq('25200000000000000000000');
+      await voting.getPollVotingInfo(1, {from: bob}).then(res => {
+        expect(res[0].toString()).to.eq('12000000000000000000000');
+        expect(res[1].toString()).to.eq('21000000000000000000000');
+        expect(res[2].toString()).to.eq('0');
       });
       await timeTraveler.advanceTime(time.duration.days(3));
       expectEvent(
         await voting.endPoll(1, {from: bob}),
-        'PollStatusUpdated',
+        'PollEnded',
         {
           pollID: new BN(1),
           status: new BN(2)
@@ -150,7 +144,7 @@ contract('Voting', async accounts => {
     describe('reverts if', async () => {
       it('createPoll', async () => {
         await expectRevert(
-          voting.createPoll('Solana Integration', new BN(3), new BN(30), {from: carol}),
+          voting.createPoll('Tezos Integration', new BN(3), new BN(30), {from: carol}),
           'Voting#onlyOperator: CALLER_NO_OPERATOR_ROLE'
         );
         await expectRevert(
@@ -158,31 +152,31 @@ contract('Voting', async accounts => {
           'Voting#createPoll: DESCRIPTION_INVALID'
         );
         await expectRevert(
-          voting.createPoll('Solana Integration', new BN(0), new BN(30), {from: bob}),
+          voting.createPoll('Tezos Integration', new BN(0), new BN(30), {from: bob}),
           'Voting#createPoll: DURATION_TIME_INVALID'
         );
-        await voting.createPoll('Solana Integration', new BN(3), new BN(30), {from: bob});
+        await voting.createPoll('Tezos Integration', new BN(3), new BN(30), {from: bob});
         await expectRevert(
-          voting.getPoll(2),
+          voting.getPollInfo(3),
           'Voting#validPoll: POLL_ID_INVALID'
         );
         await expectRevert(
-          voting.getWeight(1, constants.ZERO_ADDRESS),
+          voting.getWeight(2, constants.ZERO_ADDRESS),
           'Voting#getWeight: ACCOUNT_INVALID'
         );
         await expectRevert(
-          voting.endPoll(1),
+          voting.endPoll(2),
           'Voting#endPoll: VOTING_PERIOD_NOT_EXPIRED'
         );
-        await voting.castVote(1, true, {from: alice});
+        await voting.castVote(2, true, {from: alice});
         await expectRevert(
-          voting.castVote(1, true, {from: alice}),
+          voting.castVote(2, true, {from: alice}),
           'Voting#castVote: USER_ALREADY_VOTED'
         );
         await timeTraveler.advanceTime(time.duration.days(3));
-        await voting.endPoll(1, {from: bob});
+        await voting.endPoll(2, {from: bob});
         await expectRevert(
-          voting.castVote(1, true, {from: alice}),
+          voting.castVote(2, true, {from: alice}),
           'Voting#castVote: POLL_ALREADY_ENDED'
         );
       });

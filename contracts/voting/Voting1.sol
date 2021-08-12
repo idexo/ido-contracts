@@ -9,8 +9,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/IStakePool.sol";
 
 /**
- If total votes of poll reach threshold `_pollMinimumVotes`, poll endures `_pollDurationInDays`.
- If not, poll expires within `_pollMaximumDurationInDays`.
+ * Voting contract that offers 2 options YES / NO
+ * If total votes of poll reach threshold `_pollMinimumVotes`, poll endures `_pollDurationInDays`.
+ * If not, poll expires within `_pollMaximumDurationInDays`.
  */
 
 contract Voting1 is Ownable, AccessControl {
@@ -18,7 +19,7 @@ contract Voting1 is Ownable, AccessControl {
     using Counters for Counters.Counter;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-    Counters.Counter private _pollIds;
+    Counters.Counter public pollIds;
     IStakePool[] private _stakePools;
 
     /* Minimum votes threshold for poll to endure `_pollDurationInDays` */
@@ -31,7 +32,7 @@ contract Voting1 is Ownable, AccessControl {
     /* EVENTS */
     event VoteCasted(address indexed voter, uint256 pollID, bool vote, uint256 weight);
 	event PollCreated(address indexed creator, uint256 pollID, string description);
-	event PollStatusUpdated(uint256 pollID, PollStatus status);
+	event PollEnded(uint256 pollID, PollStatus status);
 
     /* Determine the current state of a poll */
 	enum PollStatus {
@@ -61,7 +62,9 @@ contract Voting1 is Ownable, AccessControl {
         uint256 weight;
     }
 
+    // poll id => poll info
     mapping(uint256 => Poll) private _polls;
+    // poll id => voter address => voter info
     mapping(uint256 => mapping(address => Voter)) private _voters;
 
     constructor(
@@ -275,85 +278,70 @@ contract Voting1 is Ownable, AccessControl {
         uint256 _pollId
     )
 	{
-		require(_pollId > 0 && _pollId <= _pollIds.current(), "Voting1#validPoll: POLL_ID_INVALID");
+		require(_pollId > 0 && _pollId <= pollIds.current(), "Voting1#validPoll: POLL_ID_INVALID");
 		_;
 	}
 
     /* GETTERS */
 
     /**
-     * @dev Return poll info.
-     * Except for yesVotes and noVotes.
+     * @dev Return poll general info.
+     * Except for voting result.
      *
      * @param _pollId poll id
+     * @return description string, poll startTime, endTime, minimumStakeTimeInDays, status, creator address, voter address array
      */
-    function getPoll(
+    function getPollInfo(
         uint256 _pollId
     )
         public
         view
         validPoll(_pollId)
-        returns (string memory, uint256, uint256, uint256, PollStatus, address, address[] memory, bool)
+        returns (string memory, uint256, uint256, uint256, PollStatus, address, address[] memory)
     {
         Poll memory poll = _polls[_pollId];
-        return (poll.description, poll.startTime, poll.endTime, poll.minimumStakeTimeInDays, poll.status, poll.creator, poll.voters, poll.reachedMinimumVotes);
+        return (poll.description, poll.startTime, poll.endTime, poll.minimumStakeTimeInDays, poll.status, poll.creator, poll.voters);
     }
 
     /**
-     * @dev Return poll all info.
-     * Only accessible by operators.
-     *
+     * @dev Return poll voting info.
+     * If poll is not ended, operators can call.
+     * After ended, any user can call.
      * @param _pollId poll id
+     * @return poll YES Votes, NO Votes, poll status
      */
-    function getPollForOperator(
+    function getPollVotingInfo(
         uint256 _pollId
     )
         public
         view
-        onlyOperator
         validPoll(_pollId)
-        returns (string memory, uint256, uint256, uint256, PollStatus, address, address[] memory, bool, uint256, uint256)
+        returns (uint256, uint256, PollStatus)
     {
         Poll memory poll = _polls[_pollId];
-        return (poll.description, poll.startTime, poll.endTime, poll.minimumStakeTimeInDays, poll.status, poll.creator, poll.voters, poll.reachedMinimumVotes, poll.yesVotes, poll.noVotes);
+        require(poll.status == PollStatus.IN_PROGRESS || checkOperator(_msgSender()), "Voting1#getPollVotingInfo: POLL_NOT_ENDED__CALLER_NO_OPERATOR");
+        return (poll.yesVotes, poll.noVotes, poll.status);
     }
 
     /**
      * @dev Return `_voter` info for `_pollId` poll.
-     * Except for yes/no result.
+     * If poll is not ended, operators can call.
+     * After ended, any user can call.
      *
      * @param _pollId poll id
      * @param _voter address of voter
+     * @return voter voted status (true - vote casted, no - no vote cast), voter's vote option (true - YES, false - NO), voter's voting weight
      */
-    function getVoter(
+    function getVoterInfo(
         uint256 _pollId,
         address _voter
     )
         public
         view
-        validPoll(_pollId)
-        returns (bool, uint256)
-    {
-        return (_voters[_pollId][_voter].voted, _voters[_pollId][_voter].weight);
-    }
-
-    /**
-     * @dev Return `_voter` all info for `_pollId` poll.
-     * Only accessible by operators.
-     *
-     * @param _pollId poll id
-     * @param _voter address of voter
-     */
-    function getVoterForOperator(
-        uint256 _pollId,
-        address _voter
-    )
-        public
-        view
-        onlyOperator
         validPoll(_pollId)
         returns (bool, bool, uint256)
     {
+        require(_polls[_pollId].status == PollStatus.IN_PROGRESS || checkOperator(_msgSender()), "Voting1#getVoterInfo: POLL_NOT_ENDED__CALLER_NO_OPERATOR");
         return (_voters[_pollId][_voter].voted, _voters[_pollId][_voter].vote, _voters[_pollId][_voter].weight);
     }
 
@@ -373,16 +361,16 @@ contract Voting1 is Ownable, AccessControl {
     {
         require(bytes(_description).length > 0, "Voting1#createPoll: DESCRIPTION_INVALID");
 
-        _pollIds.increment();
-        Poll storage poll = _polls[_pollIds.current()];
+        pollIds.increment();
+        Poll storage poll = _polls[pollIds.current()];
         poll.startTime = block.timestamp;
         poll.endTime = block.timestamp.add(_pollMaximumDurationInDays.mul(1 days));
         poll.minimumStakeTimeInDays = _minimumStakeTimeInDays;
         poll.description = _description;
         poll.creator = _msgSender();
 
-        emit PollCreated(_msgSender(), _pollIds.current(), _description);
-        return _pollIds.current();
+        emit PollCreated(_msgSender(), pollIds.current(), _description);
+        return pollIds.current();
     }
 
     /**
@@ -406,7 +394,7 @@ contract Voting1 is Ownable, AccessControl {
             poll.status = PollStatus.REJECTED;
         }
 
-        emit PollStatusUpdated(_pollId, poll.status);
+        emit PollEnded(_pollId, poll.status);
     }
 
     /**
@@ -497,9 +485,9 @@ contract Voting1 is Ownable, AccessControl {
             IStakePool sPool = _stakePools[i];
             uint256[] memory sTokenIds = sPool.getTokenId(_account);
             for (uint256 j = 0; j < sTokenIds.length; j++) {
-                (uint256 amount, uint256 multiplier, uint256 depositedAt) = sPool.getStake(sTokenIds[j]);
+                (uint256 amount, , uint256 depositedAt) = sPool.getStake(sTokenIds[j]);
                 if (depositedAt < poll.startTime.sub(poll.minimumStakeTimeInDays.mul(1 days))) {
-                    w = w.add(amount.mul(multiplier).div(100));
+                    w = w.add(amount);
                 }
             }
         }
