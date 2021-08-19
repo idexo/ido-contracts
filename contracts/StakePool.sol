@@ -3,27 +3,24 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./StakeToken.sol";
 import "./interfaces/IStakePool.sol";
 
 contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
-    using SafeMath for uint256;
-    using Counters for Counters.Counter;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     uint256 public constant MONTH = 31 days;
     uint256 public constant QUARTER = 93 days;
     uint256 public constant YEAR = 365 days;
-
-    uint256 private constant _monthlyDistributionRatio = 25;
-    uint256 private constant _quarterlyDistributionRatio = 50;
-    uint256 private constant _yearlyDistributionRatio = 25;
-    uint256 private constant _minimumStakeAmount = 2500 * 10 ** 18;
+    // Reward distribution ratio - monthly, quarterly, yearly
+    uint256 public constant mDistributionRatio = 25;
+    uint256 public constant qDistributionRatio = 50;
+    uint256 public constant yDistributionRatio = 25;
+    // Minimum stake amount
+    uint256 public constant minStakeAmount = 2500 * 1e18;
 
     // Address of deposit token.
     IERC20 public depositToken;
@@ -32,28 +29,30 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
     // Timestamp when stake pool was deployed to mainnet.
     uint256 public deployedAt;
 
-    struct RevenueShareDeposit {
+    struct RewardDeposit {
         address operator;
         uint256 amount;
         uint256 depositedAt;
     }
 
-    struct RevenueShareDistribute {
+    struct RewardDistribute {
         uint256 amount;
         uint256 distributedAt;
     }
+    // Reward deposit history
+    RewardDeposit[] public rewardDeposits;
+    // Reward distribution history - monthly, quarterly, yearly
+    RewardDistribute[] public mDistributes;
+    RewardDistribute[] public qDistributes;
+    RewardDistribute[] public yDistributes;
 
-    RevenueShareDeposit[] private _deposits;
-    RevenueShareDistribute[] private _monthlyDistributes;
-    RevenueShareDistribute[] private _quarterlyDistributes;
-    RevenueShareDistribute[] private _yearlyDistributes;
-
-    // account => reward amount that staker can withdraw.
-    mapping(address => uint256) private _unlockedRevenueShares;
+    // account => available reward amount that staker can claim.
+    mapping(address => uint256) public claimableRewards;
 
     event Deposited(address indexed account, uint256 indexed stakeId, uint256 amount);
-    event StakeWithdrawn(address indexed account, uint256 indexed stakeId, uint256 amount);
-    event RevenueShareWithdrawn(address indexed account, uint256 amount);
+    event Withdrawn(address indexed account, uint256 indexed stakeId, uint256 amount);
+    event RewardDeposited(address indexed account, uint256 amount);
+    event RewardClaimed(address indexed account, uint256 amount);
 
     event MonthlyDistributed(uint256 amount, uint256 distributedAt);
     event QuarterlyDistributed(uint256 amount, uint256 distributedAt);
@@ -169,7 +168,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
         external
         override
     {
-        require(amount >= _minimumStakeAmount, "StakePool#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
+        require(amount >= minStakeAmount, "StakePool#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
         _deposit(msg.sender, amount);
     }
 
@@ -182,15 +181,15 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
      * @param stakeId id of Stake that is being withdrawn.
      * @param amount withdraw amount.
      */
-    function withdrawStake(
+    function withdraw(
         uint256 stakeId,
         uint256 amount
     )
         external
         override
     {
-        require(amount >= _minimumStakeAmount, "StakePool#withdrawStake: UNDER_MINIMUM_STAKE_AMOUNT");
-        _withdrawStake(msg.sender, stakeId, amount);
+        require(amount >= minStakeAmount, "StakePool#withdraw: UNDER_MINIMUM_STAKE_AMOUNT");
+        _withdraw(msg.sender, stakeId, amount);
     }
 
     /**
@@ -220,7 +219,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
      * @param stakeId id of stake that is being withdrawn.
      * @param withdrawAmount withdraw amount.
      */
-    function _withdrawStake(
+    function _withdraw(
         address account,
         uint256 stakeId,
         uint256 withdrawAmount
@@ -228,78 +227,66 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
         private
         nonReentrant
     {
-        require(ownerOf(stakeId) == account, "StakePool#_withdrawStake: NO_STAKE_OWNER");
+        require(ownerOf(stakeId) == account, "StakePool#_withdraw: NO_STAKE_OWNER");
         _decreaseStakeAmount(stakeId, withdrawAmount);
-        require(depositToken.transfer(account, withdrawAmount), "StakePool#_withdrawStake: TRANSFER_FAILED");
+        require(depositToken.transfer(account, withdrawAmount), "StakePool#_withdraw: TRANSFER_FAILED");
 
-        emit StakeWithdrawn(account, stakeId, withdrawAmount);
+        emit Withdrawn(account, stakeId, withdrawAmount);
     }
 
-    /********************************|
-    |          Revenue Share         |
-    |_______________________________*/
+    /*************************|
+    |          Reward         |
+    |________________________*/
 
     /**
-     * @dev Deposit revenue shares to the pool.
+     * @dev Deposit reward to the pool.
      * @param amount deposit amount.
      */
-    function depositRevenueShare(
+    function depositReward(
         uint256 amount
     )
         external
         override
         onlyOperator
     {
-        require(amount > 0, "StakePool#depositRevenueShare: ZERO_AMOUNT");
-        _depositRevenueShare(msg.sender, amount);
+        require(amount > 0, "StakePool#depositReward: ZERO_AMOUNT");
+        _depositReward(msg.sender, amount);
     }
 
     /**
-     * @dev Return revenue share deposit by id.
+     * @dev Return reward deposit info by id.
      */
-    function getRevenueShareDeposit(
+    function getRewardDeposit(
         uint256 id
     )
         external
         view
         returns (address, uint256, uint256)
     {
-        return (_deposits[id].operator, _deposits[id].amount, _deposits[id].depositedAt);
+        return (rewardDeposits[id].operator, rewardDeposits[id].amount, rewardDeposits[id].depositedAt);
     }
 
     /**
-     * @dev Return unlocked revenue share amount.
-     */
-    function getUnlockedRevenueShare()
-        external
-        override
-        view
-        returns (uint256)
-    {
-        return _unlockedRevenueShares[_msgSender()];
-    }
-
-    /**
-     * @dev Withdraw unlocked revenue share.
+     * @dev Claim reward.
      *
      * @param amount withdraw amount
      */
-    function withdrawRevenueShare(
+    function claimReward(
         uint256 amount
     )
         external
         override
         nonReentrant
     {
-        require(isTokenHolder(_msgSender()), "StakePool#withdrawRevenueShare: CALLER_NO_TOKEN_OWNER");
-        require(_unlockedRevenueShares[_msgSender()] >= amount, "StakePool#withdrawRevenueShare: INSUFFICIENT_FUNDS");
-        _unlockedRevenueShares[_msgSender()] = _unlockedRevenueShares[_msgSender()].sub(amount);
+        require(isTokenHolder(_msgSender()), "StakePool#claimReward: CALLER_NO_TOKEN_OWNER");
+        require(claimableRewards[_msgSender()] >= amount, "StakePool#claimReward: INSUFFICIENT_FUNDS");
+        claimableRewards[_msgSender()] -= amount;
         rewardToken.transfer(_msgSender(), amount);
-        emit RevenueShareWithdrawn(_msgSender(), amount);
+        emit RewardClaimed(_msgSender(), amount);
     }
 
     /**
-     * @dev Distribute revenue shares to stake holders.
+     * @dev Distribute reward to stake holders.
      *
      * Currently this function should be called by operator manually and periodically (once a month).
      * May need handling with crons.
@@ -313,14 +300,14 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
         uint256 totalDistributeAmount;
 
         // Monthly distribution
-        if (_monthlyDistributes.length == 0) {
+        if (mDistributes.length == 0) {
             lastDistributeDate = deployedAt;
         } else {
-            lastDistributeDate = _monthlyDistributes[_monthlyDistributes.length - 1].distributedAt;
+            lastDistributeDate = mDistributes[mDistributes.length - 1].distributedAt;
         }
         if (lastDistributeDate + MONTH <= block.timestamp) {
-            totalDistributeAmount = _distributeToUsers(lastDistributeDate, _monthlyDistributionRatio);
-            _monthlyDistributes.push(RevenueShareDistribute({
+            totalDistributeAmount = _distributeToUsers(lastDistributeDate, mDistributionRatio);
+            mDistributes.push(RewardDistribute({
                 amount: totalDistributeAmount,
                 distributedAt: block.timestamp
             }));
@@ -328,14 +315,14 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
             emit MonthlyDistributed(totalDistributeAmount, block.timestamp);
         }
         // Quarterly distribution
-        if (_quarterlyDistributes.length == 0) {
+        if (qDistributes.length == 0) {
             lastDistributeDate = deployedAt;
         } else {
-            lastDistributeDate = _quarterlyDistributes[_quarterlyDistributes.length - 1].distributedAt;
+            lastDistributeDate = qDistributes[qDistributes.length - 1].distributedAt;
         }
         if (lastDistributeDate + QUARTER <= block.timestamp) {
-            totalDistributeAmount = _distributeToUsers(lastDistributeDate, _quarterlyDistributionRatio);
-            _quarterlyDistributes.push(RevenueShareDistribute({
+            totalDistributeAmount = _distributeToUsers(lastDistributeDate, qDistributionRatio);
+            qDistributes.push(RewardDistribute({
                 amount: totalDistributeAmount,
                 distributedAt: block.timestamp
             }));
@@ -343,14 +330,14 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
             emit QuarterlyDistributed(totalDistributeAmount, block.timestamp);
         }
         // Yearly distribution
-        if (_yearlyDistributes.length == 0) {
+        if (yDistributes.length == 0) {
             lastDistributeDate = deployedAt;
         } else {
-            lastDistributeDate = _yearlyDistributes[_yearlyDistributes.length - 1].distributedAt;
+            lastDistributeDate = yDistributes[yDistributes.length - 1].distributedAt;
         }
         if (lastDistributeDate + YEAR <= block.timestamp) {
-            totalDistributeAmount = _distributeToUsers(lastDistributeDate, _yearlyDistributionRatio);
-            _yearlyDistributes.push(RevenueShareDistribute({
+            totalDistributeAmount = _distributeToUsers(lastDistributeDate, yDistributionRatio);
+            yDistributes.push(RewardDistribute({
                 amount: totalDistributeAmount,
                 distributedAt: block.timestamp
             }));
@@ -360,22 +347,23 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @dev Deposit revenue shares to the pool.
+     * @dev Deposit reward to the pool.
      * @param account address who deposits to the pool.
      * @param amount deposit amount.
      */
-    function _depositRevenueShare(
+    function _depositReward(
         address account,
         uint256 amount
     )
         private
     {
         rewardToken.safeTransferFrom(account, address(this), amount);
-        _deposits.push(RevenueShareDeposit({
+        rewardDeposits.push(RewardDeposit({
             operator: account,
             amount: amount,
             depositedAt: block.timestamp
         }));
+        emit RewardDeposited(account, amount);
     }
 
     /**
@@ -389,19 +377,20 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
         uint256 fromDate
     )
         private
+        view
         returns (uint256[] memory, uint256[] memory, uint256)
     {
         require(fromDate <= block.timestamp, "StakePool#_calcStakeClaimShares: NO_PAST_DATE");
-        uint256[] memory eligibleStakes = new uint256[](_currentTokenId());
-        uint256[] memory eligibleStakeClaimShares = new uint256[](_currentTokenId());
+        uint256[] memory eligibleStakes = new uint256[](tokenIds);
+        uint256[] memory eligibleStakeClaimShares = new uint256[](tokenIds);
         uint256 eligibleStakesCount = 0;
         uint256 totalStakeClaim = 0;
 
-        for (uint256 i = 1; i <= _currentTokenId(); i++) {
+        for (uint256 i = 1; i <= tokenIds; i++) {
             if (_exists(i)) {
                 (uint256 amount, uint256 multiplier, uint256 depositedAt) = getStake(i);
                 if (depositedAt <= fromDate) {
-                    totalStakeClaim = totalStakeClaim.add(amount * multiplier);
+                    totalStakeClaim += amount * multiplier;
                     eligibleStakes[eligibleStakesCount++] = i;
                 }
             }
@@ -409,14 +398,14 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
 
         for (uint256 i = 0; i < eligibleStakesCount; i++) {
             (uint256 amount, uint256 multiplier, ) = getStake(eligibleStakes[i]);
-            eligibleStakeClaimShares[i] = (amount * multiplier * 1000).div(totalStakeClaim);
+            eligibleStakeClaimShares[i] = (amount * multiplier * 1000) / totalStakeClaim;
         }
 
         return (eligibleStakes, eligibleStakeClaimShares, eligibleStakesCount);
     }
 
     /**
-     * @dev Calculate sum of revenue share deposits to the pool
+     * @dev Calculate sum of reward deposits to the pool
      * processed from `fromDate` to current timestamp.
      *
      * @param fromDate timestamp when sum calculation begin.
@@ -430,9 +419,9 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
         returns (uint256)
     {
         uint256 totalDepositAmount = 0;
-        for (uint256 i = 0; i < _deposits.length; i++) {
-            if (_deposits[i].depositedAt >= fromDate ) {
-                totalDepositAmount = totalDepositAmount.add(_deposits[i].amount);
+        for (uint256 i = 0; i < rewardDeposits.length; i++) {
+            if (rewardDeposits[i].depositedAt >= fromDate ) {
+                totalDepositAmount += rewardDeposits[i].amount;
             }
         }
 
@@ -440,7 +429,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @dev Distribute revenue share to eligible stake holders according to specific conditions.
+     * @dev Distribute reward to eligible stake holders according to specific conditions.
      * @param lastDistributeDate timestamp when the last distribution was done.
      * @param distributionRatio monthly, quarterly or yearly distribution ratio.
      */
@@ -458,13 +447,13 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
         uint256 totalDistributeAmount = 0;
 
         (eligibleStakes, eligibleStakeClaimShares, eligibleStakesCount) = _calcStakeClaimShares(lastDistributeDate);
-        availableDistributeAmount = _sumDeposits(lastDistributeDate).mul(distributionRatio).div(100);
+        availableDistributeAmount = _sumDeposits(lastDistributeDate) * distributionRatio / 100;
         for (uint256 i = 0; i < eligibleStakesCount; i++) {
             uint256 stakeId = eligibleStakes[i];
-            uint256 amountShare = availableDistributeAmount.mul(eligibleStakeClaimShares[i]).div(1000);
+            uint256 amountShare = availableDistributeAmount * eligibleStakeClaimShares[i] / 1000;
             require(amountShare <= rewardToken.balanceOf(address(this)), "StakePool#_distributeToUsers: INSUFFICIENT FUNDS");
-            _unlockedRevenueShares[ownerOf(stakeId)] = _unlockedRevenueShares[ownerOf(stakeId)].add(amountShare);
-            totalDistributeAmount = totalDistributeAmount.add(amountShare);
+            claimableRewards[ownerOf(stakeId)] += amountShare;
+            totalDistributeAmount += amountShare;
         }
 
         return totalDistributeAmount;
