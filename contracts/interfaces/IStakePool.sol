@@ -44,4 +44,11 @@ interface IStakePool is IStakeToken {
 
     function distribute()
         external;
+
+    function getRewardDepositSum(
+        uint256 fromDate,
+        uint256 toDate
+    )
+        external
+        returns (uint256);
 }

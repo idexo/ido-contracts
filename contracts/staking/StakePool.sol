@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./StakeToken.sol";
-import "./interfaces/IStakePool.sol";
+import "../interfaces/IStakePool.sol";
 
 contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -21,6 +21,8 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
     uint256 public constant yDistributionRatio = 25;
     // Minimum stake amount
     uint256 public constant minStakeAmount = 2500 * 1e18;
+
+    uint256 public constant sClaimShareDenominator = 1000;
 
     // Address of deposit token.
     IERC20 public depositToken;
@@ -53,6 +55,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
     event Withdrawn(address indexed account, uint256 indexed stakeId, uint256 amount);
     event RewardDeposited(address indexed account, uint256 amount);
     event RewardClaimed(address indexed account, uint256 amount);
+    event Swept(address indexed operator, address token, address indexed to, uint256 amount);
 
     event MonthlyDistributed(uint256 amount, uint256 distributedAt);
     event QuarterlyDistributed(uint256 amount, uint256 distributedAt);
@@ -120,6 +123,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
         override
         onlyAdmin
     {
+        // Check if `account` already has operator role
         require(!hasRole(OPERATOR_ROLE, account), "StakePool#addOperator: ALREADY_OERATOR_ROLE");
         grantRole(OPERATOR_ROLE, account);
     }
@@ -135,6 +139,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
         override
         onlyAdmin
     {
+        // Check if `account` has operator role
         require(hasRole(OPERATOR_ROLE, account), "StakePool#removeOperator: NO_OPERATOR_ROLE");
         revokeRole(OPERATOR_ROLE, account);
     }
@@ -160,6 +165,9 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
 
     /**
      * @dev Deposit stake to the pool.
+     * Requirements:
+     *
+     * - `amount` must not be zero
      * @param amount deposit amount.
      */
     function deposit(
@@ -174,10 +182,13 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
 
     /**
      * @dev Withdraw from the pool.
-
-     * If amount is less than amount of the stake, cut off amount.
+     *
+     * If amount is less than amount of the stake, cut down amount.
      * If amount is equal to amount of the stake, burn the stake.
-
+     *
+     * Requirements:
+     *
+     * - `amount` >= `minStakeAmount`
      * @param stakeId id of Stake that is being withdrawn.
      * @param amount withdraw amount.
      */
@@ -212,9 +223,11 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
 
     /**
      * @dev If amount is less than amount of the stake, cut off amount.
-
      * If amount is equal to amount of the stake, burn the stake.
-
+     *
+     * Requirements:
+     *
+     * - `account` must be owner of `stakeId`
      * @param account address whose stake is being withdrawn.
      * @param stakeId id of stake that is being withdrawn.
      * @param withdrawAmount withdraw amount.
@@ -240,6 +253,9 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
 
     /**
      * @dev Deposit reward to the pool.
+     * Requirements:
+     *
+     * - `amount` must not be zero
      * @param amount deposit amount.
      */
     function depositReward(
@@ -267,9 +283,40 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
     }
 
     /**
+     * @dev Return sum of reward deposits to the pool processed between `fromDate` and `toDate`.
+     * Requirements:
+     *
+     * - `fromDate` must be less than `toDate`
+     */
+    function getRewardDepositSum(
+        uint256 fromDate,
+        uint256 toDate
+    )
+        public
+        override
+        view
+        onlyOperator
+        returns (uint256)
+    {
+        require(fromDate < toDate, "StakePool#getRewardDepositSum: INVALID_DATE_RANGE");
+        uint256 totalDepositAmount;
+        for (uint256 i = 0; i < rewardDeposits.length; i++) {
+            if (rewardDeposits[i].depositedAt >= fromDate && rewardDeposits[i].depositedAt < toDate) {
+                totalDepositAmount += rewardDeposits[i].amount;
+            }
+        }
+
+        return totalDepositAmount;
+    }
+
+    /**
      * @dev Claim reward.
      *
-     * @param amount withdraw amount
+     * Requirements:
+     *
+     * - stake token owner must call
+     * - `amount` must be less than claimable reward
+     * @param amount claim amount
      */
     function claimReward(
         uint256 amount
@@ -278,18 +325,17 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
         override
         nonReentrant
     {
-        require(isTokenHolder(_msgSender()), "StakePool#claimReward: CALLER_NO_TOKEN_OWNER");
-        require(claimableRewards[_msgSender()] >= amount, "StakePool#claimReward: INSUFFICIENT_FUNDS");
-        claimableRewards[_msgSender()] -= amount;
-        rewardToken.transfer(_msgSender(), amount);
-        emit RewardClaimed(_msgSender(), amount);
+        require(isHolder(msg.sender), "StakePool#claimReward: CALLER_NO_TOKEN_OWNER");
+        require(claimableRewards[msg.sender] >= amount, "StakePool#claimReward: INSUFFICIENT_FUNDS");
+        claimableRewards[msg.sender] -= amount;
+        rewardToken.transfer(msg.sender, amount);
+        emit RewardClaimed(msg.sender, amount);
     }
 
     /**
      * @dev Distribute reward to stake holders.
      *
-     * Currently this function should be called by operator manually and periodically (once a month).
-     * May need handling with crons.
+     * Must be invoked by operator manually and periodically (once a month, quarter and year).
      */
     function distribute()
         external
@@ -306,7 +352,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
             lastDistributeDate = mDistributes[mDistributes.length - 1].distributedAt;
         }
         if (lastDistributeDate + MONTH <= block.timestamp) {
-            totalDistributeAmount = _distributeToUsers(lastDistributeDate, mDistributionRatio);
+            totalDistributeAmount = _distribute(lastDistributeDate, mDistributionRatio);
             mDistributes.push(RewardDistribute({
                 amount: totalDistributeAmount,
                 distributedAt: block.timestamp
@@ -321,7 +367,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
             lastDistributeDate = qDistributes[qDistributes.length - 1].distributedAt;
         }
         if (lastDistributeDate + QUARTER <= block.timestamp) {
-            totalDistributeAmount = _distributeToUsers(lastDistributeDate, qDistributionRatio);
+            totalDistributeAmount = _distribute(lastDistributeDate, qDistributionRatio);
             qDistributes.push(RewardDistribute({
                 amount: totalDistributeAmount,
                 distributedAt: block.timestamp
@@ -336,7 +382,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
             lastDistributeDate = yDistributes[yDistributes.length - 1].distributedAt;
         }
         if (lastDistributeDate + YEAR <= block.timestamp) {
-            totalDistributeAmount = _distributeToUsers(lastDistributeDate, yDistributionRatio);
+            totalDistributeAmount = _distribute(lastDistributeDate, yDistributionRatio);
             yDistributes.push(RewardDistribute({
                 amount: totalDistributeAmount,
                 distributedAt: block.timestamp
@@ -344,6 +390,24 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
 
             emit YearlyDistributed(totalDistributeAmount, block.timestamp);
         }
+    }
+
+    /**
+     * @dev Sweep funds
+     * Accessible by operators
+     */
+    function sweep(
+        address token_,
+        address to,
+        uint256 amount
+    )
+        public
+        onlyOperator
+    {
+        IERC20 token = IERC20(token_);
+        // balance check is being done in ERC20
+        token.transfer(to, amount);
+        emit Swept(msg.sender, token_, to, amount);
     }
 
     /**
@@ -367,11 +431,10 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @dev Select eligible stakes that have been in the pool from fromDate and to toDate, and update their claim shares.
+     * @dev Select eligible stakes that have been in the pool from `fromDate`, and update their claim shares.
+     * Requirements:
      *
-     * `toDate` is the current timestamp.
-     *
-     * @param fromDate timestamp when update calculation begin.
+     * - `fromDate` must be past timestamp
      */
     function _calcStakeClaimShares(
         uint256 fromDate
@@ -383,13 +446,13 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
         require(fromDate <= block.timestamp, "StakePool#_calcStakeClaimShares: NO_PAST_DATE");
         uint256[] memory eligibleStakes = new uint256[](tokenIds);
         uint256[] memory eligibleStakeClaimShares = new uint256[](tokenIds);
-        uint256 eligibleStakesCount = 0;
-        uint256 totalStakeClaim = 0;
+        uint256 eligibleStakesCount;
+        uint256 totalStakeClaim;
 
         for (uint256 i = 1; i <= tokenIds; i++) {
             if (_exists(i)) {
-                (uint256 amount, uint256 multiplier, uint256 depositedAt) = getStake(i);
-                if (depositedAt <= fromDate) {
+                (uint256 amount, uint256 multiplier, uint256 depositedAt) = getStakeInfo(i);
+                if (amount > 0 && depositedAt <= fromDate) {
                     totalStakeClaim += amount * multiplier;
                     eligibleStakes[eligibleStakesCount++] = i;
                 }
@@ -397,35 +460,11 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
         }
 
         for (uint256 i = 0; i < eligibleStakesCount; i++) {
-            (uint256 amount, uint256 multiplier, ) = getStake(eligibleStakes[i]);
-            eligibleStakeClaimShares[i] = (amount * multiplier * 1000) / totalStakeClaim;
+            (uint256 amount, uint256 multiplier, ) = getStakeInfo(eligibleStakes[i]);
+            eligibleStakeClaimShares[i] = (amount * multiplier * sClaimShareDenominator) / totalStakeClaim;
         }
 
         return (eligibleStakes, eligibleStakeClaimShares, eligibleStakesCount);
-    }
-
-    /**
-     * @dev Calculate sum of reward deposits to the pool
-     * processed from `fromDate` to current timestamp.
-     *
-     * @param fromDate timestamp when sum calculation begin.
-     */
-    function _sumDeposits(
-        uint256 fromDate
-    )
-        private
-        view
-        onlyOperator
-        returns (uint256)
-    {
-        uint256 totalDepositAmount = 0;
-        for (uint256 i = 0; i < rewardDeposits.length; i++) {
-            if (rewardDeposits[i].depositedAt >= fromDate ) {
-                totalDepositAmount += rewardDeposits[i].amount;
-            }
-        }
-
-        return totalDepositAmount;
     }
 
     /**
@@ -433,7 +472,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
      * @param lastDistributeDate timestamp when the last distribution was done.
      * @param distributionRatio monthly, quarterly or yearly distribution ratio.
      */
-    function _distributeToUsers(
+    function _distribute(
         uint256 lastDistributeDate,
         uint256 distributionRatio
     )
@@ -444,14 +483,14 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
         uint256[] memory eligibleStakeClaimShares;
         uint256 eligibleStakesCount;
         uint256 availableDistributeAmount;
-        uint256 totalDistributeAmount = 0;
+        uint256 totalDistributeAmount;
 
         (eligibleStakes, eligibleStakeClaimShares, eligibleStakesCount) = _calcStakeClaimShares(lastDistributeDate);
-        availableDistributeAmount = _sumDeposits(lastDistributeDate) * distributionRatio / 100;
+        availableDistributeAmount = getRewardDepositSum(lastDistributeDate, block.timestamp) * distributionRatio / 100;
         for (uint256 i = 0; i < eligibleStakesCount; i++) {
             uint256 stakeId = eligibleStakes[i];
-            uint256 amountShare = availableDistributeAmount * eligibleStakeClaimShares[i] / 1000;
-            require(amountShare <= rewardToken.balanceOf(address(this)), "StakePool#_distributeToUsers: INSUFFICIENT FUNDS");
+            uint256 amountShare = availableDistributeAmount * eligibleStakeClaimShares[i] / sClaimShareDenominator;
+            require(amountShare <= rewardToken.balanceOf(address(this)), "StakePool#_distribute: INSUFFICIENT FUNDS");
             claimableRewards[ownerOf(stakeId)] += amountShare;
             totalDistributeAmount += amountShare;
         }

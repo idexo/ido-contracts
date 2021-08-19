@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "./interfaces/IStakeToken.sol";
+import "../interfaces/IStakeToken.sol";
 
 contract StakeToken is IStakeToken, ERC721, Ownable {
     using SafeMath for uint256;
@@ -22,7 +22,7 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
     // stake id => stake info
     mapping(uint256 => Stake) public stakes;
     // staker wallet => stake id array
-    mapping(address => uint256[]) public stakerToIds;
+    mapping(address => uint256[]) public stakerIds;
 
     event StakeAmountDecreased(uint256 stakeId, uint256 decreaseAmount);
 
@@ -34,10 +34,10 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
     { }
 
     /**
-     * @dev Get token id array owned by wallet address.
+     * @dev Get stake token id array owned by wallet address.
      * @param account address
      */
-    function getTokenId(
+    function getStakeTokenIds(
         address account
     )
         public
@@ -45,15 +45,32 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
         view
         returns (uint256[] memory)
     {
-        require(account != address(0), "StakeToken#getTokenId: ZERO_ADDRESS");
-        return stakerToIds[account];
+        return stakerIds[account];
     }
 
     /**
-     * @dev Check if wallet address owns any tokens.
+     * @dev Return total stake amount of `account`
+     */
+    function getStakeAmount(
+        address account
+    )
+        external
+        view
+        returns (uint256)
+    {
+        uint256[] memory stakeIds = stakerIds[account];
+        uint256 totalStakeAmount;
+        for (uint256 i = 0; i < stakeIds.length; i++) {
+            totalStakeAmount += stakes[stakeIds[i]].amount * stakes[stakeIds[i]].multiplier / multiplierDenominator;
+        }
+        return totalStakeAmount;
+    }
+
+    /**
+     * @dev Check if wallet address owns any stake tokens.
      * @param account address
      */
-    function isTokenHolder(
+    function isHolder(
         address account
     )
         public
@@ -61,15 +78,17 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
         view
         returns (bool)
     {
-        require(account != address(0), "StakeToken#isTokenHolder: ZERO_ADDRESS");
         return balanceOf(account) > 0;
     }
 
     /**
      * @dev Return stake info from `stakeId`.
+     * Requirements:
+     *
+     * - `stakeId` must exist in stake pool
      * @param stakeId uint256
      */
-    function getStake(
+    function getStakeInfo(
         uint256 stakeId
     )
         public
@@ -77,8 +96,38 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
         view
         returns (uint256, uint256, uint256)
     {
-        require(_exists(stakeId), "StakeToken#getStake: STAKE_NOT_FOUND");
+        require(_exists(stakeId), "StakeToken#getStakeInfo: STAKE_NOT_FOUND");
         return (stakes[stakeId].amount, stakes[stakeId].multiplier, stakes[stakeId].depositedAt);
+    }
+
+    /**
+     * @dev Return total stake amount that have been in the pool from `fromDate`
+     * Requirements:
+     *
+     * - `fromDate` must be past date
+     */
+    function getEligibleStakeAmount(
+        uint256 fromDate
+    )
+        public
+        override
+        view
+        returns (uint256)
+    {
+        require(fromDate <= block.timestamp, "StakeToken#getEligibleStakeAmount: NO_PAST_DATE");
+        uint256 totalSAmount;
+
+        for (uint256 i = 1; i <= tokenIds; i++) {
+            if (_exists(i)) {
+                Stake memory stake = stakes[i];
+                if (stake.depositedAt > fromDate) {
+                    break;
+                }
+                totalSAmount += stake.amount * stake.multiplier / multiplierDenominator;
+            }
+        }
+
+        return totalSAmount;
     }
 
     /**
@@ -104,6 +153,10 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
 
     /**
      * @dev Mint a new StakeToken.
+     * Requirements:
+     *
+     * - `account` must not be zero address, check ERC721 {_mint}
+     * - `amount` must not be zero
      * @param account address of recipient.
      * @param amount mint amount.
      * @param depositedAt timestamp when stake was deposited.
@@ -117,7 +170,7 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
         virtual
         returns (uint256)
     {
-        require(amount > 0, "StakeToken#mint: INVALID_AMOUNT");
+        require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
         tokenIds++;
         uint256 multiplier = _getMultiplier();
         super._mint(account, tokenIds);
@@ -125,13 +178,16 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
         newStake.amount = amount;
         newStake.multiplier = multiplier;
         newStake.depositedAt = depositedAt;
-        stakerToIds[account].push(tokenIds);
+        stakerIds[account].push(tokenIds);
 
         return tokenIds;
     }
 
     /**
      * @dev Burn stakeToken.
+     * Requirements:
+     *
+     * - `stakeId` must exist in stake pool
      * @param stakeId id of buring token.
      */
     function _burn(
@@ -140,11 +196,11 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
         internal
         override
     {
-        require(_exists(stakeId), "StakeToken#burn: STAKE_NOT_FOUND");
+        require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
         address stakeOwner = ownerOf(stakeId);
         super._burn(stakeId);
         delete stakes[stakeId];
-        uint256[] storage stakeIds = stakerToIds[stakeOwner];
+        uint256[] storage stakeIds = stakerIds[stakeOwner];
         for (uint256 i = 0; i < stakeIds.length; i++) {
             if (stakeIds[i] == stakeId) {
                 if (i != stakeIds.length - 1) {
@@ -159,6 +215,9 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
     /**
      * @dev Decrease stake amount.
      * If stake amount leads to be zero, the stake is burned.
+     * Requirements:
+     *
+     * - `stakeId` must exist in stake pool
      * @param stakeId id of buring token.
      * @param amount to withdraw.
      */
