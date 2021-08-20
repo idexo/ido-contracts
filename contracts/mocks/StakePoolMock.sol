@@ -25,7 +25,6 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
     uint256 public constant MONTH = 1 days;
     uint256 public constant QUARTER = 3 days;
     uint256 public constant YEAR = 12 days;
-
     // Reward distribution ratio - monthly, quarterly, yearly
     uint256 public constant mDistributionRatio = 25;
     uint256 public constant qDistributionRatio = 50;
@@ -33,7 +32,7 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
     // Minimum stake amount
     uint256 public constant minStakeAmount = 2500 * 1e18;
 
-    uint256 public constant sClaimShareDenominator = 1000;
+    uint256 public constant sClaimShareDenominator = 1e18;
 
     // Address of deposit token.
     IERC20 public depositToken;
@@ -306,7 +305,6 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
         public
         override
         view
-        onlyOperator
         returns (uint256)
     {
         require(fromDate < toDate, "StakePoolMock#getRewardDepositSum: INVALID_DATE_RANGE");
@@ -355,6 +353,7 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
     {
         uint256 lastDistributeDate;
         uint256 totalDistributeAmount;
+        uint256 currentDate = block.timestamp;
 
         // Monthly distribution
         if (mDistributes.length == 0) {
@@ -362,14 +361,15 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
         } else {
             lastDistributeDate = mDistributes[mDistributes.length - 1].distributedAt;
         }
-        if (lastDistributeDate + MONTH <= block.timestamp) {
+        if (lastDistributeDate + MONTH <= currentDate) {
+            lastDistributeDate = currentDate - MONTH;
             totalDistributeAmount = _distribute(lastDistributeDate, mDistributionRatio);
             mDistributes.push(RewardDistribute({
                 amount: totalDistributeAmount,
-                distributedAt: block.timestamp
+                distributedAt: currentDate
             }));
 
-            emit MonthlyDistributed(totalDistributeAmount, block.timestamp);
+            emit MonthlyDistributed(totalDistributeAmount, currentDate);
         }
         // Quarterly distribution
         if (qDistributes.length == 0) {
@@ -377,14 +377,15 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
         } else {
             lastDistributeDate = qDistributes[qDistributes.length - 1].distributedAt;
         }
-        if (lastDistributeDate + QUARTER <= block.timestamp) {
+        if (lastDistributeDate + QUARTER <= currentDate) {
+            lastDistributeDate = currentDate - QUARTER;
             totalDistributeAmount = _distribute(lastDistributeDate, qDistributionRatio);
             qDistributes.push(RewardDistribute({
                 amount: totalDistributeAmount,
-                distributedAt: block.timestamp
+                distributedAt: currentDate
             }));
 
-            emit QuarterlyDistributed(totalDistributeAmount, block.timestamp);
+            emit QuarterlyDistributed(totalDistributeAmount, currentDate);
         }
         // Yearly distribution
         if (yDistributes.length == 0) {
@@ -392,14 +393,15 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
         } else {
             lastDistributeDate = yDistributes[yDistributes.length - 1].distributedAt;
         }
-        if (lastDistributeDate + YEAR <= block.timestamp) {
+        if (lastDistributeDate + YEAR <= currentDate) {
+            lastDistributeDate = currentDate - YEAR;
             totalDistributeAmount = _distribute(lastDistributeDate, yDistributionRatio);
             yDistributes.push(RewardDistribute({
                 amount: totalDistributeAmount,
-                distributedAt: block.timestamp
+                distributedAt: currentDate
             }));
 
-            emit YearlyDistributed(totalDistributeAmount, block.timestamp);
+            emit YearlyDistributed(totalDistributeAmount, currentDate);
         }
     }
 

@@ -61,7 +61,7 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
         uint256[] memory stakeIds = stakerIds[account];
         uint256 totalStakeAmount;
         for (uint256 i = 0; i < stakeIds.length; i++) {
-            totalStakeAmount += stakes[stakeIds[i]].amount * stakes[stakeIds[i]].multiplier / multiplierDenominator;
+            totalStakeAmount += stakes[stakeIds[i]].amount;
         }
         return totalStakeAmount;
     }
