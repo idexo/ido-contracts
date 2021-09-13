@@ -20,6 +20,7 @@ contract('::IDO', async accounts => {
   const [alice, bob, carol] = accounts;
   const name = 'Idexo Token'; // token name
   let chainId; // buidlerevm chain id
+  // this key is from the first address on test evm
   const ownerPrivateKey = Buffer.from('f06c0fbe2093c28661914bdc0cd45f2ce4f44476f67f8e94611dadc9a834a455', 'hex');
 
   describe('#Role', async () => {

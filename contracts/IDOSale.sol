@@ -3,6 +3,7 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -33,6 +34,14 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
     struct Purchase {
         address account;
         uint256 amount;
+    }
+    // ERC20Permit
+    struct PermitRequest {
+        uint256 nonce;
+        uint256 deadline;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
     }
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -216,11 +225,12 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
     function addWhitelist(address[] memory accounts) external onlyOperator whenNotPaused {
         for (uint256 i = 0; i < accounts.length; i++) {
             require(accounts[i] != address(0), "IDOSale: ZERO_ADDRESS");
-            require(!whitelist[accounts[i]], "IDOSale: ALREADY_WHITELISTED");
-            whitelist[accounts[i]] = true;
-            _whitelistedUsers.push(accounts[i]);
+            if (!whitelist[accounts[i]]) {
+                whitelist[accounts[i]] = true;
+                _whitelistedUsers.push(accounts[i]);
 
-            emit WhitelistAdded(accounts[i]);
+                emit WhitelistAdded(accounts[i]);
+            }
         }
     }
 
@@ -231,10 +241,11 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
     function removeWhitelist(address[] memory accounts) external onlyOperator whenNotPaused {
         for (uint256 i = 0; i < accounts.length; i++) {
             require(accounts[i] != address(0), "IDOSale: ZERO_ADDRESS");
-            require(whitelist[accounts[i]], "IDOSale: ALREADY_NOT_WHITELISTED");
-            whitelist[accounts[i]] = false;
+            if (whitelist[accounts[i]]) {
+                whitelist[accounts[i]] = false;
 
-            emit WhitelistRemoved(accounts[i]);
+                emit WhitelistRemoved(accounts[i]);
+            }
         }
     }
 
@@ -267,6 +278,22 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
     }
 
     /**
+     * @dev Permit and deposit IDO token to the sale contract
+     * If token does not have `permit` function, this function does not work
+     */
+    function permitAndDepositTokens(
+        uint256 amount,
+        PermitRequest calldata permitOptions
+    ) external onlyOperator whenNotPaused {
+        require(amount != 0, "IDOSale: DEPOSIT_AMOUNT_INVALID");
+        // Permit
+        IERC20Permit(address(ido)).permit(_msgSender(), address(this), amount, permitOptions.deadline, permitOptions.v, permitOptions.r, permitOptions.s);
+        ido.safeTransferFrom(_msgSender(), address(this), amount);
+
+        emit Deposited(_msgSender(), amount);
+    }
+
+    /**
      * @dev Purchase IDO token
      * Only whitelisted users can purchase within `purchcaseCap` amount
      */
@@ -277,6 +304,28 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
         require(amount <= ido.balanceOf(address(this)), "IDOSale: INSUFFICIENT_FUNDS");
 
         purchasedAmounts[_msgSender()] += amount;
+        purchaseToken.safeTransferFrom(_msgSender(), address(this), amount * idoPrice);
+        ido.safeTransfer(_msgSender(), amount);
+
+        emit Purchased(_msgSender(), amount);
+    }
+
+    /**
+     * @dev Purchase IDO token
+     * Only whitelisted users can purchase within `purchcaseCap` amount
+     * If token does not have `permit` function, this function does not work
+     */
+    function permitAndPurchase(
+        uint256 amount,
+        PermitRequest calldata permitOptions
+    ) external nonReentrant whenNotPaused {
+        require(amount != 0, "IDOSale: PURCHASE_AMOUNT_INVALID");
+        require(whitelist[_msgSender()], "IDOSale: CALLER_NO_WHITELIST");
+        require(purchasedAmounts[_msgSender()] + amount <= purchaseCap, "IDOSale: PURCHASE_CAP_OVERFLOW");
+        require(amount <= ido.balanceOf(address(this)), "IDOSale: INSUFFICIENT_FUNDS");
+
+        purchasedAmounts[_msgSender()] += amount;
+        IERC20Permit(address(purchaseToken)).permit(_msgSender(), address(this), amount, permitOptions.deadline, permitOptions.v, permitOptions.r, permitOptions.s);
         purchaseToken.safeTransferFrom(_msgSender(), address(this), amount * idoPrice);
         ido.safeTransfer(_msgSender(), amount);
 
