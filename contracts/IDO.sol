@@ -14,7 +14,6 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
     address public newOwner;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     uint256 public constant HUNDRED_MILLION = 100 * 1000 * 1000 * 10 ** 18;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -26,7 +25,6 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
     {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(OPERATOR_ROLE, _msgSender());
-        _setupRole(PAUSER_ROLE, _msgSender());
 
         owner = _msgSender();
         emit OwnershipTransferred(address(0), _msgSender());
@@ -102,14 +100,6 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
     }
 
     /**
-     * @dev Restricted to members of the pauser role.
-     */
-    modifier onlyPauser() {
-        require(hasRole(PAUSER_ROLE, _msgSender()), "IDO#onlyPauser: CALLER_NO_PAUSER_ROLE");
-        _;
-    }
-
-    /**
      * @dev Add an account to the operator role.
      * @param account address
      */
@@ -135,9 +125,6 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
     {
         require(hasRole(OPERATOR_ROLE, account), "IDO#removeOperator: NO_OPERATOR_ROLE");
         revokeRole(OPERATOR_ROLE, account);
-        if (hasRole(PAUSER_ROLE, account)) {
-            revokeRole(PAUSER_ROLE, account);
-        }
     }
 
     /**
@@ -152,47 +139,6 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
         returns (bool)
     {
         return hasRole(OPERATOR_ROLE, account);
-    }
-
-    /**
-     * @dev Add an account to the pauser role.
-     * @param account address
-     */
-    function addPauser(
-        address account
-    )
-        public
-        onlyOwner
-    {
-        require(!hasRole(PAUSER_ROLE, account), "IDO#addPauser: ALREADY_PAUSER_ROLE");
-        if (!hasRole(OPERATOR_ROLE, account)) {
-            grantRole(OPERATOR_ROLE, account);
-        }
-        grantRole(PAUSER_ROLE, account);
-    }
-
-    /**
-     * @dev Remove an account from the pauser role.
-     * @param account address
-     */
-    function removePauser(
-        address account
-    )
-        public
-        onlyOwner
-    {
-        require(hasRole(PAUSER_ROLE, account), "IDO#removePauser: NO_PAUSER_ROLE");
-        revokeRole(PAUSER_ROLE, account);
-    }
-
-    /**
-     * @dev Check if an account is pauser.
-     * @param account address
-     */
-    function checkPauser(
-        address account
-    ) public view returns (bool) {
-        return hasRole(PAUSER_ROLE, account);
     }
 
     /************************|
@@ -278,7 +224,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
      */
     function pause()
         public
-        onlyPauser
+        onlyOperator
     {
         super._pause();
     }
@@ -288,7 +234,7 @@ contract IDO is ERC20Permit, ERC20Pausable, ERC20Capped, AccessControl {
      */
     function unpause()
         public
-        onlyPauser
+        onlyOperator
     {
         super._unpause();
     }
