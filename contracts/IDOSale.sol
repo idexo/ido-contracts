@@ -300,7 +300,7 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
     function purchase(uint256 amount) external nonReentrant whenNotPaused {
         require(amount != 0, "IDOSale: PURCHASE_AMOUNT_INVALID");
         require(whitelist[_msgSender()], "IDOSale: CALLER_NO_WHITELIST");
-        require(purchasedAmounts[_msgSender()] + amount <= purchaseCap, "IDOSale: PURCHASE_CAP_OVERFLOW");
+        require(purchasedAmounts[_msgSender()] + amount <= purchaseCap, "IDOSale: PURCHASE_CAP_EXCEEDED");
         require(amount <= ido.balanceOf(address(this)), "IDOSale: INSUFFICIENT_FUNDS");
 
         purchasedAmounts[_msgSender()] += amount;
