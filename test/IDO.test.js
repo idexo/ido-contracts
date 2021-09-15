@@ -21,11 +21,11 @@ contract('::IDO', async accounts => {
   const name = 'Idexo Token'; // token name
   let chainId; // buidlerevm chain id
   // this key is from the first address on test evm
-  const ownerPrivateKey = Buffer.from('f06c0fbe2093c28661914bdc0cd45f2ce4f44476f67f8e94611dadc9a834a455', 'hex');
+  const ownerPrivateKey = Buffer.from('85a34ef4008d6b65bcd18d8ac7cfc904060dac9d186f440ae488997154f04c12', 'hex');
 
   describe('#Role', async () => {
     it ('should add operator', async () => {
-      token = await IDO.new({from: alice});
+      token = await IDO.new(alice);
       await token.getChainId().then(res => {
         chainId = res.toNumber();
       })
@@ -39,16 +39,16 @@ contract('::IDO', async accounts => {
     });
     describe('reverts if', async () => {
       it('add operator by non-admin', async () => {
-        await truffleAssert.reverts(
+        await expectRevert(
           token.addOperator(bob, {from: bob}),
-          'revert IDO#onlyOwner: CALLER_NO_OWNER'
+          'revert IDO: CALLER_NO_OWNER'
         );
       });
       it('remove operator by non-admin', async () => {
         await token.addOperator(bob);
-        await truffleAssert.reverts(
+        await expectRevert(
           token.removeOperator(bob, {from: bob}),
-          'revert IDO#onlyOwner: CALLER_NO_OWNER'
+          'revert IDO: CALLER_NO_OWNER'
         );
       });
     });
@@ -58,10 +58,6 @@ contract('::IDO', async accounts => {
     it('should be paused/unpaused by operator', async () => {
       await token.pause({from: bob});
       expect(await token.paused()).to.eq(true);
-      await truffleAssert.reverts(
-        token.mint(alice, web3.utils.toWei(new BN(1000))),
-        'revert ERC20Pausable: token transfer while paused'
-      );
       await expectRevert(
         token.transfer(bob, web3.utils.toWei(new BN(500))),
         'ERC20Pausable: token transfer while paused'
@@ -71,27 +67,19 @@ contract('::IDO', async accounts => {
     });
     describe('reverts if', async () => {
       it('pause/unpause by non-operator', async () => {
-        await truffleAssert.reverts(
+        await expectRevert(
           token.pause({from: carol}),
-          'IDO#onlyOperator: CALLER_NO_OPERATOR_ROLE'
+          'IDO: CALLER_NO_OPERATOR_ROLE'
         );
       });
     });
   });
 
   describe('#Token', async () => {
-    it('should mint a new token by operator', async () => {
-      await token.mint(alice, web3.utils.toWei(new BN(1000)), {from: bob});
-      await token.balanceOf(alice).then(balance => {
-        expect(balance.toString()).to.eq('1000000000000000000000');
+    it('totalsupply', async () => {
+      await token.balanceOf(alice).then(res => {
+        expect(res.toString()).to.eq('100000000000000000000000000');
       });
-    });
-    it('shoule not mint when exceeded cap', async () => {
-      await token.mint(alice, web3.utils.toWei(new BN(1000)), {from: bob});
-      await truffleAssert.reverts(
-        token.mint(alice, web3.utils.toWei(new BN(100000000)), {from: bob}),
-        'revert ERC20Capped: cap exceeded'
-      );
     });
     it('should permit and approve', async () => {
       // Create the approval request
@@ -116,14 +104,6 @@ contract('::IDO', async accounts => {
         'Approval'
       );
     });
-    describe('reverts if', async () => {
-      it('mint a new token by non-operator', async () => {
-        await truffleAssert.reverts(
-          token.mint(alice, web3.utils.toWei(new BN(1000)), {from: carol}),
-          'revert IDO#onlyOperator: CALLER_NO_OPERATOR_ROLE'
-        );
-      });
-    });
   });
 
   describe('#Ownership', async () => {
@@ -136,20 +116,20 @@ contract('::IDO', async accounts => {
       it('non-owner call transferOwnership', async () => {
         await expectRevert(
           token.transferOwnership(bob, {from: carol}),
-          'IDO#onlyOwner: CALLER_NO_OWNER'
+          'IDO: CALLER_NO_OWNER'
         );
       });
       it('call transferOwnership with zero address', async () => {
         await expectRevert(
           token.transferOwnership(constants.ZERO_ADDRESS, {from: bob}),
-          'IDO#transferOwnership: INVALID_ADDRESS'
+          'IDO: INVALID_ADDRESS'
         );
       });
       it('non new owner call acceptOwnership', async () => {
         await token.transferOwnership(alice, {from: bob});
         await expectRevert(
           token.acceptOwnership({from: carol}),
-          'IDO#acceptOwnership: CALLER_NO_NEW_OWNER'
+          'IDO: CALLER_NO_NEW_OWNER'
         );
       })
     });
