@@ -269,6 +269,10 @@ contract RelayManager2 is Pausable, AccessControl, ReentrancyGuard {
     |          Fee         |
     |_____________________*/
 
+    /**
+     * @dev Withdraw admin fee accumulated
+     * Only operators can call
+     */
     function withdrawAdminFee(
         address receiver,
         uint256 amount
@@ -281,6 +285,10 @@ contract RelayManager2 is Pausable, AccessControl, ReentrancyGuard {
         emit AdminFeeWithdraw(receiver, amount);
     }
 
+    /**
+     * @dev Withdraw gas fee accumulated
+     * Only operators can call
+     */
     function withdrawGasFee(
         address receiver,
         uint256 amount
