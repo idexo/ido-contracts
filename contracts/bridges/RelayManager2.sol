@@ -6,17 +6,18 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
+import "../interfaces/IWIDO.sol";
 
-contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
-    using SafeERC20 for IERC20;
+contract RelayManager2 is Pausable, AccessControl, ReentrancyGuard {
+    using SafeERC20 for IWIDO;
     // The contract owner address
     address public owner;
     // Proposed contract new owner address
     address public newOwner;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-    // IDO token address
-    IERC20 public ido;
+    // Wrapped IDO token address
+    IWIDO public wIDO;
 
     uint256 public baseGas;
 
@@ -46,12 +47,12 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
     event GasFeeWithdraw(address indexed receiver, uint256 amount);
 
     constructor(
-        IERC20 _ido,
+        IWIDO _wIDO,
         uint256 _adminFee
     ) {
-        require(_adminFee != 0, "RelayManagerETH: ADMIN_FEE_INVALID");
+        require(_adminFee != 0, "RelayManager2: ADMIN_FEE_INVALID");
         address sender = _msgSender();
-        ido = _ido;
+        wIDO = _wIDO;
         owner = sender;
         adminFee = _adminFee;
         baseGas = 21000; // default block gas limit
@@ -75,7 +76,7 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
      * Only `owner` can call
      */
     function setAdminFee(uint256 newAdminFee) external onlyOwner {
-        require(newAdminFee != 0, "RelayManagerETH: ADMIN_FEE_INVALID");
+        require(newAdminFee != 0, "RelayManager2: ADMIN_FEE_INVALID");
         adminFee = newAdminFee;
 
         emit AdminFeeChanged(newAdminFee);
@@ -99,7 +100,7 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(owner == _msgSender(), "RelayManagerETH: CALLER_NO_OWNER");
+        require(owner == _msgSender(), "RelayManager2: CALLER_NO_OWNER");
         _;
     }
 
@@ -121,8 +122,8 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
      * can only be called by the contract owner.
      */
     function transferOwnership(address _newOwner) external onlyOwner {
-        require(_newOwner != address(0), "RelayManagerETH: INVALID_ADDRESS");
-        require(_newOwner != owner, "RelayManagerETH: OWNERSHIP_SELF_TRANSFER");
+        require(_newOwner != address(0), "RelayManager2: INVALID_ADDRESS");
+        require(_newOwner != owner, "RelayManager2: OWNERSHIP_SELF_TRANSFER");
         newOwner = _newOwner;
     }
 
@@ -130,7 +131,7 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
      * @dev The new owner accept an ownership transfer.
      */
     function acceptOwnership() external {
-        require(_msgSender() == newOwner, "RelayManagerETH: CALLER_NO_NEW_OWNER");
+        require(_msgSender() == newOwner, "RelayManager2: CALLER_NO_NEW_OWNER");
         emit OwnershipTransferred(owner, newOwner);
         owner = newOwner;
         newOwner = address(0);
@@ -144,7 +145,7 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
      * @dev Restricted to members of the operator role.
      */
     modifier onlyOperator() {
-        require(hasRole(OPERATOR_ROLE, _msgSender()), "RelayManagerETH: CALLER_NO_OPERATOR_ROLE");
+        require(hasRole(OPERATOR_ROLE, _msgSender()), "RelayManager2: CALLER_NO_OPERATOR_ROLE");
         _;
     }
 
@@ -152,7 +153,7 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
      * @dev Add an account to the operator role.
      */
     function addOperator(address account) public onlyOwner {
-        require(!hasRole(OPERATOR_ROLE, account), "RelayManagerETH: ALREADY_OERATOR_ROLE");
+        require(!hasRole(OPERATOR_ROLE, account), "RelayManager2: ALREADY_OERATOR_ROLE");
         grantRole(OPERATOR_ROLE, account);
     }
 
@@ -160,7 +161,7 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
      * @dev Remove an account from the operator role.
      */
     function removeOperator(address account) public onlyOwner {
-        require(hasRole(OPERATOR_ROLE, account), "RelayManagerETH: NO_OPERATOR_ROLE");
+        require(hasRole(OPERATOR_ROLE, account), "RelayManager2: NO_OPERATOR_ROLE");
         revokeRole(OPERATOR_ROLE, account);
     }
 
@@ -203,11 +204,11 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
         uint256 amount,
         uint256 toChainId
     ) external whenNotPaused {
-        require(amount > 0, "RelayManagerETH: DEPOSIT_AMOUNT_INVALID");
-        require(receiver != address(0), "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
+        require(amount > 0, "RelayManager2: DEPOSIT_AMOUNT_INVALID");
+        require(receiver != address(0), "RelayManager2: RECEIVER_ZERO_ADDRESS");
         address sender = _msgSender();
-        // Lock tokens
-        ido.safeTransferFrom(sender, address(this), amount);
+        // Burn tokens
+        wIDO.burn(_msgSender(), amount);
 
         emit Deposited(sender, receiver, toChainId, amount, nonces[sender]++);
     }
@@ -221,13 +222,13 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
         uint256 toChainId,
         PermitRequest calldata permitOptions
     ) external whenNotPaused {
-        require(amount > 0, "RelayManagerETH: DEPOSIT_AMOUNT_INVALID");
-        require(receiver != address(0), "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
+        require(amount > 0, "RelayManager2: DEPOSIT_AMOUNT_INVALID");
+        require(receiver != address(0), "RelayManager2: RECEIVER_ZERO_ADDRESS");
         address sender = _msgSender();
         // Approve the relay manager contract to spend tokens on behalf of `sender`
-        IERC20Permit(address(ido)).permit(_msgSender(), address(this), amount, permitOptions.deadline, permitOptions.v, permitOptions.r, permitOptions.s);
-        // Lock tokens
-        ido.safeTransferFrom(sender, address(this), amount);
+        IERC20Permit(address(wIDO)).permit(_msgSender(), address(this), amount, permitOptions.deadline, permitOptions.v, permitOptions.r, permitOptions.s);
+        // Burn tokens
+        wIDO.burn(_msgSender(), amount);
 
         emit Deposited(sender, receiver, toChainId, amount, nonces[sender]++);
     }
@@ -242,10 +243,10 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
         uint256 gasPrice
     ) external nonReentrant whenNotPaused onlyOperator {
         uint256 initialGas = gasleft();
-        require(receiver != address(0), "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
-        require(amount > 0, "RelayManagerETH: SEND_AMOUNT_INVALID");
-        require(!processedHashes[depositHash], "RelayManagerETH: ALREADY_PROCESSED");
-        require(ido.balanceOf(address(this)) >= amount, "RelayManagerETH: INSUFFICIENT_LIQUIDITY");
+        require(receiver != address(0), "RelayManager2: RECEIVER_ZERO_ADDRESS");
+        require(amount > 0, "RelayManager2: SEND_AMOUNT_INVALID");
+        require(!processedHashes[depositHash], "RelayManager2: ALREADY_PROCESSED");
+        require(wIDO.balanceOf(address(this)) >= amount, "RelayManager2: INSUFFICIENT_LIQUIDITY");
 
         // Mark the depositHash state true to avoid double sending
         processedHashes[depositHash] = true;
@@ -258,8 +259,8 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
         gasFeeAccumulated += totalGasUsed * gasPrice;
         // Calculate real amount to transfer considering adminFee and gasFee
         uint256 amountToTransfer = amount - calculatedAdminFee - totalGasUsed * gasPrice;
-        // Unlock tokens
-        ido.safeTransfer(receiver, amountToTransfer);
+        // Mint tokens
+        wIDO.mint(receiver, amountToTransfer);
 
         emit Sent(receiver, amount, amountToTransfer, depositHash);
     }
@@ -272,10 +273,10 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
         address receiver,
         uint256 amount
     ) external onlyOperator whenNotPaused {
-        require(amount > 0, "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
-        require(adminFeeAccumulated >= amount, "RelayManagerETH: INSUFFICIENT_ADMIN_FEE");
+        require(amount > 0, "RelayManager2: RECEIVER_ZERO_ADDRESS");
+        require(adminFeeAccumulated >= amount, "RelayManager2: INSUFFICIENT_ADMIN_FEE");
         adminFeeAccumulated -= amount;
-        ido.safeTransfer(receiver, amount);
+        wIDO.safeTransfer(receiver, amount);
 
         emit AdminFeeWithdraw(receiver, amount);
     }
@@ -284,10 +285,10 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
         address receiver,
         uint256 amount
     ) external onlyOperator whenNotPaused {
-        require(amount > 0, "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
-        require(gasFeeAccumulated >= amount, "RelayManagerETH: INSUFFICIENT_GAS_FEE");
+        require(amount > 0, "RelayManager2: RECEIVER_ZERO_ADDRESS");
+        require(gasFeeAccumulated >= amount, "RelayManager2: INSUFFICIENT_GAS_FEE");
         gasFeeAccumulated -= amount;
-        ido.safeTransfer(receiver, amount);
+        wIDO.safeTransfer(receiver, amount);
 
         emit GasFeeWithdraw(receiver, amount);
     }

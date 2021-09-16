@@ -4,8 +4,9 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "../interfaces/IWIDO.sol";
 
-contract WIDO is ERC20Permit, ERC20Pausable, AccessControl {
+contract WIDO is IWIDO, ERC20Permit, ERC20Pausable, AccessControl {
     // Contract owner address
     address public owner;
     // Proposed new contract owner address
@@ -34,7 +35,7 @@ contract WIDO is ERC20Permit, ERC20Pausable, AccessControl {
      * @dev Set relayer address
      * Only owner can call
      */
-    function setRelayer(address newRelayer) external onlyOwner {
+    function setRelayer(address newRelayer) external override onlyOwner {
         require(newRelayer != address(0), "WIDO: NEW_RELAYER_ADDRESS_INVALID");
         relayer = newRelayer;
 
@@ -60,7 +61,7 @@ contract WIDO is ERC20Permit, ERC20Pausable, AccessControl {
      * NOTE: Renouncing ownership will leave the contract without an owner,
      * thereby removing any functionality that is only available to the owner.
      */
-    function renounceOwnership() external onlyOwner {
+    function renounceOwnership() external override onlyOwner {
         emit OwnershipTransferred(owner, address(0));
         owner = address(0);
     }
@@ -72,7 +73,7 @@ contract WIDO is ERC20Permit, ERC20Pausable, AccessControl {
      *
      * @param _newOwner new contract owner.
      */
-    function transferOwnership(address _newOwner) external onlyOwner {
+    function transferOwnership(address _newOwner) external override onlyOwner {
         require(_newOwner != address(0), "WIDO: INVALID_ADDRESS");
         require(_newOwner != owner, "WIDO: OWNERSHIP_SELF_TRANSFER");
         newOwner = _newOwner;
@@ -81,7 +82,7 @@ contract WIDO is ERC20Permit, ERC20Pausable, AccessControl {
     /**
      * @dev The new owner accept an ownership transfer.
      */
-    function acceptOwnership() external {
+    function acceptOwnership() external override {
         require(_msgSender() == newOwner, "WIDO: CALLER_NO_NEW_OWNER");
         emit OwnershipTransferred(owner, newOwner);
         owner = newOwner;
@@ -104,7 +105,7 @@ contract WIDO is ERC20Permit, ERC20Pausable, AccessControl {
      * @dev Add an account to the operator role.
      * @param account address
      */
-    function addOperator(address account) public onlyOwner {
+    function addOperator(address account) public override onlyOwner {
         require(!hasRole(OPERATOR_ROLE, account), "WIDO: ALREADY_OERATOR_ROLE");
         grantRole(OPERATOR_ROLE, account);
     }
@@ -113,7 +114,7 @@ contract WIDO is ERC20Permit, ERC20Pausable, AccessControl {
      * @dev Remove an account from the operator role.
      * @param account address
      */
-    function removeOperator(address account) public onlyOwner {
+    function removeOperator(address account) public override onlyOwner {
         require(hasRole(OPERATOR_ROLE, account), "WIDO: NO_OPERATOR_ROLE");
         revokeRole(OPERATOR_ROLE, account);
     }
@@ -122,7 +123,7 @@ contract WIDO is ERC20Permit, ERC20Pausable, AccessControl {
      * @dev Check if an account is operator.
      * @param account address
      */
-    function checkOperator(address account) public view returns (bool) {
+    function checkOperator(address account) public override view returns (bool) {
         return hasRole(OPERATOR_ROLE, account);
     }
 
@@ -137,7 +138,7 @@ contract WIDO is ERC20Permit, ERC20Pausable, AccessControl {
     function mint(
         address account,
         uint256 amount
-    ) external {
+    ) external override {
         require(_msgSender() == relayer, "WIDO: CALLER_NO_RELAYER");
         _mint(account, amount);
     }
@@ -149,7 +150,7 @@ contract WIDO is ERC20Permit, ERC20Pausable, AccessControl {
     function burn(
         address account,
         uint256 amount
-    ) external {
+    ) external override {
         require(_msgSender() == relayer, "WIDO: CALLER_NO_RELAYER");
         _burn(account, amount);
     }
@@ -171,7 +172,7 @@ contract WIDO is ERC20Permit, ERC20Pausable, AccessControl {
     /**
      * @dev Get chain id.
      */
-    function getChainId() public view returns (uint256) {
+    function getChainId() public override view returns (uint256) {
         uint256 id;
         assembly { id := chainid() }
         return id;
@@ -184,14 +185,14 @@ contract WIDO is ERC20Permit, ERC20Pausable, AccessControl {
     /**
      * @dev Pause.
      */
-    function pause() public onlyOperator {
+    function pause() public override onlyOperator {
         super._pause();
     }
 
     /**
      * @dev Unpause.
      */
-    function unpause() public onlyOperator {
+    function unpause() public override onlyOperator {
         super._unpause();
     }
 }
