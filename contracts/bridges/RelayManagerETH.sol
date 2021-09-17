@@ -233,7 +233,7 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @dev Send funds to the receiver to process cross-chain transfer
+     * @dev Send (mint) funds to the receiver to process cross-chain transfer
      */
     function send(
         address receiver,
@@ -244,11 +244,11 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
         uint256 initialGas = gasleft();
         require(receiver != address(0), "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
         require(amount > 0, "RelayManagerETH: SEND_AMOUNT_INVALID");
-        require(!processedHashes[depositHash], "RelayManagerETH: ALREADY_PROCESSED");
         require(ido.balanceOf(address(this)) >= amount, "RelayManagerETH: INSUFFICIENT_LIQUIDITY");
-
+        bytes32 hash = keccak256(abi.encodePacked(depositHash, address(ido), receiver, amount));
+        require(!processedHashes[hash], "RelayManagerETH: ALREADY_PROCESSED");
         // Mark the depositHash state true to avoid double sending
-        processedHashes[depositHash] = true;
+        processedHashes[hash] = true;
         // Calculate adminFee
         uint256 calculatedAdminFee = amount * adminFee / 10000;
         adminFeeAccumulated += calculatedAdminFee;

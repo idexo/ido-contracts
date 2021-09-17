@@ -10,8 +10,6 @@ contract IDO is ERC20Permit, ERC20Pausable, AccessControl {
     address public owner;
     // Proposed new contract owner address
     address public newOwner;
-    // Mint the total supply when deploying
-    address public treasury;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     uint256 public constant cap = 100 * 1000 * 1000 * 1 ether;
@@ -19,12 +17,11 @@ contract IDO is ERC20Permit, ERC20Pausable, AccessControl {
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event TreasuryChanged(address indexed treasury);
 
-    constructor(address _treasury) ERC20("Idexo Token", "IDO") ERC20Permit("Idexo Token") {
-        require(_treasury != address(0), "IDO: TREASURY_ZERO_ADDRESS");
+    constructor() ERC20("Idexo Token", "IDO") ERC20Permit("Idexo Token") {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(OPERATOR_ROLE, _msgSender());
 
-        _mint(_treasury, cap);
+        _mint(_msgSender(), cap);
         owner = _msgSender();
         emit OwnershipTransferred(address(0), _msgSender());
     }
@@ -74,23 +71,6 @@ contract IDO is ERC20Permit, ERC20Pausable, AccessControl {
         emit OwnershipTransferred(owner, newOwner);
         owner = newOwner;
         newOwner = address(0);
-    }
-
-    /***************************|
-    |          Treasury         |
-    |__________________________*/
-
-    /**
-     * @dev Set new treasury address
-     * Only owner can access
-     */
-    function setTreasury(address newTreasury) external onlyOwner {
-        require(newTreasury != address(0), "IDO: NEW_TREASURY_ZERO_ADDRESS");
-        require(treasury != newTreasury, "IDO: NEW_TREASURY_ADDRESS_INVALID");
-        treasury = newTreasury;
-        transferFrom(treasury, newTreasury, balanceOf(treasury));
-
-        emit TreasuryChanged(newTreasury);
     }
 
     /***********************|
