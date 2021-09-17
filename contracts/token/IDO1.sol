@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract IDO is ERC20Permit, ERC20Pausable, AccessControl {
+contract IDO1 is ERC20Permit, ERC20Pausable, AccessControl {
     // Contract owner address
     address public owner;
     // Proposed new contract owner address
@@ -24,7 +24,7 @@ contract IDO is ERC20Permit, ERC20Pausable, AccessControl {
         string memory symbol,
         address _treasury
     ) ERC20(name, symbol) ERC20Permit(name) {
-        require(_treasury != address(0), "IDO: TREASURY_ZERO_ADDRESS");
+        require(_treasury != address(0), "IDO1: TREASURY_ZERO_ADDRESS");
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(OPERATOR_ROLE, _msgSender());
 
@@ -41,7 +41,7 @@ contract IDO is ERC20Permit, ERC20Pausable, AccessControl {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(owner == _msgSender(), "IDO: CALLER_NO_OWNER");
+        require(owner == _msgSender(), "IDO1: CALLER_NO_OWNER");
         _;
     }
 
@@ -65,8 +65,8 @@ contract IDO is ERC20Permit, ERC20Pausable, AccessControl {
      * @param _newOwner new contract owner.
      */
     function transferOwnership(address _newOwner) external onlyOwner {
-        require(_newOwner != address(0), "IDO: INVALID_ADDRESS");
-        require(_newOwner != owner, "IDO: OWNERSHIP_SELF_TRANSFER");
+        require(_newOwner != address(0), "IDO1: INVALID_ADDRESS");
+        require(_newOwner != owner, "IDO1: OWNERSHIP_SELF_TRANSFER");
         newOwner = _newOwner;
     }
 
@@ -74,7 +74,7 @@ contract IDO is ERC20Permit, ERC20Pausable, AccessControl {
      * @dev The new owner accept an ownership transfer.
      */
     function acceptOwnership() external {
-        require(_msgSender() == newOwner, "IDO: CALLER_NO_NEW_OWNER");
+        require(_msgSender() == newOwner, "IDO1: CALLER_NO_NEW_OWNER");
         emit OwnershipTransferred(owner, newOwner);
         owner = newOwner;
         newOwner = address(0);
@@ -89,8 +89,8 @@ contract IDO is ERC20Permit, ERC20Pausable, AccessControl {
      * Only owner can access
      */
     function setTreasury(address newTreasury) external onlyOwner {
-        require(newTreasury != address(0), "IDO: NEW_TREASURY_ZERO_ADDRESS");
-        require(treasury != newTreasury, "IDO: NEW_TREASURY_ADDRESS_INVALID");
+        require(newTreasury != address(0), "IDO1: NEW_TREASURY_ZERO_ADDRESS");
+        require(treasury != newTreasury, "IDO1: NEW_TREASURY_ADDRESS_INVALID");
         treasury = newTreasury;
         transferFrom(treasury, newTreasury, balanceOf(treasury));
 
@@ -105,7 +105,7 @@ contract IDO is ERC20Permit, ERC20Pausable, AccessControl {
      * @dev Restricted to members of the operator role.
      */
     modifier onlyOperator() {
-        require(hasRole(OPERATOR_ROLE, _msgSender()), "IDO: CALLER_NO_OPERATOR_ROLE");
+        require(hasRole(OPERATOR_ROLE, _msgSender()), "IDO1: CALLER_NO_OPERATOR_ROLE");
         _;
     }
 
@@ -114,7 +114,7 @@ contract IDO is ERC20Permit, ERC20Pausable, AccessControl {
      * @param account address
      */
     function addOperator(address account) public onlyOwner {
-        require(!hasRole(OPERATOR_ROLE, account), "IDO: ALREADY_OERATOR_ROLE");
+        require(!hasRole(OPERATOR_ROLE, account), "IDO1: ALREADY_OERATOR_ROLE");
         grantRole(OPERATOR_ROLE, account);
     }
 
@@ -123,7 +123,7 @@ contract IDO is ERC20Permit, ERC20Pausable, AccessControl {
      * @param account address
      */
     function removeOperator(address account) public onlyOwner {
-        require(hasRole(OPERATOR_ROLE, account), "IDO: NO_OPERATOR_ROLE");
+        require(hasRole(OPERATOR_ROLE, account), "IDO1: NO_OPERATOR_ROLE");
         revokeRole(OPERATOR_ROLE, account);
     }
 

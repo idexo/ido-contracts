@@ -5,9 +5,9 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "./libs/BaseRelayRecipient.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 
-contract LiquidityPoolManager is Pausable, AccessControl, BaseRelayRecipient, ReentrancyGuard {
+contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
     // The contract owner address
     address public owner;
@@ -24,47 +24,35 @@ contract LiquidityPoolManager is Pausable, AccessControl, BaseRelayRecipient, Re
     uint256 public adminFeeAccumulated;
     uint256 public gasFeeAccumulated;
 
-    // Token transfer caps
-    uint256 public minDepositCap;
-    uint256 public maxDepositCap;
-    // Liquidity amount in $IDO
-    uint256 public liquidity;
-
-    mapping(address => uint256) public liquidityProviders;
     // Transfer nonce
     mapping(address => uint256) public nonces;
     // Transfer hash processed status
     mapping(bytes32 => bool) public processedHashes;
-
+    // ERC20Permit
     struct PermitRequest {
         uint256 nonce;
-        uint256 expiry;
-        bool allowed;
+        uint256 deadline;
         uint8 v;
         bytes32 r;
         bytes32 s;
     }
-
     // Events
     event Deposited(address indexed from, address indexed receiver, uint256 toChainId, uint256 amount, uint256 nonce);
     event Sent(address indexed receiver, uint256 indexed amount, uint256 indexed transferredAmount, bytes32 depositHash);
     event AdminFeeChanged(uint256 indexed AdminFee);
     event TrustedForwarderChanged(address indexed TrustedForwarder);
-    event LiquidityAdded(address indexed sender, uint256 amount);
-    event LiquidityRemoved(address indexed sender, uint256 amount);
     event EthReceived(address indexed sender, uint256 amount);
+    event AdminFeeWithdraw(address indexed receiver, uint256 amount);
+    event GasFeeWithdraw(address indexed receiver, uint256 amount);
 
     constructor(
         IERC20 _ido,
-        address _trustedForwarder,
         uint256 _adminFee
     ) {
-        require(_trustedForwarder != address(0), "LiquidityPoolManager: TRUSTED_FORWARDER_ZERO_ADDRESS");
-        require(_adminFee != 0, "LiquidityPoolManager: ADMIN_FEE_INVALID");
+        require(_adminFee != 0, "RelayManagerETH: ADMIN_FEE_INVALID");
         address sender = _msgSender();
         ido = _ido;
         owner = sender;
-        trustedForwarder = _trustedForwarder;
         adminFee = _adminFee;
         baseGas = 21000; // default block gas limit
 
@@ -78,8 +66,6 @@ contract LiquidityPoolManager is Pausable, AccessControl, BaseRelayRecipient, Re
         emit EthReceived(_msgSender(), msg.value);
     }
 
-    // TODO check whenNotPaused and whenPaused for function calls
-
     /**************************|
     |          Setters         |
     |_________________________*/
@@ -88,8 +74,8 @@ contract LiquidityPoolManager is Pausable, AccessControl, BaseRelayRecipient, Re
      * @dev Set admin fee bps
      * Only `owner` can call
      */
-    function setAdminFee(uint256 newAdminFee) external onlyOwner whenNotPaused {
-        require(newAdminFee != 0, "LiquidityPoolManager: ADMIN_FEE_INVALID");
+    function setAdminFee(uint256 newAdminFee) external onlyOwner {
+        require(newAdminFee != 0, "RelayManagerETH: ADMIN_FEE_INVALID");
         adminFee = newAdminFee;
 
         emit AdminFeeChanged(newAdminFee);
@@ -103,27 +89,6 @@ contract LiquidityPoolManager is Pausable, AccessControl, BaseRelayRecipient, Re
         baseGas = newBaseGas;
     }
 
-    /**
-     * @dev Set trustedForwarder address
-     * Only `owner` can call
-     */
-    function setTrustedForwarder(address newTrustedForwarder) external onlyOwner {
-        require(newTrustedForwarder != address(0), "LiquidityPoolManager: TRUSTED_FORWARDER_ZERO_ADDRESS");
-        trustedForwarder = newTrustedForwarder;
-
-        emit TrustedForwarderChanged(newTrustedForwarder);
-    }
-
-    /**
-     * @dev Set deposit cap limits
-     * Only `owner` can call
-     */
-    function setDepositCap(uint256 _minDepositCap, uint256 _maxDepositCap) external onlyOwner {
-        require(_minDepositCap < _maxDepositCap, "LiquidityPoolManager: DEPOSIT_CAP_INVALID");
-        minDepositCap = _minDepositCap;
-        maxDepositCap = _maxDepositCap;
-    }
-
     /****************************|
     |          Ownership         |
     |___________________________*/
@@ -134,7 +99,7 @@ contract LiquidityPoolManager is Pausable, AccessControl, BaseRelayRecipient, Re
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(owner == _msgSender(), "LiquidityPoolManager: CALLER_NO_OWNER");
+        require(owner == _msgSender(), "RelayManagerETH: CALLER_NO_OWNER");
         _;
     }
 
@@ -156,8 +121,8 @@ contract LiquidityPoolManager is Pausable, AccessControl, BaseRelayRecipient, Re
      * can only be called by the contract owner.
      */
     function transferOwnership(address _newOwner) external onlyOwner {
-        require(_newOwner != address(0), "LiquidityPoolManager: INVALID_ADDRESS");
-        require(_newOwner != owner, "LiquidityPoolManager: OWNERSHIP_SELF_TRANSFER");
+        require(_newOwner != address(0), "RelayManagerETH: INVALID_ADDRESS");
+        require(_newOwner != owner, "RelayManagerETH: OWNERSHIP_SELF_TRANSFER");
         newOwner = _newOwner;
     }
 
@@ -165,7 +130,7 @@ contract LiquidityPoolManager is Pausable, AccessControl, BaseRelayRecipient, Re
      * @dev The new owner accept an ownership transfer.
      */
     function acceptOwnership() external {
-        require(_msgSender() == newOwner, "LiquidityPoolManager: CALLER_NO_NEW_OWNER");
+        require(_msgSender() == newOwner, "RelayManagerETH: CALLER_NO_NEW_OWNER");
         emit OwnershipTransferred(owner, newOwner);
         owner = newOwner;
         newOwner = address(0);
@@ -179,7 +144,7 @@ contract LiquidityPoolManager is Pausable, AccessControl, BaseRelayRecipient, Re
      * @dev Restricted to members of the operator role.
      */
     modifier onlyOperator() {
-        require(hasRole(OPERATOR_ROLE, _msgSender()), "LiquidityPoolManager: CALLER_NO_OPERATOR_ROLE");
+        require(hasRole(OPERATOR_ROLE, _msgSender()), "RelayManagerETH: CALLER_NO_OPERATOR_ROLE");
         _;
     }
 
@@ -187,7 +152,7 @@ contract LiquidityPoolManager is Pausable, AccessControl, BaseRelayRecipient, Re
      * @dev Add an account to the operator role.
      */
     function addOperator(address account) public onlyOwner {
-        require(!hasRole(OPERATOR_ROLE, account), "LiquidityPoolManager: ALREADY_OERATOR_ROLE");
+        require(!hasRole(OPERATOR_ROLE, account), "RelayManagerETH: ALREADY_OERATOR_ROLE");
         grantRole(OPERATOR_ROLE, account);
     }
 
@@ -195,7 +160,7 @@ contract LiquidityPoolManager is Pausable, AccessControl, BaseRelayRecipient, Re
      * @dev Remove an account from the operator role.
      */
     function removeOperator(address account) public onlyOwner {
-        require(hasRole(OPERATOR_ROLE, account), "LiquidityPoolManager: NO_OPERATOR_ROLE");
+        require(hasRole(OPERATOR_ROLE, account), "RelayManagerETH: NO_OPERATOR_ROLE");
         revokeRole(OPERATOR_ROLE, account);
     }
 
@@ -226,56 +191,45 @@ contract LiquidityPoolManager is Pausable, AccessControl, BaseRelayRecipient, Re
         super._unpause();
     }
 
-    /****************************|
-    |          Liquidity         |
-    |___________________________*/
-
-    /**
-     * @dev Add liquidity to the liquidity pool contract
-     */
-    function addLiquidity(uint256 amount) external whenNotPaused nonReentrant {
-        require(amount != 0, "LiquidityPoolManager: LIQUIDITY_AMOUNT_INVALID");
-        address sender = _msgSender();
-        liquidityProviders[sender] += amount;
-        liquidity += amount;
-        ido.safeTransferFrom(sender, address(this), amount);
-
-        emit LiquidityAdded(sender, amount);
-    }
-
-    /**
-     * @dev Remove liquidity from the liquidity pool contract
-     */
-    function removeLiquidity(uint256 amount) external whenNotPaused nonReentrant {
-        require(amount != 0, "LiquidityPoolManager: LIQUIDITY_AMOUNT_INVALID");
-        address sender = _msgSender();
-        require(liquidityProviders[sender] >= amount, "LiquidityPoolManager: INSUFFICIENT_FUNDS");
-        require(liquidity >= amount, "LiquidityPoolManager: INSUFFICIENT_LIQUIDITY");
-        liquidityProviders[sender] -= amount;
-        ido.safeTransfer(sender, amount);
-
-        emit LiquidityRemoved(sender, amount);
-    }
-
     /***************************|
     |          Transfer         |
     |__________________________*/
 
     /**
-     * @dev Deposit funds to the liquidity pool contract for cross-chain transfer
+     * @dev Deposit funds to the relay contract for cross-chain transfer
      */
     function deposit(
         address receiver,
         uint256 amount,
         uint256 toChainId
     ) external whenNotPaused {
-        require(minDepositCap <= amount && amount <= maxDepositCap, "LiquidityPoolManager: DEPOSIT_AMOUNT_OUT_OF_RANGE");
-        require(receiver != address(0), "LiquidityPoolManager: RECEIVER_ZERO_ADDRESS");
+        require(amount > 0, "RelayManagerETH: DEPOSIT_AMOUNT_INVALID");
+        require(receiver != address(0), "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
         address sender = _msgSender();
-        liquidity += amount;
+        // Lock tokens
         ido.safeTransferFrom(sender, address(this), amount);
 
-        emit Deposited(sender, receiver, toChainId, amount, ++nonces[sender]);
+        emit Deposited(sender, receiver, toChainId, amount, nonces[sender]++);
+    }
+
+    /**
+     * @dev Deposit funds to the relay contract for cross-chain transfer
+     */
+    function permitAndDeposit(
+        address receiver,
+        uint256 amount,
+        uint256 toChainId,
+        PermitRequest calldata permitOptions
+    ) external whenNotPaused {
+        require(amount > 0, "RelayManagerETH: DEPOSIT_AMOUNT_INVALID");
+        require(receiver != address(0), "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
+        address sender = _msgSender();
+        // Approve the relay manager contract to spend tokens on behalf of `sender`
+        IERC20Permit(address(ido)).permit(_msgSender(), address(this), amount, permitOptions.deadline, permitOptions.v, permitOptions.r, permitOptions.s);
+        // Lock tokens
+        ido.safeTransferFrom(sender, address(this), amount);
+
+        emit Deposited(sender, receiver, toChainId, amount, nonces[sender]++);
     }
 
     /**
@@ -288,13 +242,11 @@ contract LiquidityPoolManager is Pausable, AccessControl, BaseRelayRecipient, Re
         uint256 gasPrice
     ) external nonReentrant whenNotPaused onlyOperator {
         uint256 initialGas = gasleft();
-        require(receiver != address(0), "LiquidityPoolManager: RECEIVER_ZERO_ADDRESS");
-        require(minDepositCap <= amount && amount <= maxDepositCap, "LiquidityPoolManager: SEND_AMOUNT_OUT_OF_RANGE");
-        require(!processedHashes[depositHash], "LiquidityPoolManager: ALREADY_PROCESSED");
-        // TODO check that liquidity + gasFeeAccumulated + adminFeeAccumulate
-        require(liquidity >= amount, "LiquidityPoolManager: INSUFFICIENT_LIQUIDITY");
-        // Decrease liquidity
-        liquidity -= amount;
+        require(receiver != address(0), "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
+        require(amount > 0, "RelayManagerETH: SEND_AMOUNT_INVALID");
+        require(!processedHashes[depositHash], "RelayManagerETH: ALREADY_PROCESSED");
+        require(ido.balanceOf(address(this)) >= amount, "RelayManagerETH: INSUFFICIENT_LIQUIDITY");
+
         // Mark the depositHash state true to avoid double sending
         processedHashes[depositHash] = true;
         // Calculate adminFee
@@ -306,21 +258,45 @@ contract LiquidityPoolManager is Pausable, AccessControl, BaseRelayRecipient, Re
         gasFeeAccumulated += totalGasUsed * gasPrice;
         // Calculate real amount to transfer considering adminFee and gasFee
         uint256 amountToTransfer = amount - calculatedAdminFee - totalGasUsed * gasPrice;
-
+        // Unlock tokens
         ido.safeTransfer(receiver, amountToTransfer);
 
         emit Sent(receiver, amount, amountToTransfer, depositHash);
     }
 
-    // TODO check again withdraw $IDO, gasFeeAccumulated, adminFeeAccumulated
+    /**********************|
+    |          Fee         |
+    |_____________________*/
 
     /**
-     * Return the sender of this call.
-     * If the call came through our trusted forwarder, return the original sender.
-     * otherwise, return `msg.sender`.
-     * should be used in the contract anywhere instead of `msg.sender`
+     * @dev Withdraw admin fee accumulated
+     * Only operators can call
      */
-    function _msgSender() internal virtual override(BaseRelayRecipient, Context) view returns (address) {
-        return BaseRelayRecipient._msgSender();
+    function withdrawAdminFee(
+        address receiver,
+        uint256 amount
+    ) external onlyOperator whenNotPaused {
+        require(amount > 0, "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
+        require(adminFeeAccumulated >= amount, "RelayManagerETH: INSUFFICIENT_ADMIN_FEE");
+        adminFeeAccumulated -= amount;
+        ido.safeTransfer(receiver, amount);
+
+        emit AdminFeeWithdraw(receiver, amount);
+    }
+
+    /**
+     * @dev Withdraw gas fee accumulated
+     * Only operators can call
+     */
+    function withdrawGasFee(
+        address receiver,
+        uint256 amount
+    ) external onlyOperator whenNotPaused {
+        require(amount > 0, "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
+        require(gasFeeAccumulated >= amount, "RelayManagerETH: INSUFFICIENT_GAS_FEE");
+        gasFeeAccumulated -= amount;
+        ido.safeTransfer(receiver, amount);
+
+        emit GasFeeWithdraw(receiver, amount);
     }
 }
