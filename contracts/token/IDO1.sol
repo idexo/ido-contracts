@@ -10,14 +10,11 @@ contract IDO1 is ERC20Permit, ERC20Pausable, AccessControl {
     address public owner;
     // Proposed new contract owner address
     address public newOwner;
-    // Mint the total supply when deploying
-    address public treasury;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     uint256 public constant cap = 100 * 1000 * 1000 * 1 ether;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event TreasuryChanged(address indexed treasury);
     // Set `name` and `symbol` when deploying
     constructor(
         string memory name,
@@ -78,23 +75,6 @@ contract IDO1 is ERC20Permit, ERC20Pausable, AccessControl {
         emit OwnershipTransferred(owner, newOwner);
         owner = newOwner;
         newOwner = address(0);
-    }
-
-    /***************************|
-    |          Treasury         |
-    |__________________________*/
-
-    /**
-     * @dev Set new treasury address
-     * Only owner can access
-     */
-    function setTreasury(address newTreasury) external onlyOwner {
-        require(newTreasury != address(0), "IDO1: NEW_TREASURY_ZERO_ADDRESS");
-        require(treasury != newTreasury, "IDO1: NEW_TREASURY_ADDRESS_INVALID");
-        treasury = newTreasury;
-        transferFrom(treasury, newTreasury, balanceOf(treasury));
-
-        emit TreasuryChanged(newTreasury);
     }
 
     /***********************|

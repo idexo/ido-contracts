@@ -15,7 +15,6 @@ contract IDO is ERC20Permit, ERC20Pausable, AccessControl {
     uint256 public constant cap = 100 * 1000 * 1000 * 1 ether;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event TreasuryChanged(address indexed treasury);
 
     constructor() ERC20("Idexo Token", "IDO") ERC20Permit("Idexo Token") {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
