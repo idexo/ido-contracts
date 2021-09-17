@@ -1,3 +1,5 @@
+// Initiate `ownerPrivateKey` with the first account private key on test evm
+
 const { expect, assert} = require('chai');
 const truffleAssert = require('truffle-assertions');
 const {
@@ -21,11 +23,11 @@ contract('::IDO', async accounts => {
   const name = 'Idexo Token'; // token name
   let chainId; // buidlerevm chain id
   // this key is from the first address on test evm
-  const ownerPrivateKey = Buffer.from('85a34ef4008d6b65bcd18d8ac7cfc904060dac9d186f440ae488997154f04c12', 'hex');
+  const ownerPrivateKey = Buffer.from('317e0470b65ea431ca3016c0108d4d430ac47157da5cdf7c12433ccac1a4509b', 'hex');
 
   describe('#Role', async () => {
     it ('should add operator', async () => {
-      token = await IDO.new(alice);
+      token = await IDO.new();
       await token.getChainId().then(res => {
         chainId = res.toNumber();
       })
