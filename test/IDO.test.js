@@ -23,7 +23,7 @@ contract('::IDO', async accounts => {
   const name = 'Idexo Token'; // token name
   let chainId; // buidlerevm chain id
   // this key is from the first address on test evm
-  const ownerPrivateKey = Buffer.from('317e0470b65ea431ca3016c0108d4d430ac47157da5cdf7c12433ccac1a4509b', 'hex');
+  const ownerPrivateKey = Buffer.from('95980b41b3377ca2163e38623f3d11df0d7cd35d121034cde7d389d82508be65', 'hex');
 
   describe('#Role', async () => {
     it ('should add operator', async () => {
@@ -60,12 +60,17 @@ contract('::IDO', async accounts => {
     it('should be paused/unpaused by operator', async () => {
       await token.pause({from: bob});
       expect(await token.paused()).to.eq(true);
+      // Owner can transfer
+      await token.transfer(bob, web3.utils.toWei(new BN(500)));
+      // Non owner can not transfer
       await expectRevert(
-        token.transfer(bob, web3.utils.toWei(new BN(500))),
+        token.transfer(alice, web3.utils.toWei(new BN(500)), {from: bob}),
         'ERC20Pausable: token transfer while paused'
       );
       await token.unpause({from: bob});
       expect(await token.paused()).to.eq(false);
+      // Now everyone can transfer
+      await token.transfer(alice, web3.utils.toWei(new BN(500)), {from: bob});
     });
     describe('reverts if', async () => {
       it('pause/unpause by non-operator', async () => {
