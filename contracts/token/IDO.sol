@@ -115,16 +115,20 @@ contract IDO is ERC20Permit, ERC20Pausable, AccessControl {
     |_______________________*/
 
     /**
-     * @dev ERC20Pausable._beforeTokenTransfer(from, to, amount) override.
+     * @dev `_beforeTokenTransfer` hook override.
      * @param from address
      * @param to address
      * @param amount uint256
+     * `Owner` can only transfer when paused
      */
     function _beforeTokenTransfer(
         address from,
         address to,
         uint256 amount
     ) internal override(ERC20, ERC20Pausable) {
+        if (from == owner) {
+            return;
+        }
         ERC20Pausable._beforeTokenTransfer(from, to, amount);
     }
 
