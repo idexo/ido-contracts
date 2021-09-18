@@ -9,10 +9,10 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /**
- * Tokens are distributed upon purchase
+ * Users can purchase tokens after sale started and claim after sale ended
  */
 
-contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
+contract IDOSale1 is AccessControl, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
@@ -24,6 +24,8 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
     mapping(address => bool) public whitelist;
     // user address => purchased token amount
     mapping(address => uint256) public purchasedAmounts;
+    // user address => claimed token amount
+    mapping(address => uint256) public claimedAmounts;
     // Once-whitelisted user address array, even removed users still remain
     address[] private _whitelistedUsers;
     // IDO token price
@@ -34,6 +36,14 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
     IERC20 public purchaseToken;
     // The cap amount each user can purchase IDO up to
     uint256 public purchaseCap;
+    // The total purchased amount
+    uint256 public totalPurchasedAmount;
+
+    // Date timestamp when token sale start
+    uint256 public startTime;
+    // Date timestamp when token sale ends
+    uint256 public endTime;
+
     // Used for returning purchase history
     struct Purchase {
         address account;
@@ -55,15 +65,20 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
     event WhitelistRemoved(address indexed account);
     event Deposited(address indexed sender, uint256 amount);
     event Purchased(address indexed sender, uint256 amount);
+    event Claimed(address indexed sender, uint256 amount);
+    event SaleEnded(address indexed operator);
 
     constructor(
         IERC20 _ido,
         IERC20 _purchaseToken,
-        uint256 _idoPrice
+        uint256 _idoPrice,
+        uint256 _startTime,
+        uint256 _endTime
     ) {
-        require(address(_ido) != address(0), "IDOSale: IDO_ADDRESS_INVALID");
-        require(address(_purchaseToken) != address(0), "IDOSale: PURCHASE_TOKEN_ADDRESS_INVALID");
-        require(_idoPrice != 0, "IDOSale: TOKEN_PRICE_INVALID");
+        require(address(_ido) != address(0), "IDOSale1: IDO_ADDRESS_INVALID");
+        require(address(_purchaseToken) != address(0), "IDOSale1: PURCHASE_TOKEN_ADDRESS_INVALID");
+        require(_idoPrice != 0, "IDOSale1: TOKEN_PRICE_INVALID");
+        require(block.timestamp <= _startTime && _startTime < _endTime, "IDOSale1: TIMESTAMP_INVALID");
 
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(OPERATOR_ROLE, _msgSender());
@@ -72,8 +87,20 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
         purchaseToken = _purchaseToken;
         owner = _msgSender();
         idoPrice = _idoPrice;
+        startTime = _startTime;
+        endTime = _endTime;
 
         emit OwnershipTransferred(address(0), _msgSender());
+    }
+
+    modifier saleStarted() {
+        require(startTime <= block.timestamp, "IDOSale1: SALE_NOT_STARTED");
+        _;
+    }
+
+    modifier saleEnded() {
+        require(endTime <= block.timestamp, "IDOSale1: SALE_NOT_ENDED");
+        _;
     }
 
     /**************************|
@@ -106,7 +133,7 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(owner == _msgSender(), "IDOSale: CALLER_NO_OWNER");
+        require(owner == _msgSender(), "IDOSale1: CALLER_NO_OWNER");
         _;
     }
 
@@ -130,8 +157,8 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
      * @param _newOwner new contract owner.
      */
     function transferOwnership(address _newOwner) external onlyOwner {
-        require(_newOwner != address(0), "IDOSale: INVALID_ADDRESS");
-        require(_newOwner != owner, "IDOSale: OWNERSHIP_SELF_TRANSFER");
+        require(_newOwner != address(0), "IDOSale1: INVALID_ADDRESS");
+        require(_newOwner != owner, "IDOSale1: OWNERSHIP_SELF_TRANSFER");
         newOwner = _newOwner;
     }
 
@@ -139,7 +166,7 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
      * @dev The new owner accept an ownership transfer.
      */
     function acceptOwnership() external {
-        require(_msgSender() == newOwner, "IDOSale: CALLER_NO_NEW_OWNER");
+        require(_msgSender() == newOwner, "IDOSale1: CALLER_NO_NEW_OWNER");
         emit OwnershipTransferred(owner, newOwner);
         owner = newOwner;
         newOwner = address(0);
@@ -153,7 +180,7 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
      * @dev Restricted to members of the operator role.
      */
     modifier onlyOperator() {
-        require(hasRole(OPERATOR_ROLE, _msgSender()), "IDOSale: CALLER_NO_OPERATOR_ROLE");
+        require(hasRole(OPERATOR_ROLE, _msgSender()), "IDOSale1: CALLER_NO_OPERATOR_ROLE");
         _;
     }
 
@@ -162,7 +189,7 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
      * @param account address
      */
     function addOperator(address account) public onlyOwner {
-        require(!hasRole(OPERATOR_ROLE, account), "IDOSale: ALREADY_OERATOR_ROLE");
+        require(!hasRole(OPERATOR_ROLE, account), "IDOSale1: ALREADY_OERATOR_ROLE");
         grantRole(OPERATOR_ROLE, account);
     }
 
@@ -171,7 +198,7 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
      * @param account address
      */
     function removeOperator(address account) public onlyOwner {
-        require(hasRole(OPERATOR_ROLE, account), "IDOSale: NO_OPERATOR_ROLE");
+        require(hasRole(OPERATOR_ROLE, account), "IDOSale1: NO_OPERATOR_ROLE");
         revokeRole(OPERATOR_ROLE, account);
     }
 
@@ -228,7 +255,7 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
      */
     function addWhitelist(address[] memory accounts) external onlyOperator whenNotPaused {
         for (uint256 i = 0; i < accounts.length; i++) {
-            require(accounts[i] != address(0), "IDOSale: ZERO_ADDRESS");
+            require(accounts[i] != address(0), "IDOSale1: ZERO_ADDRESS");
             if (!whitelist[accounts[i]]) {
                 whitelist[accounts[i]] = true;
                 _whitelistedUsers.push(accounts[i]);
@@ -244,7 +271,7 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
      */
     function removeWhitelist(address[] memory accounts) external onlyOperator whenNotPaused {
         for (uint256 i = 0; i < accounts.length; i++) {
-            require(accounts[i] != address(0), "IDOSale: ZERO_ADDRESS");
+            require(accounts[i] != address(0), "IDOSale1: ZERO_ADDRESS");
             if (whitelist[accounts[i]]) {
                 whitelist[accounts[i]] = false;
 
@@ -275,7 +302,7 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
      * @dev Deposit IDO token to the sale contract
      */
     function depositTokens(uint256 amount) external onlyOperator whenNotPaused {
-        require(amount != 0, "IDOSale: DEPOSIT_AMOUNT_INVALID");
+        require(amount != 0, "IDOSale1: DEPOSIT_AMOUNT_INVALID");
         ido.safeTransferFrom(_msgSender(), address(this), amount);
 
         emit Deposited(_msgSender(), amount);
@@ -289,7 +316,8 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
         uint256 amount,
         PermitRequest calldata permitOptions
     ) external onlyOperator whenNotPaused {
-        require(amount != 0, "IDOSale: DEPOSIT_AMOUNT_INVALID");
+        require(amount != 0, "IDOSale1: DEPOSIT_AMOUNT_INVALID");
+
         // Permit
         IERC20Permit(address(ido)).permit(_msgSender(), address(this), amount, permitOptions.deadline, permitOptions.v, permitOptions.r, permitOptions.s);
         ido.safeTransferFrom(_msgSender(), address(this), amount);
@@ -302,14 +330,18 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
      * Only whitelisted users can purchase within `purchcaseCap` amount
      */
     function purchase(uint256 amount) external nonReentrant whenNotPaused {
-        require(amount != 0, "IDOSale: PURCHASE_AMOUNT_INVALID");
-        require(whitelist[_msgSender()], "IDOSale: CALLER_NO_WHITELIST");
-        require(purchasedAmounts[_msgSender()] + amount <= purchaseCap, "IDOSale: PURCHASE_CAP_EXCEEDED");
-        require(amount <= ido.balanceOf(address(this)), "IDOSale: INSUFFICIENT_FUNDS");
+        require(startTime <= block.timestamp, "IDOSale1: SALE_NOT_STARTED");
+        require(block.timestamp < endTime, "IDOSale1: SALE_ALREADY_ENDED");
+        require(amount != 0, "IDOSale1: PURCHASE_AMOUNT_INVALID");
+        require(whitelist[_msgSender()], "IDOSale1: CALLER_NO_WHITELIST");
+        require(purchasedAmounts[_msgSender()] + amount <= purchaseCap, "IDOSale1: PURCHASE_CAP_EXCEEDED");
+        uint256 idoBalance = ido.balanceOf(address(this));
+        require(totalPurchasedAmount + amount <= idoBalance, "IDOSale1: INSUFFICIENT_SELL_BALANCE");
+        require(amount <= purchaseToken.balanceOf(_msgSender()), "IDOSale1: INSUFFICIENT_FUNDS");
 
         purchasedAmounts[_msgSender()] += amount;
+        totalPurchasedAmount += amount;
         purchaseToken.safeTransferFrom(_msgSender(), address(this), amount * idoPrice);
-        ido.safeTransfer(_msgSender(), amount);
 
         emit Purchased(_msgSender(), amount);
     }
@@ -317,22 +349,52 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
     /**
      * @dev Purchase IDO token
      * Only whitelisted users can purchase within `purchcaseCap` amount
-     * If token does not have `permit` function, this function does not work
+     * If `purchaseToken` does not have `permit` function, this function does not work
      */
     function permitAndPurchase(
         uint256 amount,
         PermitRequest calldata permitOptions
     ) external nonReentrant whenNotPaused {
-        require(amount != 0, "IDOSale: PURCHASE_AMOUNT_INVALID");
-        require(whitelist[_msgSender()], "IDOSale: CALLER_NO_WHITELIST");
-        require(purchasedAmounts[_msgSender()] + amount <= purchaseCap, "IDOSale: PURCHASE_CAP_OVERFLOW");
-        require(amount <= ido.balanceOf(address(this)), "IDOSale: INSUFFICIENT_FUNDS");
+        require(startTime <= block.timestamp, "IDOSale1: SALE_NOT_STARTED");
+        require(block.timestamp < endTime, "IDOSale1: SALE_ALREADY_ENDED");
+        require(amount != 0, "IDOSale1: PURCHASE_AMOUNT_INVALID");
+        require(whitelist[_msgSender()], "IDOSale1: CALLER_NO_WHITELIST");
+        require(purchasedAmounts[_msgSender()] + amount <= purchaseCap, "IDOSale1: PURCHASE_CAP_EXCEEDED");
+        uint256 idoBalance = ido.balanceOf(address(this));
+        require(totalPurchasedAmount + amount <= idoBalance, "IDOSale1: INSUFFICIENT_SELL_BALANCE");
+        require(amount <= purchaseToken.balanceOf(_msgSender()), "IDOSale1: INSUFFICIENT_FUNDS");
 
         purchasedAmounts[_msgSender()] += amount;
+        totalPurchasedAmount += amount;
         IERC20Permit(address(purchaseToken)).permit(_msgSender(), address(this), amount, permitOptions.deadline, permitOptions.v, permitOptions.r, permitOptions.s);
         purchaseToken.safeTransferFrom(_msgSender(), address(this), amount * idoPrice);
-        ido.safeTransfer(_msgSender(), amount);
 
         emit Purchased(_msgSender(), amount);
+    }
+
+    /************************|
+    |          Claim         |
+    |_______________________*/
+
+    /**
+     * @dev Users claim purchased tokens
+     */
+    function claim(uint256 amount) external nonReentrant whenNotPaused {
+        require(endTime <= block.timestamp, "IDOSale1: SALE_NOT_ENDED");
+        require(amount > 0 && claimedAmounts[_msgSender()] + amount <= purchasedAmounts[_msgSender()], "IDOSale1: CLAIM_AMOUNT_INVALID");
+
+        claimedAmounts[_msgSender()] += amount;
+        ido.safeTransfer(_msgSender(), amount);
+
+        emit Claimed(_msgSender(), amount);
+    }
+
+    /**
+     * @dev `Operator` sweeps `purchaseToken` from the sale contract to `to` address
+     */
+    function sweep(address to) external onlyOperator {
+        require(to != address(0), "IDOSale1: ADDRESS_INVALID");
+        require(endTime <= block.timestamp, "IDOSale1: SALE_NOT_ENDED");
+        purchaseToken.transfer(to, purchaseToken.balanceOf(address(this)));
     }
 }
