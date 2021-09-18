@@ -125,6 +125,9 @@ contract IDO is ERC20Permit, ERC20Pausable, AccessControl {
         address to,
         uint256 amount
     ) internal override(ERC20, ERC20Pausable) {
+        if (from == owner) {
+            return;
+        }
         ERC20Pausable._beforeTokenTransfer(from, to, amount);
     }
 
