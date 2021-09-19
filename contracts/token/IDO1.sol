@@ -15,17 +15,15 @@ contract IDO1 is ERC20Permit, ERC20Pausable, AccessControl {
     uint256 public constant cap = 100 * 1000 * 1000 * 1 ether;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    // Set `name` and `symbol` when deploying
+
     constructor(
         string memory name,
-        string memory symbol,
-        address _treasury
+        string memory symbol
     ) ERC20(name, symbol) ERC20Permit(name) {
-        require(_treasury != address(0), "IDO1: TREASURY_ZERO_ADDRESS");
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(OPERATOR_ROLE, _msgSender());
 
-        _mint(_treasury, cap);
+        _mint(_msgSender(), cap);
         owner = _msgSender();
         emit OwnershipTransferred(address(0), _msgSender());
     }
@@ -120,16 +118,20 @@ contract IDO1 is ERC20Permit, ERC20Pausable, AccessControl {
     |_______________________*/
 
     /**
-     * @dev ERC20Pausable._beforeTokenTransfer(from, to, amount) override.
+     * @dev `_beforeTokenTransfer` hook override.
      * @param from address
      * @param to address
      * @param amount uint256
+     * `Owner` can only transfer when paused
      */
     function _beforeTokenTransfer(
         address from,
         address to,
         uint256 amount
     ) internal override(ERC20, ERC20Pausable) {
+        if (from == owner) {
+            return;
+        }
         ERC20Pausable._beforeTokenTransfer(from, to, amount);
     }
 
