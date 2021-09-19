@@ -1,7 +1,7 @@
 async function increase(duration) {
 
   //first, let's increase time
-  await web3.currentProvider.sendAsync({
+  await web3.eth.currentProvider.sendAsync({
       jsonrpc: "2.0",
       method: "evm_increaseTime",
       params: [duration], // there are 86400 seconds in a day

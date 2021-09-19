@@ -5,25 +5,40 @@ const {
   expectEvent,
   expectRevert
 } = require('@openzeppelin/test-helpers');
+const timeTraveler = require('ganache-time-traveler');
+const {
+  duration,
+  increase
+} = require('./helpers/time');
 
 const IDOSale = artifacts.require('IDOSale');
 const ERC20Mock = artifacts.require('ERC20Mock');
+
+const toUSDTWei = (amount) => new BN(amount).mul(new BN(10).pow(new BN(6)));
 
 contract('IDOSale', async accounts => {
   let saleContract;
   let ido, usdt;
   const [alice, bob, carol, darren] = accounts;
+  let startTime, endTime;
 
   describe('#Role', async () => {
     it ('should add operator', async () => {
       ido = await ERC20Mock.new('Idexo token', 'IDO');
       ido.mint(alice, web3.utils.toWei(new BN(10000)));
+      // USDT decimals is 6
       usdt = await ERC20Mock.new('USDT token', 'USDT');
-      usdt.mint(alice, web3.utils.toWei(new BN(10000)));
-      usdt.mint(bob, web3.utils.toWei(new BN(10000)));
-      usdt.mint(carol, web3.utils.toWei(new BN(10000)));
+      usdt.mint(alice, toUSDTWei(10000));
+      usdt.mint(bob, toUSDTWei(10000));
+      usdt.mint(carol, toUSDTWei(10000));
 
-      saleContract = await IDOSale.new(ido.address, usdt.address, new BN(5));
+      const currentTime = Math.floor(Date.now() / 1000);
+      startTime = currentTime + duration.days(2);
+      endTime = startTime + duration.days(7);
+      console.log('startTime: ', startTime);
+      console.log('endTime: ', endTime);
+
+      saleContract = await IDOSale.new(ido.address, usdt.address, new BN(450000), web3.utils.toWei(new BN(11111)), startTime, endTime);
 
       await saleContract.addOperator(bob);
       expect(await saleContract.checkOperator(bob)).to.eq(true);
@@ -49,30 +64,7 @@ contract('IDOSale', async accounts => {
     });
   });
 
-  describe('#Setters', async () => {
-    it('setIdoPrice, setPurchaseCap', async () => {
-      expectEvent(
-        await saleContract.setIdoPrice(new BN(6)),
-        'IdoPriceChanged'
-      );
-      expectEvent(
-        await saleContract.setPurchaseCap(web3.utils.toWei(new BN(100))),
-        'PurchaseCapChanged'
-      );
-    });
-    describe('reverts if', async () => {
-      it('non-owner call setIdoPrice/setPurchaseCap', async () => {
-        await expectRevert(
-          saleContract.setIdoPrice(new BN(6), {from: bob}),
-          'IDOSale: CALLER_NO_OWNER'
-        );
-        await expectRevert(
-          saleContract.setPurchaseCap(web3.utils.toWei(new BN(100)), {from: bob}),
-          'IDOSale: CALLER_NO_OWNER'
-        );
-      });
-    });
-  });
+
 
   describe('#Whitelist', async () => {
     it('addWhitelist, removeWhitelist', async () => {
@@ -113,28 +105,7 @@ contract('IDOSale', async accounts => {
   });
 
   describe('#Token Management', async () => {
-    it('depositTokens, purcahse', async () => {
-      await ido.approve(saleContract.address, web3.utils.toWei(new BN(10000)));
-      expectEvent(
-        await saleContract.depositTokens(web3.utils.toWei(new BN(10000))),
-        'Deposited'
-      );
-      await usdt.approve(saleContract.address, web3.utils.toWei(new BN(120)), {from: bob});
-      expectEvent(
-        await saleContract.purchase(web3.utils.toWei(new BN(20)), {from: bob}),
-        'Purchased'
-      );
-      await usdt.approve(saleContract.address, web3.utils.toWei(new BN(120)), {from: carol});
-      await saleContract.purchase(web3.utils.toWei(new BN(20)), {from: carol})
-      await saleContract.purchaseHistory().then(res => {
-        expect(res.length).to.eq(4);
-        console.log(res[0]);
-        console.log(res[1]);
-        console.log(res[2]);
-        console.log(res[3]);
-      });
-    });
-    describe('reverts if', async () => {
+    describe('reverts if (before sale start)', async () => {
       it('non-operator call depositTokens', async () => {
         await expectRevert(
           saleContract.depositTokens(web3.utils.toWei(new BN(10000)), {from: carol}),
@@ -147,6 +118,53 @@ contract('IDOSale', async accounts => {
           'IDOSale: DEPOSIT_AMOUNT_INVALID'
         );
       });
+      it('call purchase when sale is not started', async () => {
+        await expectRevert(
+          saleContract.purchase(web3.utils.toWei(new BN(20)), {from: bob}),
+          'IDOSale: SALE_NOT_STARTED'
+        );
+      });
+    });
+    describe('depositTokens, purcahse', async () => {
+      it('depositTokens, purcahse', async () => {
+        await ido.approve(saleContract.address, web3.utils.toWei(new BN(10000)));
+        expectEvent(
+          await saleContract.depositTokens(web3.utils.toWei(new BN(200))),
+          'Deposited'
+        );
+        await usdt.approve(saleContract.address, toUSDTWei(new BN(10000)), {from: bob});
+        // 2 days passed
+        timeTraveler.advanceTime(duration.days(2));
+        await usdt.balanceOf(bob).then(res => {
+          console.log(res.toString());
+        });
+        expectEvent(
+          await saleContract.purchase(web3.utils.toWei(new BN(20)), {from: bob}),
+          'Purchased'
+        );
+        // Check USDT balance of sale contract
+        await usdt.balanceOf(saleContract.address).then(res => {
+          expect(res.toString()).to.eq('9000000');
+        })
+        await usdt.balanceOf(bob).then(res => {
+          expect(res.toString()).to.eq('9991000000');
+        })
+        await usdt.approve(saleContract.address, toUSDTWei(new BN(10000)), {from: carol});
+        await saleContract.purchase(web3.utils.toWei(new BN(30)), {from: carol})
+        // Check usdt balance of sale contract
+        await usdt.balanceOf(saleContract.address).then(res => {
+          expect(res.toString()).to.eq('22500000');
+        })
+        await saleContract.purchaseHistory().then(res => {
+          expect(res.length).to.eq(4);
+          console.log(res[0]);
+          console.log(res[1]);
+          console.log(res[2]);
+          console.log(res[3]);
+        });
+      });
+    });
+    describe('reverts if (after sale start)', async () => {
       it('zero amount in purchase', async () => {
         await expectRevert(
           saleContract.purchase(web3.utils.toWei(new BN(0)), {from: bob}),
@@ -161,14 +179,80 @@ contract('IDOSale', async accounts => {
       });
       it('purchase when deposit cap exceeded', async () => {
         await expectRevert(
-          saleContract.purchase(web3.utils.toWei(new BN(100)), {from: bob}),
+          saleContract.purchase(web3.utils.toWei(new BN(11111)), {from: bob}),
           'IDOSale: PURCHASE_CAP_EXCEEDED'
+        );
+      });
+      it('purchase when sellable balance exceeded', async () => {
+        await expectRevert(
+          saleContract.purchase(web3.utils.toWei(new BN(200)), {from: bob}),
+          'IDOSale: INSUFFICIENT_SELL_BALANCE'
+        );
+      });
+      it('claim when the sale not ended', async () => {
+        await expectRevert(
+          saleContract.claim(web3.utils.toWei(new BN(20)), {from: bob}),
+          'IDOSale: SALE_NOT_ENDED'
+        );
+      });
+      it('sweep when the sale not ended', async () => {
+        await expectRevert(
+          saleContract.sweep(darren),
+          'IDOSale: SALE_NOT_ENDED'
+        );
+      });
+    });
+    describe('claim, sweep', async () => {
+      it('claim', async () => {
+        // 7 days passed
+        timeTraveler.advanceTime(duration.days(7));
+        expectEvent(
+          await saleContract.claim(web3.utils.toWei(new BN(10)), {from: bob}),
+          'Claimed'
+        );
+        await ido.balanceOf(bob).then(res => {
+          expect(res.toString()).to.eq('10000000000000000000');
+        });
+      });
+      it('sweep', async () => {
+        expectEvent(
+          await saleContract.sweep(darren),
+          'Swept'
+        );
+        await usdt.balanceOf(darren).then(res => {
+          expect(res.toString()).to.eq('22500000');
+        });
+      });
+    });
+    describe('reverts if (after sale end)', async () => {
+      it('claim with amount 0', async () => {
+        await expectRevert(
+          saleContract.claim(web3.utils.toWei(new BN(0)), {from: bob}),
+          'IDOSale: CLAIM_AMOUNT_INVALID'
+        );
+      });
+      it('claim amount exceeded', async () => {
+        await expectRevert(
+          saleContract.claim(web3.utils.toWei(new BN(15)), {from: bob}),
+          'IDOSale: CLAIM_AMOUNT_EXCEEDED'
+        );
+      });
+      it('non-owner call sweep', async () => {
+        await expectRevert(
+          saleContract.sweep(alice, {from: bob}),
+          'IDOSale: CALLER_NO_OWNER'
+        );
+      });
+      it('sweep to zero address', async () => {
+        await expectRevert(
+          saleContract.sweep(constants.ZERO_ADDRESS),
+          'IDOSale: ADDRESS_INVALID'
         );
       });
     });
   });
 
-  describe('#pause', async () => {
+  describe('#Pause', async () => {
     it('should be paused/unpaused by operator', async () => {
       await saleContract.pause({from: bob});
       expect(await saleContract.paused()).to.eq(true);
@@ -184,6 +268,31 @@ contract('IDOSale', async accounts => {
         await expectRevert(
           saleContract.pause({from: carol}),
           'IDOSale: CALLER_NO_OPERATOR_ROLE'
+        );
+      });
+    });
+  });
+
+  describe('#Setters', async () => {
+    it('setIdoPrice, setPurchaseCap', async () => {
+      expectEvent(
+        await saleContract.setIdoPrice(new BN(550000)),
+        'IdoPriceChanged'
+      );
+      expectEvent(
+        await saleContract.setPurchaseCap(web3.utils.toWei(new BN(22222))),
+        'PurchaseCapChanged'
+      );
+    });
+    describe('reverts if', async () => {
+      it('non-owner call setIdoPrice/setPurchaseCap', async () => {
+        await expectRevert(
+          saleContract.setIdoPrice(new BN(550000), {from: bob}),
+          'IDOSale: CALLER_NO_OWNER'
+        );
+        await expectRevert(
+          saleContract.setPurchaseCap(web3.utils.toWei(new BN(222222)), {from: bob}),
+          'IDOSale: CALLER_NO_OWNER'
         );
       });
     });

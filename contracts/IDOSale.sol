@@ -66,6 +66,7 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
     event Deposited(address indexed sender, uint256 amount);
     event Purchased(address indexed sender, uint256 amount);
     event Claimed(address indexed sender, uint256 amount);
+    event Swept(address indexed sender, uint256 amount);
 
     constructor(
         IERC20 _ido,
@@ -329,11 +330,12 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
         require(purchasedAmounts[_msgSender()] + amount <= purchaseCap, "IDOSale: PURCHASE_CAP_EXCEEDED");
         uint256 idoBalance = ido.balanceOf(address(this));
         require(totalPurchasedAmount + amount <= idoBalance, "IDOSale: INSUFFICIENT_SELL_BALANCE");
-        require(amount <= purchaseToken.balanceOf(_msgSender()), "IDOSale: INSUFFICIENT_FUNDS");
+        uint256 purchaseTokenAmount = amount * idoPrice / (10 ** 18);
+        require(purchaseTokenAmount <= purchaseToken.balanceOf(_msgSender()), "IDOSale: INSUFFICIENT_FUNDS");
 
         purchasedAmounts[_msgSender()] += amount;
         totalPurchasedAmount += amount;
-        purchaseToken.safeTransferFrom(_msgSender(), address(this), amount * idoPrice / (10 ** 18));
+        purchaseToken.safeTransferFrom(_msgSender(), address(this), purchaseTokenAmount);
 
         emit Purchased(_msgSender(), amount);
     }
@@ -354,12 +356,13 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
         require(purchasedAmounts[_msgSender()] + amount <= purchaseCap, "IDOSale: PURCHASE_CAP_EXCEEDED");
         uint256 idoBalance = ido.balanceOf(address(this));
         require(totalPurchasedAmount + amount <= idoBalance, "IDOSale: INSUFFICIENT_SELL_BALANCE");
-        require(amount <= purchaseToken.balanceOf(_msgSender()), "IDOSale: INSUFFICIENT_FUNDS");
+        uint256 purchaseTokenAmount = amount * idoPrice / (10 ** 18);
+        require(purchaseTokenAmount <= purchaseToken.balanceOf(_msgSender()), "IDOSale: INSUFFICIENT_FUNDS");
 
         purchasedAmounts[_msgSender()] += amount;
         totalPurchasedAmount += amount;
         IERC20Permit(address(purchaseToken)).permit(_msgSender(), address(this), amount, permitOptions.deadline, permitOptions.v, permitOptions.r, permitOptions.s);
-        purchaseToken.safeTransferFrom(_msgSender(), address(this), amount * idoPrice / (10 ** 18));
+        purchaseToken.safeTransferFrom(_msgSender(), address(this), purchaseTokenAmount);
 
         emit Purchased(_msgSender(), amount);
     }
@@ -388,6 +391,9 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
     function sweep(address to) external onlyOwner {
         require(to != address(0), "IDOSale: ADDRESS_INVALID");
         require(endTime <= block.timestamp, "IDOSale: SALE_NOT_ENDED");
-        purchaseToken.transfer(to, purchaseToken.balanceOf(address(this)));
+        uint256 bal = purchaseToken.balanceOf(address(this));
+        purchaseToken.transfer(to, bal);
+
+        emit Swept(to, bal);
     }
 }
