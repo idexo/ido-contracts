@@ -40,9 +40,7 @@ contract IDO is ERC20Permit, ERC20Pausable, AccessControl {
     /**
      * @dev Leaves the contract without owner. It will not be possible to call
      * `onlyOwner` functions anymore. Can only be called by the current owner.
-     *
-     * NOTE: Renouncing ownership will leave the contract without an owner,
-     * thereby removing any functionality that is only available to the owner.
+     * `owner` should first call {removeOperator} for himself.
      */
     function renounceOwnership() external onlyOwner {
         emit OwnershipTransferred(owner, address(0));
@@ -64,6 +62,7 @@ contract IDO is ERC20Permit, ERC20Pausable, AccessControl {
 
     /**
      * @dev The new owner accept an ownership transfer.
+     * The new owner should remove `operator` role from previous owner and add for himself.
      */
     function acceptOwnership() external {
         require(_msgSender() == newOwner, "IDO: CALLER_NO_NEW_OWNER");
