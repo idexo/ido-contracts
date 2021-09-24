@@ -392,7 +392,7 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
         require(to != address(0), "IDOSale: ADDRESS_INVALID");
         require(endTime <= block.timestamp, "IDOSale: SALE_NOT_ENDED");
         uint256 bal = purchaseToken.balanceOf(address(this));
-        purchaseToken.transfer(to, bal);
+        purchaseToken.safeTransfer(to, bal);
 
         emit Swept(to, bal);
     }
