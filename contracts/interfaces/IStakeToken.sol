@@ -5,6 +5,8 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 interface IStakeToken is IERC721 {
+    function getStakerIds(address account) external view returns (uint256[] memory);
+
     function isHolder(address account) external view returns (bool);
 
     function getEligibleStakeAmount(uint256 fromDate) external view returns (uint256);

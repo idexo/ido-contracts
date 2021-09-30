@@ -484,10 +484,9 @@ contract Voting1 is Ownable, AccessControl {
 
         for (uint256 i = 0; i < _stakePools.length; i++) {
             IStakePool sPool = _stakePools[i];
-            uint256 bal = sPool.balanceOf(_account);
-            for (uint256 j = 0; j < bal; j++) {
-                uint256 sId = sPool.stakerIds(_account, j);
-                (uint256 amount, , uint256 depositedAt) = sPool.stakes(sId);
+            uint256[] memory sTokenIds = sPool.getStakerIds(_account);
+            for (uint256 j = 0; j < sTokenIds.length; j++) {
+                (uint256 amount, , uint256 depositedAt) = sPool.stakes(sTokenIds[j]);
                 if (depositedAt < poll.startTime.sub(poll.minimumStakeTimeInDays.mul(1 days))) {
                     w = w.add(amount);
                 }

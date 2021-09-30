@@ -99,12 +99,13 @@ contract('::StakePool', async accounts => {
       });
     });
     describe('##getters', async () => {
-      it('getStakeTokenIds, getStakeAmount, isHolder, getEligibleStakeAmount', async () => {
+      it('getStakeAmount, isHolder, getEligibleStakeAmount', async () => {
         await stakePool.deposit(web3.utils.toWei(new BN(3000)), {from: alice});
-        await stakePool.getStakeTokenIds(alice).then(res => {
-          expect(res.length).to.eq(2);
-          expect(res[0].toString()).to.eq('2');
-          expect(res[1].toString()).to.eq('3');
+        await stakePool.stakerIds(alice, 0).then(res => {
+          expect(res.toString()).to.eq('2');
+        });
+        await stakePool.stakerIds(alice, 1).then(res => {
+          expect(res.toString()).to.eq('3');
         });
         await stakePool.getStakeAmount(alice).then(res => {
           expect(res.toString()).to.eq('5800000000000000000000');

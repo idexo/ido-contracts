@@ -6,17 +6,25 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "./StakeToken.sol";
+import "../staking/StakeToken.sol";
 import "../interfaces/IStakePool.sol";
 
-contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pausable {
+/**
+ * Mock version of StakePool.
+ * Distribution intervals are shortened for testing.
+ * MONTH -> 1 day.
+ * QUARTER -> 3 days.
+ * YEAR -> 12 days.
+ */
+
+contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     // TODO Reconsider
-    uint256 public constant MONTH = 30 days;
-    uint256 public constant QUARTER = 90 days;
-    uint256 public constant YEAR = 360 days;
+    uint256 public constant MONTH = 1 days;
+    uint256 public constant QUARTER = 3 days;
+    uint256 public constant YEAR = 12 days;
     // Reward distribution ratio - monthly, quarterly, yearly
     uint256 public constant mDistributionRatio = 25;
     uint256 public constant qDistributionRatio = 50;
@@ -102,7 +110,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pa
      * @dev Restricted to members of the operator role.
      */
     modifier onlyOperator() {
-        require(hasRole(OPERATOR_ROLE, _msgSender()), "StakePool: CALLER_NO_OPERATOR_ROLE");
+        require(hasRole(OPERATOR_ROLE, _msgSender()), "StakePoolMock: CALLER_NO_OPERATOR_ROLE");
         _;
     }
 
@@ -111,7 +119,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pa
      */
     function addOperator(address account) public override onlyOwner {
         // Check if `account` already has operator role
-        require(!hasRole(OPERATOR_ROLE, account), "StakePool: ALREADY_OERATOR_ROLE");
+        require(!hasRole(OPERATOR_ROLE, account), "StakePoolMock: ALREADY_OERATOR_ROLE");
         grantRole(OPERATOR_ROLE, account);
     }
 
@@ -120,7 +128,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pa
      */
     function removeOperator(address account) public override onlyOwner {
         // Check if `account` has operator role
-        require(hasRole(OPERATOR_ROLE, account), "StakePool: NO_OPERATOR_ROLE");
+        require(hasRole(OPERATOR_ROLE, account), "StakePoolMock: NO_OPERATOR_ROLE");
         revokeRole(OPERATOR_ROLE, account);
     }
 
@@ -159,7 +167,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pa
      * - `amount` >= `minStakeAmount`
      */
     function deposit(uint256 amount) external override whenNotPaused {
-        require(amount >= minStakeAmount, "StakePool: UNDER_MINIMUM_STAKE_AMOUNT");
+        require(amount >= minStakeAmount, "StakePoolMock: UNDER_MINIMUM_STAKE_AMOUNT");
         _deposit(_msgSender(), amount);
     }
 
@@ -176,7 +184,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pa
         uint256 stakeId,
         uint256 amount
     ) external override whenNotPaused {
-        require(amount >= minStakeAmount, "StakePool: UNDER_MINIMUM_STAKE_AMOUNT");
+        require(amount >= minStakeAmount, "StakePoolMock: UNDER_MINIMUM_STAKE_AMOUNT");
         _withdraw(_msgSender(), stakeId, amount);
     }
 
@@ -210,7 +218,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pa
         uint256 stakeId,
         uint256 withdrawAmount
     ) private nonReentrant {
-        require(ownerOf(stakeId) == account, "StakePool: NO_STAKE_OWNER");
+        require(ownerOf(stakeId) == account, "StakePoolMock: NO_STAKE_OWNER");
         super._decreaseStakeAmount(stakeId, withdrawAmount);
         ido.safeTransfer(account, withdrawAmount);
 
@@ -228,7 +236,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pa
      * - `amount` must not be zero
      */
     function depositReward(uint256 amount) external override onlyOperator {
-        require(amount > 0, "StakePool: ZERO_AMOUNT");
+        require(amount > 0, "StakePoolMock: ZERO_AMOUNT");
         _depositReward(_msgSender(), amount);
     }
 
@@ -242,7 +250,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pa
         uint256 fromDate,
         uint256 toDate
     ) public override view returns (uint256) {
-        require(fromDate < toDate, "StakePool: INVALID_DATE_RANGE");
+        require(fromDate < toDate, "StakePoolMock: INVALID_DATE_RANGE");
         uint256 totalDepositAmount;
         for (uint256 i = 0; i < rewardDeposits.length; i++) {
             if (rewardDeposits[i].depositedAt >= fromDate && rewardDeposits[i].depositedAt < toDate) {
@@ -262,9 +270,9 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pa
      * - `amount` must be less than claimable reward
      */
     function claimReward(uint256 amount) external override nonReentrant whenNotPaused {
-        require(isHolder(_msgSender()), "StakePool: CALLER_NO_STAKE_HOLDER");
-        require(claimableRewards[_msgSender()] >= amount, "StakePool: INSUFFICIENT_CLAIMABLE_REWARD");
-        require(amount <= usdt.balanceOf(address(this)), "StakePool: INSUFFICIENT_FUNDS");
+        require(isHolder(_msgSender()), "StakePoolMock: CALLER_NO_STAKE_HOLDER");
+        require(claimableRewards[_msgSender()] >= amount, "StakePoolMock: INSUFFICIENT_CLAIMABLE_REWARD");
+        require(amount <= usdt.balanceOf(address(this)), "StakePoolMock: INSUFFICIENT_FUNDS");
         claimableRewards[_msgSender()] -= amount;
         usdt.safeTransfer(_msgSender(), amount);
         emit RewardClaimed(_msgSender(), amount);
@@ -354,7 +362,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pa
      * - `fromDate` must be past timestamp
      */
     function _calcStakeClaimShares(uint256 fromDate) private view returns (uint256[] memory, uint256[] memory, uint256) {
-        require(fromDate <= block.timestamp, "StakePool: NO_PAST_DATE");
+        require(fromDate <= block.timestamp, "StakePoolMock: NO_PAST_DATE");
         uint256[] memory eligibleStakes = new uint256[](tokenID);
         uint256[] memory eligibleStakeClaimShares = new uint256[](tokenID);
         uint256 eligibleStakesCount;
@@ -398,7 +406,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pa
         for (uint256 i = 0; i < eligibleStakesCount; i++) {
             uint256 stakeId = eligibleStakes[i];
             uint256 amountShare = availableDistributeAmount * eligibleStakeClaimShares[i] / sClaimShareDenominator;
-            require(amountShare <= usdt.balanceOf(address(this)), "StakePool: INSUFFICIENT_FUNDS");
+            require(amountShare <= usdt.balanceOf(address(this)), "StakePoolMock: INSUFFICIENT_FUNDS");
             claimableRewards[ownerOf(stakeId)] += amountShare;
             totalDistributeAmount += amountShare;
         }
@@ -416,8 +424,8 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pa
         address to,
         uint256 amount
     ) public onlyOwner {
-        require(token_ != address(0), "StakePool: TOKEN_ADDRESS_INVALID");
-        require(amount > 0, "StakePool: AMOUNT_INVALID");
+        require(token_ != address(0), "StakePoolMock: TOKEN_ADDRESS_INVALID");
+        require(amount > 0, "StakePoolMock: AMOUNT_INVALID");
         IERC20 token = IERC20(token_);
         // balance check is being done in {ERC20}
         token.safeTransfer(to, amount);

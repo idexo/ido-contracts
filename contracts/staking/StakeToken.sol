@@ -29,6 +29,13 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
     ) ERC721(name_, symbol_) { }
 
     /**
+     * @dev Get stake token id array owned by `account`.
+     */
+    function getStakerIds(address account) public override view returns (uint256[] memory) {
+        return stakerIds[account];
+    }
+
+    /**
      * @dev Return total stake amount of `account`
      */
     function getStakeAmount(address account) external view returns (uint256 totalStakeAmount) {
