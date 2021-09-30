@@ -27,5 +27,5 @@ interface IStakePool is IStakeToken {
     function getRewardDepositSum(
         uint256 fromDate,
         uint256 toDate
-    ) external returns (uint256);
+    ) external view returns (uint256);
 }

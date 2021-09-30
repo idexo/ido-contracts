@@ -17,9 +17,9 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
         uint256 depositedAt;
     }
     // stake id => stake info
-    mapping(uint256 => Stake) public stakes;
+    mapping(uint256 => Stake) public override stakes;
     // staker wallet => stake id array
-    mapping(address => uint256[]) public stakerIds;
+    mapping(address => uint256[]) public override stakerIds;
 
     event StakeAmountDecreased(uint256 stakeId, uint256 decreaseAmount);
 

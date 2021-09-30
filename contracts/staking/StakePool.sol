@@ -16,7 +16,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pa
     // TODO Reconsider
     uint256 public constant MONTH = 30 days;
     uint256 public constant QUARTER = 90 days;
-    uint256 public constant YEAR = 365 days;
+    uint256 public constant YEAR = 360 days;
     // Reward distribution ratio - monthly, quarterly, yearly
     uint256 public constant mDistributionRatio = 25;
     uint256 public constant qDistributionRatio = 50;
@@ -332,23 +332,6 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pa
     }
 
     /**
-     * @dev Withdraw funds from the pool
-     * Operators only can call
-     *
-     * - `amount` must not be zero
-     */
-    function sweep(
-        address token_,
-        address to,
-        uint256 amount
-    ) public onlyOwner {
-        IERC20 token = IERC20(token_);
-        // balance check is being done in {ERC20}
-        token.safeTransfer(to, amount);
-        emit Swept(_msgSender(), token_, to, amount);
-    }
-
-    /**
      * @dev Deposit reward to the pool.
      * Transfer `amount` of USDT from `account` to the pool.
      */
@@ -418,5 +401,25 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pa
             claimableRewards[ownerOf(stakeId)] += amountShare;
             totalDistributeAmount += amountShare;
         }
+    }
+
+    /**
+     * @dev Withdraw funds from the pool
+     * Operators only can call
+     *
+     * - `token_` must not be zero address
+     * - `amount` must not be zero
+     */
+    function sweep(
+        address token_,
+        address to,
+        uint256 amount
+    ) public onlyOwner {
+        require(token_ != address(0), "StakePool: TOKEN_ADDRESS_INVALID");
+        require(amount > 0, "StakePool: AMOUNT_INVALID");
+        IERC20 token = IERC20(token_);
+        // balance check is being done in {ERC20}
+        token.safeTransfer(to, amount);
+        emit Swept(_msgSender(), token_, to, amount);
     }
 }
