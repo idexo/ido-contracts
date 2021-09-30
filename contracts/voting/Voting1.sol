@@ -472,6 +472,7 @@ contract Voting1 is Ownable, AccessControl {
         address _account
     )
         public
+        view
         validPoll(_pollId)
         returns (uint256)
     {
@@ -483,9 +484,9 @@ contract Voting1 is Ownable, AccessControl {
 
         for (uint256 i = 0; i < _stakePools.length; i++) {
             IStakePool sPool = _stakePools[i];
-            uint256[] memory sTokenIds = sPool.getStakeTokenIds(_account);
+            uint256[] memory sTokenIds = sPool.getStakerIds(_account);
             for (uint256 j = 0; j < sTokenIds.length; j++) {
-                (uint256 amount, , uint256 depositedAt) = sPool.getStakeInfo(sTokenIds[j]);
+                (uint256 amount, , uint256 depositedAt) = sPool.stakes(sTokenIds[j]);
                 if (depositedAt < poll.startTime.sub(poll.minimumStakeTimeInDays.mul(1 days))) {
                     w = w.add(amount);
                 }

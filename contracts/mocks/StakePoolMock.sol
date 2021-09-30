@@ -3,10 +3,9 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 import "../staking/StakeToken.sol";
 import "../interfaces/IStakePool.sol";
 
@@ -18,10 +17,11 @@ import "../interfaces/IStakePool.sol";
  * YEAR -> 12 days.
  */
 
-contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
+contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+    // TODO Reconsider
     uint256 public constant MONTH = 1 days;
     uint256 public constant QUARTER = 3 days;
     uint256 public constant YEAR = 12 days;
@@ -34,11 +34,11 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
 
     uint256 public constant sClaimShareDenominator = 1e18;
 
-    // Address of deposit token.
-    IERC20 public depositToken;
-    // Address of reward token.
-    IERC20 public rewardToken;
-    // Timestamp when stake pool was deployed to mainnet.
+    // IDO token
+    IERC20 public ido;
+    // USDT token
+    IERC20 public usdt;
+    // Timestamp when stake pool was deployed.
     uint256 public deployedAt;
 
     struct RewardDeposit {
@@ -74,17 +74,17 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
     constructor(
         string memory stakeTokenName_,
         string memory stakeTokenSymbol_,
-        IERC20 depositToken_,
-        IERC20 rewardToken_
+        IERC20 ido_,
+        IERC20 usdt_
     )
         StakeToken(stakeTokenName_, stakeTokenSymbol_)
     {
-        depositToken = depositToken_;
-        rewardToken = rewardToken_;
+        ido = ido_;
+        usdt = usdt_;
         deployedAt = block.timestamp;
 
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(OPERATOR_ROLE, msg.sender);
+        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _setupRole(OPERATOR_ROLE, _msgSender());
     }
 
     /**
@@ -107,66 +107,54 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
     |______________________*/
 
     /**
-     * @dev Restricted to members of the admin role.
-     */
-    modifier onlyAdmin() {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "StakePoolMock#onlyAdmin: CALLER_NO_ADMIN_ROLE");
-        _;
-    }
-
-    /**
      * @dev Restricted to members of the operator role.
      */
     modifier onlyOperator() {
-        require(hasRole(OPERATOR_ROLE, msg.sender), "StakePoolMock#onlyOperator: CALLER_NO_OPERATOR_ROLE");
+        require(hasRole(OPERATOR_ROLE, _msgSender()), "StakePoolMock: CALLER_NO_OPERATOR_ROLE");
         _;
     }
 
     /**
      * @dev Add an account to the operator role.
-     * @param account address of recipient.
      */
-    function addOperator(
-        address account
-    )
-        public
-        override
-        onlyAdmin
-    {
+    function addOperator(address account) public override onlyOwner {
         // Check if `account` already has operator role
-        require(!hasRole(OPERATOR_ROLE, account), "StakePoolMock#addOperator: ALREADY_OERATOR_ROLE");
+        require(!hasRole(OPERATOR_ROLE, account), "StakePoolMock: ALREADY_OERATOR_ROLE");
         grantRole(OPERATOR_ROLE, account);
     }
 
     /**
      * @dev Remove an account from the operator role.
-     * @param account address.
      */
-    function removeOperator(
-        address account
-    )
-        public
-        override
-        onlyAdmin
-    {
+    function removeOperator(address account) public override onlyOwner {
         // Check if `account` has operator role
-        require(hasRole(OPERATOR_ROLE, account), "StakePoolMock#removeOperator: NO_OPERATOR_ROLE");
+        require(hasRole(OPERATOR_ROLE, account), "StakePoolMock: NO_OPERATOR_ROLE");
         revokeRole(OPERATOR_ROLE, account);
     }
 
     /**
      * @dev Check if an account is operator.
-     * @param account address of operator being checked.
      */
-    function checkOperator(
-        address account
-    )
-        public
-        override
-        view
-        returns (bool)
-    {
+    function checkOperator(address account) public override view returns (bool) {
         return hasRole(OPERATOR_ROLE, account);
+    }
+
+    /***************************|
+    |          Pausable         |
+    |__________________________*/
+
+    /**
+     * @dev Pause the pool
+     */
+    function pause() external onlyOperator {
+        super._pause();
+    }
+
+    /**
+     * @dev Unpause the pool
+     */
+    function unpause() external onlyOperator {
+        super._unpause();
     }
 
     /************************|
@@ -175,84 +163,64 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
 
     /**
      * @dev Deposit stake to the pool.
-     * Requirements:
      *
-     * - `amount` must not be zero
-     * @param amount deposit amount.
+     * - `amount` >= `minStakeAmount`
      */
-    function deposit(
-        uint256 amount
-    )
-        external
-        override
-    {
-        require(amount >= minStakeAmount, "StakePoolMock#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
-        _deposit(msg.sender, amount);
+    function deposit(uint256 amount) external override whenNotPaused {
+        require(amount >= minStakeAmount, "StakePoolMock: UNDER_MINIMUM_STAKE_AMOUNT");
+        _deposit(_msgSender(), amount);
     }
 
     /**
-     * @dev Withdraw from the pool.
+     * @dev Withdraw stake from the pool.
      *
-     * If amount is less than amount of the stake, cut down amount.
-     * If amount is equal to amount of the stake, burn the stake.
-     *
-     * Requirements:
+     * If `amount` is less than amount of the stake, cut down the stake amount.
+     * If `amount` is equal to amount of the stake, burn the stake.
      *
      * - `amount` >= `minStakeAmount`
-     * @param stakeId id of Stake that is being withdrawn.
-     * @param amount withdraw amount.
+     * - `stakeId` should be valid
      */
     function withdraw(
         uint256 stakeId,
         uint256 amount
-    )
-        external
-        override
-    {
-        require(amount >= minStakeAmount, "StakePoolMock#withdraw: UNDER_MINIMUM_STAKE_AMOUNT");
-        _withdraw(msg.sender, stakeId, amount);
+    ) external override whenNotPaused {
+        require(amount >= minStakeAmount, "StakePoolMock: UNDER_MINIMUM_STAKE_AMOUNT");
+        _withdraw(_msgSender(), stakeId, amount);
     }
 
     /**
      * @dev Deposit stake to the pool.
-     * @param account address of recipient.
-     * @param amount deposit amount.
+     * Mint a new StakeToken.
+     * Transfer `amount` of IDO from `account` to the pool.
+     * Zero account check for `account` happen in {ERC721}.
      */
     function _deposit(
         address account,
         uint256 amount
-    )
-        private
-        nonReentrant
-    {
-        uint256 stakeId = _mint(account, amount, block.timestamp);
-        require(depositToken.transferFrom(account, address(this), amount), "StakePoolMock#_deposit: TRANSFER_FAILED");
+    ) private nonReentrant {
+        uint256 stakeId = super._mint(account, amount, block.timestamp);
+        ido.safeTransferFrom(account, address(this), amount);
 
         emit Deposited(account, stakeId, amount);
     }
 
     /**
-     * @dev If amount is less than amount of the stake, cut off amount.
-     * If amount is equal to amount of the stake, burn the stake.
+     * @dev If `amount` is less than amount of the stake, cut down the stake amount.
+     * If `amount` is equal to amount of the stake, burn the stake.
+     * Transfer `withdrawAmount` of IDO from the pool to `account`.
      *
-     * Requirements:
-     *
+     * - `amount` >= `minStakeAmount`
+     * - `stakeId` should be valid
      * - `account` must be owner of `stakeId`
-     * @param account address whose stake is being withdrawn.
-     * @param stakeId id of stake that is being withdrawn.
-     * @param withdrawAmount withdraw amount.
      */
     function _withdraw(
         address account,
         uint256 stakeId,
         uint256 withdrawAmount
-    )
-        private
-        nonReentrant
-    {
-        require(ownerOf(stakeId) == account, "StakePoolMock#_withdraw: NO_STAKE_OWNER");
-        _decreaseStakeAmount(stakeId, withdrawAmount);
-        require(depositToken.transfer(account, withdrawAmount), "StakePoolMock#_withdraw: TRANSFER_FAILED");
+    ) private nonReentrant {
+        require(ownerOf(stakeId) == account, "StakePoolMock: NO_STAKE_OWNER");
+        super._decreaseStakeAmount(stakeId, withdrawAmount);
+        ido.safeTransfer(account, withdrawAmount);
 
         emit Withdrawn(account, stakeId, withdrawAmount);
     }
@@ -263,33 +231,13 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
 
     /**
      * @dev Deposit reward to the pool.
-     * Requirements:
+     * Operators ony can call.
      *
      * - `amount` must not be zero
-     * @param amount deposit amount.
      */
-    function depositReward(
-        uint256 amount
-    )
-        external
-        override
-        onlyOperator
-    {
-        require(amount > 0, "StakePoolMock#depositReward: ZERO_AMOUNT");
-        _depositReward(msg.sender, amount);
-    }
-
-    /**
-     * @dev Return reward deposit info by id.
-     */
-    function getRewardDeposit(
-        uint256 id
-    )
-        external
-        view
-        returns (address, uint256, uint256)
-    {
-        return (rewardDeposits[id].operator, rewardDeposits[id].amount, rewardDeposits[id].depositedAt);
+    function depositReward(uint256 amount) external override onlyOperator {
+        require(amount > 0, "StakePoolMock: ZERO_AMOUNT");
+        _depositReward(_msgSender(), amount);
     }
 
     /**
@@ -301,13 +249,8 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
     function getRewardDepositSum(
         uint256 fromDate,
         uint256 toDate
-    )
-        public
-        override
-        view
-        returns (uint256)
-    {
-        require(fromDate < toDate, "StakePoolMock#getRewardDepositSum: INVALID_DATE_RANGE");
+    ) public override view returns (uint256) {
+        require(fromDate < toDate, "StakePoolMock: INVALID_DATE_RANGE");
         uint256 totalDepositAmount;
         for (uint256 i = 0; i < rewardDeposits.length; i++) {
             if (rewardDeposits[i].depositedAt >= fromDate && rewardDeposits[i].depositedAt < toDate) {
@@ -319,26 +262,20 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
     }
 
     /**
-     * @dev Claim reward.
+     * @dev Claim reward from the pool.
+     * Decrease `claimableRewards` by `amount`.
+     * Transfer `amount` of USDT from the pool to `_msgSender()`.
      *
-     * Requirements:
-     *
-     * - stake token owner must call
+     * - stake holder must call
      * - `amount` must be less than claimable reward
-     * @param amount claim amount
      */
-    function claimReward(
-        uint256 amount
-    )
-        external
-        override
-        nonReentrant
-    {
-        require(isHolder(msg.sender), "StakePoolMock#claimReward: CALLER_NO_TOKEN_OWNER");
-        require(claimableRewards[msg.sender] >= amount, "StakePoolMock#claimReward: INSUFFICIENT_FUNDS");
-        claimableRewards[msg.sender] -= amount;
-        rewardToken.transfer(msg.sender, amount);
-        emit RewardClaimed(msg.sender, amount);
+    function claimReward(uint256 amount) external override nonReentrant whenNotPaused {
+        require(isHolder(_msgSender()), "StakePoolMock: CALLER_NO_STAKE_HOLDER");
+        require(claimableRewards[_msgSender()] >= amount, "StakePoolMock: INSUFFICIENT_CLAIMABLE_REWARD");
+        require(amount <= usdt.balanceOf(address(this)), "StakePoolMock: INSUFFICIENT_FUNDS");
+        claimableRewards[_msgSender()] -= amount;
+        usdt.safeTransfer(_msgSender(), amount);
+        emit RewardClaimed(_msgSender(), amount);
     }
 
     /**
@@ -346,11 +283,7 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
      *
      * Must be invoked by operator manually and periodically (once a month, quarter and year).
      */
-    function distribute()
-        external
-        override
-        onlyOperator
-    {
+    function distribute() external override onlyOperator whenNotPaused {
         uint256 lastDistributeDate;
         uint256 totalDistributeAmount;
         uint256 currentDate = block.timestamp;
@@ -362,6 +295,7 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
             lastDistributeDate = mDistributes[mDistributes.length - 1].distributedAt;
         }
         if (lastDistributeDate + MONTH <= currentDate) {
+            // TODO check again
             lastDistributeDate = currentDate - MONTH;
             totalDistributeAmount = _distribute(lastDistributeDate, mDistributionRatio);
             mDistributes.push(RewardDistribute({
@@ -406,35 +340,14 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
     }
 
     /**
-     * @dev Sweep funds
-     * Accessible by operators
-     */
-    function sweep(
-        address token_,
-        address to,
-        uint256 amount
-    )
-        public
-        onlyOperator
-    {
-        IERC20 token = IERC20(token_);
-        // balance check is being done in ERC20
-        token.transfer(to, amount);
-        emit Swept(msg.sender, token_, to, amount);
-    }
-
-    /**
      * @dev Deposit reward to the pool.
-     * @param account address who deposits to the pool.
-     * @param amount deposit amount.
+     * Transfer `amount` of USDT from `account` to the pool.
      */
     function _depositReward(
         address account,
         uint256 amount
-    )
-        private
-    {
-        rewardToken.safeTransferFrom(account, address(this), amount);
+    ) private {
+        usdt.safeTransferFrom(account, address(this), amount);
         rewardDeposits.push(RewardDeposit({
             operator: account,
             amount: amount,
@@ -445,36 +358,30 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
 
     /**
      * @dev Select eligible stakes that have been in the pool from `fromDate`, and update their claim shares.
-     * Requirements:
      *
      * - `fromDate` must be past timestamp
      */
-    function _calcStakeClaimShares(
-        uint256 fromDate
-    )
-        private
-        view
-        returns (uint256[] memory, uint256[] memory, uint256)
-    {
-        require(fromDate <= block.timestamp, "StakePoolMock#_calcStakeClaimShares: NO_PAST_DATE");
-        uint256[] memory eligibleStakes = new uint256[](tokenIds);
-        uint256[] memory eligibleStakeClaimShares = new uint256[](tokenIds);
+    function _calcStakeClaimShares(uint256 fromDate) private view returns (uint256[] memory, uint256[] memory, uint256) {
+        require(fromDate <= block.timestamp, "StakePoolMock: NO_PAST_DATE");
+        uint256[] memory eligibleStakes = new uint256[](tokenID);
+        uint256[] memory eligibleStakeClaimShares = new uint256[](tokenID);
         uint256 eligibleStakesCount;
         uint256 totalStakeClaim;
+        Stake memory stake;
 
-        for (uint256 i = 1; i <= tokenIds; i++) {
+        for (uint256 i = 1; i <= tokenID; i++) {
             if (_exists(i)) {
-                (uint256 amount, uint256 multiplier, uint256 depositedAt) = getStakeInfo(i);
-                if (amount > 0 && depositedAt <= fromDate) {
-                    totalStakeClaim += amount * multiplier;
+                stake = stakes[i];
+                if (stake.amount > 0 && stake.depositedAt <= fromDate) {
+                    totalStakeClaim += stake.amount * stake.multiplier;
                     eligibleStakes[eligibleStakesCount++] = i;
                 }
             }
         }
 
         for (uint256 i = 0; i < eligibleStakesCount; i++) {
-            (uint256 amount, uint256 multiplier, ) = getStakeInfo(eligibleStakes[i]);
-            eligibleStakeClaimShares[i] = (amount * multiplier * sClaimShareDenominator) / totalStakeClaim;
+            stake = stakes[eligibleStakes[i]];
+            eligibleStakeClaimShares[i] = (stake.amount * stake.multiplier * sClaimShareDenominator) / totalStakeClaim;
         }
 
         return (eligibleStakes, eligibleStakeClaimShares, eligibleStakesCount);
@@ -488,26 +395,40 @@ contract StakePoolMock is IStakePool, StakeToken, AccessControl, ReentrancyGuard
     function _distribute(
         uint256 lastDistributeDate,
         uint256 distributionRatio
-    )
-        private
-        returns (uint256)
-    {
+    ) private returns (uint256 totalDistributeAmount) {
         uint256[] memory eligibleStakes;
         uint256[] memory eligibleStakeClaimShares;
         uint256 eligibleStakesCount;
         uint256 availableDistributeAmount;
-        uint256 totalDistributeAmount;
 
         (eligibleStakes, eligibleStakeClaimShares, eligibleStakesCount) = _calcStakeClaimShares(lastDistributeDate);
         availableDistributeAmount = getRewardDepositSum(lastDistributeDate, block.timestamp) * distributionRatio / 100;
         for (uint256 i = 0; i < eligibleStakesCount; i++) {
             uint256 stakeId = eligibleStakes[i];
             uint256 amountShare = availableDistributeAmount * eligibleStakeClaimShares[i] / sClaimShareDenominator;
-            require(amountShare <= rewardToken.balanceOf(address(this)), "StakePoolMock#_distribute: INSUFFICIENT FUNDS");
+            require(amountShare <= usdt.balanceOf(address(this)), "StakePoolMock: INSUFFICIENT_FUNDS");
             claimableRewards[ownerOf(stakeId)] += amountShare;
             totalDistributeAmount += amountShare;
         }
+    }
 
-        return totalDistributeAmount;
+    /**
+     * @dev Withdraw funds from the pool
+     * Operators only can call
+     *
+     * - `token_` must not be zero address
+     * - `amount` must not be zero
+     */
+    function sweep(
+        address token_,
+        address to,
+        uint256 amount
+    ) public onlyOwner {
+        require(token_ != address(0), "StakePoolMock: TOKEN_ADDRESS_INVALID");
+        require(amount > 0, "StakePoolMock: AMOUNT_INVALID");
+        IERC20 token = IERC20(token_);
+        // balance check is being done in {ERC20}
+        token.safeTransfer(to, amount);
+        emit Swept(_msgSender(), token_, to, amount);
     }
 }
