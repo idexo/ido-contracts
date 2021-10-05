@@ -9,7 +9,7 @@ interface IStakePool is IStakeToken {
 
     function removeOperator(address account) external;
 
-    function checkOperator(address account) external returns (bool);
+    function checkOperator(address account) external view returns (bool);
 
     function deposit(uint256 amount) external;
 
