@@ -38,9 +38,18 @@ contract StakePoolSimpleCombined is IStakePool, StakeToken, AccessControl, Reent
         uint256 depositedAt;
     }
 
+    struct RewardDeposit {
+        address operator;
+        uint256 amount;
+        uint256 depositedAt;
+    }
+
     
     // Reward deposit history
-    ClaimableRewardDeposit[] public rewardDeposits;
+    ClaimableRewardDeposit[] public claimableRewardDeposits;
+
+    // Reward deposit history
+    RewardDeposit[] public rewardDeposits;
    
 
     // tokenId => available reward amount that tokenId can claim.
@@ -49,6 +58,7 @@ contract StakePoolSimpleCombined is IStakePool, StakeToken, AccessControl, Reent
     event Deposited(address indexed account, uint256 indexed stakeId, uint256 amount);
     event Withdrawn(address indexed account, uint256 indexed stakeId, uint256 amount);
     event ClaimableRewardDeposited(address indexed account, uint256 amount);
+    event RewardDeposited(address indexed account, uint256 amount);
     event RewardClaimed(address indexed account, uint256 amount);
     event Swept(address indexed operator, address token, address indexed to, uint256 amount);
 
@@ -275,6 +285,19 @@ contract StakePoolSimpleCombined is IStakePool, StakeToken, AccessControl, Reent
     }
 
     /**
+     * @dev Return reward deposit info by id.
+     */
+    function getClaimableReward(
+        uint256 tokenId
+    )
+        external
+        view
+        returns (uint256)
+    {
+        return (claimableRewards[tokenId]);
+    }
+
+    /**
      * @dev add to claimable reward for a given staker address
      */
     function addClaimableReward(
@@ -282,7 +305,6 @@ contract StakePoolSimpleCombined is IStakePool, StakeToken, AccessControl, Reent
         uint256 amount
     )
         external
-        override
         onlyOperator
     {
         claimableRewards[tokenId] += amount;
@@ -303,10 +325,9 @@ contract StakePoolSimpleCombined is IStakePool, StakeToken, AccessControl, Reent
         uint256 amount
     )
         external
-        override
         nonReentrant
     {
-        require(isHolder(msg.sender, tokenId), "StakePool#claimReward: CALLER_NO_TOKEN_OWNER");
+        require((ownerOf(tokenId) == msg.sender), "StakePool#claimReward: CALLER_NO_TOKEN_OWNER");
         require(claimableRewards[tokenId] >= amount, "StakePool#claimReward: INSUFFICIENT_FUNDS");
         claimableRewards[tokenId] -= amount;
         rewardToken.transfer(msg.sender, amount);
