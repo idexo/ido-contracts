@@ -123,14 +123,14 @@ contract StakePoolSimple is IStakePoolSimple, AccessControl, ReentrancyGuard, Pa
      * If `amount` is less than amount of the stake, cut down the stake amount.
      * If `amount` is equal to amount of the stake, burn the stake.
      *
-     * - `amount` >= `minStakeAmount`
+     * - `amount` must not be zero
      * - `stakeId` should be valid
      */
     function withdraw(
         uint256 stakeId,
         uint256 amount
     ) external override whenNotPaused {
-        require(amount >= minStakeAmount, "StakePoolSimple: UNDER_MINIMUM_STAKE_AMOUNT");
+        require(amount > 0, "StakePoolSimple: WITHDRAW_AMOUNT_INVALID");
         _withdraw(_msgSender(), stakeId, amount);
     }
 
@@ -155,7 +155,7 @@ contract StakePoolSimple is IStakePoolSimple, AccessControl, ReentrancyGuard, Pa
      * If `amount` is equal to amount of the stake, burn the stake.
      * Transfer `withdrawAmount` of IDO from the pool to `account`.
      *
-     * - `amount` >= `minStakeAmount`
+     * - `amount` must not be zero
      * - `stakeId` should be valid
      * - `account` must be owner of `stakeId`
      */

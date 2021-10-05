@@ -2,6 +2,8 @@ const IDO1 = artifacts.require('IDO1');
 const IDOSale = artifacts.require('IDOSale');
 const ERC20Mock6 = artifacts.require('ERC20Mock6');
 const StakePoolMock = artifacts.require('StakePoolMock');
+const StakeTokenSimple = artifacts.require('StakeTokenSimple');
+const StakePoolSimple = artifacts.require('StakePoolSimple');
 const BN = web3.utils.BN;
 
 module.exports = async function (deployer) {
@@ -35,11 +37,31 @@ module.exports = async function (deployer) {
   // );
 
   //------------ StakePoolMock ------------
+
+  // await deployer.deploy(
+  //   StakePoolMock,
+  //   'Test Stake Token',
+  //   'TST',
+  //   '0x975dE233452b915219373bFf5A49b1C81cD807eF',
+  //   '0xf8bd1920cdd944758771e789474dfb5b5e3f8a0b'
+  // );
+
+  //------------ StakePoolSimple ------------
   await deployer.deploy(
-    StakePoolMock,
-    'Test Stake Token',
-    'TST',
-    '0x975dE233452b915219373bFf5A49b1C81cD807eF',
-    '0xf8bd1920cdd944758771e789474dfb5b5e3f8a0b'
+    StakeTokenSimple,
+    'Test Stake Token Simple',
+    'TSTS',
   );
+  const stakeTokenSimple = await StakeTokenSimple.deployed();
+
+  await deployer.deploy(
+    StakePoolSimple,
+    stakeTokenSimple.address,
+    '0x975dE233452b915219373bFf5A49b1C81cD807eF',
+    '0xf8bd1920cdd944758771e789474dfb5b5e3f8a0b',
+  );
+  const stakePoolSimple = await StakePoolSimple.deployed();
+
+  console.log('StakeTokenSimple deployed to:', stakeTokenSimple.address);
+  console.log('StakePoolSimple deployed to:', stakePoolSimple.address);
 };

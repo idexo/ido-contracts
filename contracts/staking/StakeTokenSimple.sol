@@ -130,7 +130,6 @@ contract StakeTokenSimple is IStakeTokenSimple, ERC721, Ownable {
      * - `stakeId` must exist in stake pool
      */
     function _burn(uint256 stakeId) internal override {
-        require(_msgSender() == stakePoolSimple, "StakeTokenSimple: CALLER_NO_STAKE_POOL_SIMPLE");
         require(_exists(stakeId), "StakeTokenSimple: STAKE_NOT_FOUND");
         address stakeOwner = ownerOf(stakeId);
         super._burn(stakeId);
@@ -157,6 +156,7 @@ contract StakeTokenSimple is IStakeTokenSimple, ERC721, Ownable {
         uint256 stakeId,
         uint256 amount
     ) external override {
+        require(_msgSender() == stakePoolSimple, "StakeTokenSimple: CALLER_NO_STAKE_POOL_SIMPLE");
         require(_exists(stakeId), "StakeTokenSimple: STAKE_NOT_FOUND");
         require(amount <= stakes[stakeId].amount, "StakeTokenSimple: INSUFFICIENT_STAKE_AMOUNT");
         if (amount == stakes[stakeId].amount) {
