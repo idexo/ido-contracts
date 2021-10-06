@@ -201,7 +201,7 @@ contract StakePoolSimpleCombined is IStakePool, StakeToken, AccessControl, Reent
         external
         override
     {
-        require(amount >= minStakeAmount, "StakePool#withdraw: UNDER_MINIMUM_STAKE_AMOUNT");
+        require(amount > 0, "StakePool#withdraw: UNDER_MINIMUM_WITHDRAW_AMOUNT");
         _withdraw(msg.sender, stakeId, amount);
     }
 
@@ -298,7 +298,7 @@ contract StakePoolSimpleCombined is IStakePool, StakeToken, AccessControl, Reent
     }
 
     /**
-     * @dev add to claimable reward for a given staker address
+     * @dev add to claimable reward for a given token id
      */
     function addClaimableReward(
         uint256 tokenId,
@@ -308,6 +308,21 @@ contract StakePoolSimpleCombined is IStakePool, StakeToken, AccessControl, Reent
         onlyOperator
     {
         claimableRewards[tokenId] += amount;
+    }
+
+    /**
+     * @dev batch add to claimable reward for given token ids
+     */
+    function addClaimableRewards(
+        uint256[] calldata tokenIds,
+        uint256[] calldata amounts
+    )
+        external
+        onlyOperator
+    {
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            claimableRewards[tokenIds[i]] += amounts[i];
+        }        
     }
 
 
@@ -330,7 +345,7 @@ contract StakePoolSimpleCombined is IStakePool, StakeToken, AccessControl, Reent
         require((ownerOf(tokenId) == msg.sender), "StakePool#claimReward: CALLER_NO_TOKEN_OWNER");
         require(claimableRewards[tokenId] >= amount, "StakePool#claimReward: INSUFFICIENT_FUNDS");
         claimableRewards[tokenId] -= amount;
-        rewardToken.transfer(msg.sender, amount);
+        rewardToken.safeTransfer(msg.sender, amount);
         emit RewardClaimed(msg.sender, amount);
     }
 

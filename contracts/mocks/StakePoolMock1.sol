@@ -303,7 +303,7 @@ contract StakePoolMock1 is IStakePool, StakeToken, AccessControl, ReentrancyGuar
         uint256 toDate
     )
         public
-        override
+       
         view
         returns (uint256)
     {
@@ -331,7 +331,7 @@ contract StakePoolMock1 is IStakePool, StakeToken, AccessControl, ReentrancyGuar
         uint256 amount
     )
         external
-        override
+       
         nonReentrant
     {
         require(isHolder(msg.sender), "StakePoolMock#claimReward: CALLER_NO_TOKEN_OWNER");
@@ -348,7 +348,7 @@ contract StakePoolMock1 is IStakePool, StakeToken, AccessControl, ReentrancyGuar
      */
     function distribute()
         external
-        override
+        
         onlyOperator
     {
         uint256 lastDistributeDate;
