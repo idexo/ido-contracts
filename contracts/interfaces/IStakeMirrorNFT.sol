@@ -18,8 +18,4 @@ interface IStakeMirrorNFT is IERC721 {
     function removeOperator(address account) external;
 
     function checkOperator(address account) external view returns (bool);
-
-    function pause() external;
-
-    function unpause() external;
 }
