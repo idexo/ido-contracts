@@ -3,6 +3,7 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
@@ -13,10 +14,12 @@ import "../interfaces/IStakeMirrorNFT.sol";
  * Deployed on sidechain.
  */
 
-contract StakeMirrorNFT is IStakeMirrorNFT, ERC721, Ownable, AccessControl, Pausable {
+contract StakeMirrorNFT is IStakeMirrorNFT, ERC721, ERC721URIStorage, Ownable, AccessControl, Pausable {
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     uint256 public constant multiplierDenominator = 100;
+    // Base NFT URI
+    string public baseURI;
 
     struct Stake {
         uint256 amount;
@@ -32,8 +35,11 @@ contract StakeMirrorNFT is IStakeMirrorNFT, ERC721, Ownable, AccessControl, Paus
 
     constructor(
         string memory name_,
-        string memory symbol_
+        string memory symbol_,
+        string memory baseURI_
     ) ERC721(name_, symbol_) {
+        baseURI = baseURI_;
+
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(OPERATOR_ROLE, msg.sender);
     }
@@ -104,6 +110,46 @@ contract StakeMirrorNFT is IStakeMirrorNFT, ERC721, Ownable, AccessControl, Paus
         super._unpause();
     }
 
+    /**********************|
+    |          URI         |
+    |_____________________*/
+
+    /**
+     * @dev Return token URI
+     * Override {ERC721URIStorage:tokenURI}
+     */
+    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+        return ERC721URIStorage.tokenURI(tokenId);
+    }
+
+    /**
+     * @dev Set token URI
+     * Only `operator` can call
+     *
+     * - `tokenId` must exist, see {ERC721URIStorage:_setTokenURI}
+     */
+    function setTokenURI(
+        uint256 tokenId,
+        string memory _tokenURI
+    ) public onlyOperator {
+        super._setTokenURI(tokenId, _tokenURI);
+    }
+
+    /**
+     * @dev Set `baseURI`
+     * Only `operator` can call
+     */
+    function setBaseURI(string memory baseURI_) public onlyOperator {
+        baseURI = baseURI_;
+    }
+
+    /**
+     * @dev Return base URI
+     * Override {ERC721:_baseURI}
+     */
+    function _baseURI() internal view override returns (string memory) {
+        return baseURI;
+    }
 
     /************************|
     |          Stake         |
@@ -135,6 +181,7 @@ contract StakeMirrorNFT is IStakeMirrorNFT, ERC721, Ownable, AccessControl, Paus
 
     /**
      * @dev Mint a new StakeMirrorNFT.
+     * Only `operator` can call
      *
      * - `account` must not be zero address, check ERC721 {_mint}
      * - `tokenId` must not be zero
@@ -164,10 +211,10 @@ contract StakeMirrorNFT is IStakeMirrorNFT, ERC721, Ownable, AccessControl, Paus
      *
      * - `stakeId` must exist
      */
-    function _burn(uint256 stakeId) internal override {
+    function _burn(uint256 stakeId) internal override(ERC721, ERC721URIStorage) {
         require(_exists(stakeId), "StakeMirrorNFT: STAKE_NOT_FOUND");
         address stakeOwner = ownerOf(stakeId);
-        super._burn(stakeId);
+        ERC721URIStorage._burn(stakeId);
         delete stakes[stakeId];
         uint256[] storage stakeIds = stakerIds[stakeOwner];
         for (uint256 i = 0; i < stakeIds.length; i++) {
@@ -184,6 +231,7 @@ contract StakeMirrorNFT is IStakeMirrorNFT, ERC721, Ownable, AccessControl, Paus
     /**
      * @dev Decrease stake amount by `amount`.
      * If stake amount leads to be zero, the stake is burned.
+     * Only `operator` can call
      *
      * - `stakeId` must exist
      */
