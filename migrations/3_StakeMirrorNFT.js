@@ -5,6 +5,6 @@ module.exports = async function (deployer) {
     StakeMirrorNFT,
     'Stake Mirror Test',
     'SMT',
-    'https://example.com/json/',
+    '',
   );
 };

@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "../interfaces/IStakeMirrorNFT.sol";
 
 /**
@@ -14,7 +13,7 @@ import "../interfaces/IStakeMirrorNFT.sol";
  * Deployed on sidechain.
  */
 
-contract StakeMirrorNFT is IStakeMirrorNFT, ERC721, ERC721URIStorage, Ownable, AccessControl, Pausable {
+contract StakeMirrorNFT is IStakeMirrorNFT, ERC721, ERC721URIStorage, Ownable, AccessControl {
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     uint256 public constant multiplierDenominator = 100;
@@ -90,24 +89,6 @@ contract StakeMirrorNFT is IStakeMirrorNFT, ERC721, ERC721URIStorage, Ownable, A
      */
     function checkOperator(address account) public override view returns (bool) {
         return hasRole(OPERATOR_ROLE, account);
-    }
-
-    /***************************|
-    |          Pausable         |
-    |__________________________*/
-
-    /**
-     * @dev Pause the NFT
-     */
-    function pause() external override onlyOperator {
-        super._pause();
-    }
-
-    /**
-     * @dev Unpause the NFT
-     */
-    function unpause() external override onlyOperator {
-        super._unpause();
     }
 
     /**********************|
