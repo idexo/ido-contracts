@@ -4,11 +4,10 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 import "../interfaces/IWIDO.sol";
 
-contract RelayManager2 is Pausable, AccessControl, ReentrancyGuard {
+contract RelayManager2 is AccessControl, ReentrancyGuard {
     using SafeERC20 for IWIDO;
     // The contract owner address
     address public owner;
@@ -172,26 +171,6 @@ contract RelayManager2 is Pausable, AccessControl, ReentrancyGuard {
         return hasRole(OPERATOR_ROLE, account);
     }
 
-    /********************************|
-    |          Pause/Unpause         |
-    |_______________________________*/
-
-    /**
-     * @dev Pause the liquidity pool contract
-     * Only `operator` can call
-     */
-    function pause() external onlyOperator {
-        super._pause();
-    }
-
-    /**
-     * @dev Unause the liquidity pool contract
-     * Only `operator` can call
-     */
-    function unpause() external onlyOperator {
-        super._unpause();
-    }
-
     /***************************|
     |          Transfer         |
     |__________________________*/
@@ -203,7 +182,7 @@ contract RelayManager2 is Pausable, AccessControl, ReentrancyGuard {
         address receiver,
         uint256 amount,
         uint256 toChainId
-    ) external whenNotPaused {
+    ) external {
         require(amount > 0, "RelayManager2: DEPOSIT_AMOUNT_INVALID");
         require(receiver != address(0), "RelayManager2: RECEIVER_ZERO_ADDRESS");
         address sender = _msgSender();
@@ -221,7 +200,7 @@ contract RelayManager2 is Pausable, AccessControl, ReentrancyGuard {
         uint256 amount,
         uint256 toChainId,
         PermitRequest calldata permitOptions
-    ) external whenNotPaused {
+    ) external {
         require(amount > 0, "RelayManager2: DEPOSIT_AMOUNT_INVALID");
         require(receiver != address(0), "RelayManager2: RECEIVER_ZERO_ADDRESS");
         address sender = _msgSender();
@@ -241,7 +220,7 @@ contract RelayManager2 is Pausable, AccessControl, ReentrancyGuard {
         uint256 amount,
         bytes32 depositHash,
         uint256 gasPrice
-    ) external nonReentrant whenNotPaused onlyOperator {
+    ) external nonReentrant onlyOperator {
         uint256 initialGas = gasleft();
         require(receiver != address(0), "RelayManager2: RECEIVER_ZERO_ADDRESS");
         require(amount > 0, "RelayManager2: SEND_AMOUNT_INVALID");
@@ -276,7 +255,7 @@ contract RelayManager2 is Pausable, AccessControl, ReentrancyGuard {
     function withdrawAdminFee(
         address receiver,
         uint256 amount
-    ) external onlyOperator whenNotPaused {
+    ) external onlyOperator {
         require(amount > 0, "RelayManager2: RECEIVER_ZERO_ADDRESS");
         require(adminFeeAccumulated >= amount, "RelayManager2: INSUFFICIENT_ADMIN_FEE");
         adminFeeAccumulated -= amount;
@@ -292,7 +271,7 @@ contract RelayManager2 is Pausable, AccessControl, ReentrancyGuard {
     function withdrawGasFee(
         address receiver,
         uint256 amount
-    ) external onlyOperator whenNotPaused {
+    ) external onlyOperator {
         require(amount > 0, "RelayManager2: RECEIVER_ZERO_ADDRESS");
         require(gasFeeAccumulated >= amount, "RelayManager2: INSUFFICIENT_GAS_FEE");
         gasFeeAccumulated -= amount;
