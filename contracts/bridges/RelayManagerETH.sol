@@ -4,10 +4,9 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 
-contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
+contract RelayManagerETH is AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
     // The contract owner address
     address public owner;
@@ -171,26 +170,6 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
         return hasRole(OPERATOR_ROLE, account);
     }
 
-    /********************************|
-    |          Pause/Unpause         |
-    |_______________________________*/
-
-    /**
-     * @dev Pause the liquidity pool contract
-     * Only `operator` can call
-     */
-    function pause() external onlyOperator {
-        super._pause();
-    }
-
-    /**
-     * @dev Unause the liquidity pool contract
-     * Only `operator` can call
-     */
-    function unpause() external onlyOperator {
-        super._unpause();
-    }
-
     /***************************|
     |          Transfer         |
     |__________________________*/
@@ -202,7 +181,7 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
         address receiver,
         uint256 amount,
         uint256 toChainId
-    ) external whenNotPaused {
+    ) external {
         require(amount > 0, "RelayManagerETH: DEPOSIT_AMOUNT_INVALID");
         require(receiver != address(0), "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
         address sender = _msgSender();
@@ -220,7 +199,7 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
         uint256 amount,
         uint256 toChainId,
         PermitRequest calldata permitOptions
-    ) external whenNotPaused {
+    ) external {
         require(amount > 0, "RelayManagerETH: DEPOSIT_AMOUNT_INVALID");
         require(receiver != address(0), "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
         address sender = _msgSender();
@@ -234,13 +213,14 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
 
     /**
      * @dev Send (mint) funds to the receiver to process cross-chain transfer
+     * `depositHash = keccak256(abi.encodePacked(senderAddress, tokenAddress, nonce))`
      */
     function send(
         address receiver,
         uint256 amount,
         bytes32 depositHash,
         uint256 gasPrice
-    ) external nonReentrant whenNotPaused onlyOperator {
+    ) external nonReentrant onlyOperator {
         uint256 initialGas = gasleft();
         require(receiver != address(0), "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
         require(amount > 0, "RelayManagerETH: SEND_AMOUNT_INVALID");
@@ -275,7 +255,7 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
     function withdrawAdminFee(
         address receiver,
         uint256 amount
-    ) external onlyOperator whenNotPaused {
+    ) external onlyOperator {
         require(amount > 0, "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
         require(adminFeeAccumulated >= amount, "RelayManagerETH: INSUFFICIENT_ADMIN_FEE");
         adminFeeAccumulated -= amount;
@@ -291,7 +271,7 @@ contract RelayManagerETH is Pausable, AccessControl, ReentrancyGuard {
     function withdrawGasFee(
         address receiver,
         uint256 amount
-    ) external onlyOperator whenNotPaused {
+    ) external onlyOperator {
         require(amount > 0, "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
         require(gasFeeAccumulated >= amount, "RelayManagerETH: INSUFFICIENT_GAS_FEE");
         gasFeeAccumulated -= amount;

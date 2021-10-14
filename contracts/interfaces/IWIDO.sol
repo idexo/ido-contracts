@@ -30,8 +30,4 @@ interface IWIDO is IERC20 {
     ) external;
 
     function getChainId() external view returns (uint256);
-
-    function pause() external;
-
-    function unpause() external;
 }

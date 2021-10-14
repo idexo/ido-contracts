@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "../interfaces/IWIDO.sol";
 
-contract WIDO is IWIDO, ERC20Permit, ERC20Pausable, AccessControl {
+contract WIDO is IWIDO, ERC20Permit, AccessControl {
     // Contract owner address
     address public owner;
     // Proposed new contract owner address
@@ -156,43 +156,11 @@ contract WIDO is IWIDO, ERC20Permit, ERC20Pausable, AccessControl {
     }
 
     /**
-     * @dev ERC20Pausable._beforeTokenTransfer(from, to, amount) override.
-     * @param from address
-     * @param to address
-     * @param amount uint256
-     */
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal override(ERC20, ERC20Pausable) {
-        ERC20Pausable._beforeTokenTransfer(from, to, amount);
-    }
-
-    /**
      * @dev Get chain id.
      */
     function getChainId() public override view returns (uint256) {
         uint256 id;
         assembly { id := chainid() }
         return id;
-    }
-
-    /******************************|
-    |          Pausability         |
-    |_____________________________*/
-
-    /**
-     * @dev Pause.
-     */
-    function pause() public override onlyOperator {
-        super._pause();
-    }
-
-    /**
-     * @dev Unpause.
-     */
-    function unpause() public override onlyOperator {
-        super._unpause();
     }
 }
