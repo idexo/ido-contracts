@@ -213,6 +213,7 @@ contract RelayManagerETH is AccessControl, ReentrancyGuard {
 
     /**
      * @dev Send (mint) funds to the receiver to process cross-chain transfer
+     * `depositHash = keccak256(abi.encodePacked(senderAddress, tokenAddress, nonce))`
      */
     function send(
         address receiver,

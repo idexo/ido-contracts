@@ -193,27 +193,8 @@ contract RelayManager2 is AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @dev Deposit funds to the relay contract for cross-chain transfer
-     */
-    function permitAndDeposit(
-        address receiver,
-        uint256 amount,
-        uint256 toChainId,
-        PermitRequest calldata permitOptions
-    ) external {
-        require(amount > 0, "RelayManager2: DEPOSIT_AMOUNT_INVALID");
-        require(receiver != address(0), "RelayManager2: RECEIVER_ZERO_ADDRESS");
-        address sender = _msgSender();
-        // Approve the relay manager contract to spend tokens on behalf of `sender`
-        IERC20Permit(address(wIDO)).permit(_msgSender(), address(this), amount, permitOptions.deadline, permitOptions.v, permitOptions.r, permitOptions.s);
-        // Burn tokens
-        wIDO.burn(_msgSender(), amount);
-
-        emit Deposited(sender, receiver, toChainId, amount, nonces[sender]++);
-    }
-
-    /**
      * @dev Send funds to the receiver to process cross-chain transfer
+     * `depositHash = keccak256(abi.encodePacked(senderAddress, tokenAddress, nonce))`
      */
     function send(
         address receiver,
@@ -224,8 +205,8 @@ contract RelayManager2 is AccessControl, ReentrancyGuard {
         uint256 initialGas = gasleft();
         require(receiver != address(0), "RelayManager2: RECEIVER_ZERO_ADDRESS");
         require(amount > 0, "RelayManager2: SEND_AMOUNT_INVALID");
-        require(!processedHashes[depositHash], "RelayManager2: ALREADY_PROCESSED");
-        require(wIDO.balanceOf(address(this)) >= amount, "RelayManager2: INSUFFICIENT_LIQUIDITY");
+        bytes32 hash = keccak256(abi.encodePacked(depositHash, address(wIDO), receiver, amount));
+        require(!processedHashes[hash], "RelayManager2: ALREADY_PROCESSED");
 
         // Mark the depositHash state true to avoid double sending
         processedHashes[depositHash] = true;
