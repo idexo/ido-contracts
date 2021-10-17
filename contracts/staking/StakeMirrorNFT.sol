@@ -137,11 +137,39 @@ contract StakeMirrorNFT is IStakeMirrorNFT, ERC721, ERC721URIStorage, Ownable, A
     |_______________________*/
 
     /**
-     * @dev Get stake token id array owned by `account`.
+     * @dev Get stake token id array owned by wallet address.
+     * @param account address
      */
-    function getStakerIds(address account) public override view returns (uint256[] memory) {
+    function getStakeTokenIds(
+        address account
+    )
+        public
+        override
+        view
+        returns (uint256[] memory)
+    {
         return stakerIds[account];
     }
+
+    /**
+     * @dev Return stake info from `stakeId`.
+     * Requirements:
+     *
+     * - `stakeId` must exist in stake pool
+     * @param stakeId uint256
+     */
+    function getStakeInfo(
+        uint256 stakeId
+    )
+        public
+        override
+        view
+        returns (uint256, uint256, uint256)
+    {
+        require(_exists(stakeId), "StakeToken#getStakeInfo: STAKE_NOT_FOUND");
+        return (stakes[stakeId].amount, stakes[stakeId].multiplier, stakes[stakeId].depositedAt);
+    }
+
 
     /**
      * @dev Return total stake amount of `account`

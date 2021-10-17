@@ -5,7 +5,19 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 interface IStakeMirrorNFT is IERC721 {
-    function getStakerIds(address account) external view returns (uint256[] memory);
+   
+
+    function getStakeInfo(
+        uint256 stakeId
+    )
+        external
+        returns (uint256, uint256, uint256);
+
+    function getStakeTokenIds(
+        address account
+    )
+        external
+        returns (uint256[] memory);
 
     function isHolder(address account) external view returns (bool);
 
