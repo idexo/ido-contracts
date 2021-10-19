@@ -13,12 +13,6 @@ interface IWIDO is IERC20 {
 
     function acceptOwnership() external;
 
-    function addOperator(address account) external;
-
-    function removeOperator(address account) external;
-
-    function checkOperator(address account) external view returns (bool);
-
     function mint(
         address account,
         uint256 amount
