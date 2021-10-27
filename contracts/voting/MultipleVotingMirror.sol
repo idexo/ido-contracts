@@ -343,6 +343,7 @@ contract MultipleVotingMirror is Ownable, AccessControl {
   ) private validPoll(_pollId) returns (uint256) {
     require(_account != address(0), "ACCOUNT_INVALID");
     uint256 w; // total weight
+    bool oldEnough = true;
     Poll memory poll = _polls[_pollId];
     require(block.timestamp < poll.endTime, "POLL_ENDED");
 
@@ -354,10 +355,12 @@ contract MultipleVotingMirror is Ownable, AccessControl {
         (uint256 amount, , uint256 depositedAt) = sPool.getStakeInfo(sTokenIds[j]);
         if (depositedAt +  poll.minimumStakeTimeInDays * 1 days < poll.startTime) {
           w += amount;
+        } else {
+          oldEnough = false;
         }
       }
     }
-    require(w == 0, "NO_VALID_VOTING_NFTS_PRESENT");
+    require(w > 0, oldEnough ? "NO_VALID_VOTING_NFTS_PRESENT" : "STAKE_NOT_OLD_ENOUGH");
     return w;
   }
 
