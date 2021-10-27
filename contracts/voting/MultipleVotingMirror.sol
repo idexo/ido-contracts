@@ -257,6 +257,33 @@ contract MultipleVotingMirror is Ownable, AccessControl {
   }
 
   /**
+   * @dev Update poll `startTime` and `endTime`
+   *
+   * Poll must not be ended
+   * If poll started, it is not allowed to set `_startTime`
+   */
+  function updatePollTime(
+    uint256 _pollId,
+    uint256 _startTime,
+    uint8 _durationTimeInDays
+  ) public onlyOperator validPoll(_pollId) {
+    Poll storage poll = _polls[_pollId];
+    uint256 startTime = poll.startTime;
+    bool started = startTime < block.timestamp;
+    bool ended = poll.endTime < block.timestamp;
+    require(!ended, "POLL_ENDED");
+
+    if (_startTime >= block.timestamp && !started) {
+      poll.startTime = _startTime;
+      startTime = _startTime;
+    }
+
+    if (_durationTimeInDays > 0 && startTime + _durationTimeInDays * 1 days >= block.timestamp) {
+      poll.endTime = startTime + _durationTimeInDays * 1 days;
+    }
+  }
+
+  /**
     * @dev Check if `_account` already voted for `_pollId`.
     *
     * @param _pollId poll id.
