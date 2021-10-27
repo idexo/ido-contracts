@@ -44,7 +44,7 @@ contract MultipleVotingMirror is Ownable, AccessControl {
 
   /* EVENTS  */
   event VoteCasted(address indexed voter, uint256 pollID, uint8 optionId, uint256 weight);
-  event PollCreated(address indexed creator, uint256 pollID, uint8 votingTimeInDays);
+  event PollCreated(address indexed creator, uint256 pollID);
 
   constructor(address[] memory stakePools_) {
     for (uint256 i = 0; i < stakePools_.length; i++) {
@@ -220,28 +220,24 @@ contract MultipleVotingMirror is Ownable, AccessControl {
 
   /**
     * @dev Create a new poll.
-    *
-    * @param _description poll description.
-    * @param _durationTimeInDays poll duration time.
-    * @param _minimumStakeTimeInDays minimum stake duration time for poll voters.
     */
   function createPoll(
     string memory _description,
     string[] memory _options,
     uint256 _startTime,
-    uint8 _durationTimeInDays,
+    uint256 _endTime,
     uint8 _minimumStakeTimeInDays
   ) public onlyOperator returns (uint256) {
     require(bytes(_description).length > 0, "DESCRIPTION_INVALID");
     require(_options.length > 1, "OPTIONS_INVALID" );
     require(_startTime >= block.timestamp, "START_TIME_INVALID");
-    require(_durationTimeInDays > 0, "DURATION_TIME_INVALID");
+    require(_endTime > _startTime, "END_TIME_INVALID");
 
     uint256 newPollId = pollIds + 1;
     pollIds = newPollId;
     Poll storage poll = _polls[newPollId];
     poll.startTime = _startTime;
-    poll.endTime = _startTime + _durationTimeInDays * 1 days;
+    poll.endTime = _endTime;
     poll.minimumStakeTimeInDays = _minimumStakeTimeInDays;
     poll.description = _description;
     poll.options.push("");
@@ -251,7 +247,7 @@ contract MultipleVotingMirror is Ownable, AccessControl {
     }
 
     poll.creator = msg.sender;
-    emit PollCreated(msg.sender, newPollId, _durationTimeInDays);
+    emit PollCreated(msg.sender, newPollId);
 
     return newPollId;
   }
@@ -260,12 +256,12 @@ contract MultipleVotingMirror is Ownable, AccessControl {
    * @dev Update poll `startTime` and `endTime`
    *
    * Poll must not be ended
-   * If poll started, it is not allowed to set `_startTime`
+   * If poll started, it is not allowed to set `startTime`
    */
   function updatePollTime(
     uint256 _pollId,
     uint256 _startTime,
-    uint8 _durationTimeInDays
+    uint256 _endTime
   ) public onlyOperator validPoll(_pollId) {
     Poll storage poll = _polls[_pollId];
     uint256 startTime = poll.startTime;
@@ -278,8 +274,8 @@ contract MultipleVotingMirror is Ownable, AccessControl {
       startTime = _startTime;
     }
 
-    if (_durationTimeInDays > 0 && startTime + _durationTimeInDays * 1 days >= block.timestamp) {
-      poll.endTime = startTime + _durationTimeInDays * 1 days;
+    if (_endTime >= block.timestamp) {
+      poll.endTime = _endTime;
     }
   }
 
