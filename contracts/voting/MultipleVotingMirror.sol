@@ -349,7 +349,6 @@ contract MultipleVotingMirror is Ownable, AccessControl {
     for (uint256 i = 0; i < stakePools.length; i++) {
       IStakeMirrorNFT sPool = stakePools[i];
       uint256[] memory sTokenIds = sPool.getStakeTokenIds(_account);
-      require(sTokenIds.length > 0, "NO_VALID_VOTING_NFTS_PRESENT");
 
       for (uint256 j = 0; j < sTokenIds.length; j++) {
         (uint256 amount, , uint256 depositedAt) = sPool.getStakeInfo(sTokenIds[j]);
@@ -358,7 +357,7 @@ contract MultipleVotingMirror is Ownable, AccessControl {
         }
       }
     }
-
+    require(w == 0, "NO_VALID_VOTING_NFTS_PRESENT");
     return w;
   }
 
