@@ -135,6 +135,8 @@ contract MultipleVotingMirror is Ownable, AccessControl {
         break;
       }
     }
+
+    isStakePool[_sPool] = false;
   }
 
   /***********************|
