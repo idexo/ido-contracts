@@ -46,4 +46,5 @@ jobs:
         npm install --quiet --no-progress --loglevel=error --g truffle
         npm install --quiet --no-progress --loglevel=error
         truffle develop &
+        sleep 5
         truffle test ./test/StakePoolSimpleCombined.test.js
