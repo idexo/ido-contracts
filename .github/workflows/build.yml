@@ -43,8 +43,12 @@ jobs:
 
     - name: Truffle compile and test
       run: |
+        date +%T
         npm install --quiet --no-progress --loglevel=error --g truffle
+        date +%T
         npm install --quiet --no-progress --loglevel=error
+        date +%T
         truffle develop &
         sleep 5
-        truffle test ./test/StakePoolSimpleCombined.test.js
+        truffle test
+        date +%T
