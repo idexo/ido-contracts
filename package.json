@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "coverage": "./node_modules/.bin/solidity-coverage",
     "build-contracts": "sol-merger \"./contracts/staking/*.sol\" ./build"
   },
   "repository": {
