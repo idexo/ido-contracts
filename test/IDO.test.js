@@ -43,14 +43,14 @@ contract('::IDO', async accounts => {
       it('add operator by non-admin', async () => {
         await expectRevert(
           token.addOperator(bob, {from: bob}),
-          'revert IDO: CALLER_NO_OWNER'
+          'IDO: CALLER_NO_OWNER'
         );
       });
       it('remove operator by non-admin', async () => {
         await token.addOperator(bob);
         await expectRevert(
           token.removeOperator(bob, {from: bob}),
-          'revert IDO: CALLER_NO_OWNER'
+          'IDO: CALLER_NO_OWNER'
         );
       });
     });
