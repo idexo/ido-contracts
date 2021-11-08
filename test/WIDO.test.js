@@ -1,3 +1,5 @@
+// Initiate `ownerPrivateKey` with the first account private key on test evm
+
 const { expect, assert} = require('chai');
 const truffleAssert = require('truffle-assertions');
 const {
@@ -23,60 +25,12 @@ contract('::WIDO', async accounts => {
   // this key is from the first address on test evm
   const ownerPrivateKey = Buffer.from('01246b5dca23b6a21a3b0b59205bb57b8e5ffbe2204e2d76c67ea6459f505a51', 'hex');
 
-  describe('#Role', async () => {
-    it ('should add operator', async () => {
+  describe('#Token', async () => {
+    it('mint, burn', async () => {
       token = await WIDO.new();
       await token.getChainId().then(res => {
         chainId = res.toNumber();
       })
-
-      await token.addOperator(bob);
-      expect(await token.checkOperator(bob)).to.eq(true);
-    });
-    it('should remove operator', async () => {
-      await token.removeOperator(bob);
-      expect(await token.checkOperator(bob)).to.eq(false);
-    });
-    describe('reverts if', async () => {
-      it('add operator by non-admin', async () => {
-        await expectRevert(
-          token.addOperator(bob, {from: bob}),
-          'WIDO: CALLER_NO_OWNER'
-        );
-      });
-      it('remove operator by non-admin', async () => {
-        await token.addOperator(bob);
-        await expectRevert(
-          token.removeOperator(bob, {from: bob}),
-          'WIDO: CALLER_NO_OWNER'
-        );
-      });
-    });
-  });
-
-  describe('#pause', async () => {
-    it('should be paused/unpaused by operator', async () => {
-      await token.pause({from: bob});
-      expect(await token.paused()).to.eq(true);
-      await expectRevert(
-        token.transfer(bob, web3.utils.toWei(new BN(500))),
-        'ERC20Pausable: token transfer while paused'
-      );
-      await token.unpause({from: bob});
-      expect(await token.paused()).to.eq(false);
-    });
-    describe('reverts if', async () => {
-      it('pause/unpause by non-operator', async () => {
-        await expectRevert(
-          token.pause({from: carol}),
-          'WIDO: CALLER_NO_OPERATOR_ROLE'
-        );
-      });
-    });
-  });
-
-  describe('#Token', async () => {
-    it('mint, burn', async () => {
       await token.setRelayer(relayer);
       expectEvent(
         await token.mint(alice, web3.utils.toWei(new BN(100)), {from: relayer}),

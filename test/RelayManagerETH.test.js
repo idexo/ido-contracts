@@ -125,35 +125,18 @@ contract('RelayManagerETH', async accounts => {
     });
     it('withdrawAdminFee, withdrawGasFee', async () => {
       expectEvent(
-        await relayManager.withdrawAdminFee(carol, adminFee, {from: bob}),
+        await relayManager.withdrawAdminFee(carol, adminFee),
         'AdminFeeWithdraw'
       );
       await relayManager.adminFeeAccumulated().then(res => {
         expect(res.toString()).to.eq('0');
       });
       expectEvent(
-        await relayManager.withdrawGasFee(carol, gasFee, {from: bob}),
+        await relayManager.withdrawGasFee(carol, gasFee),
         'GasFeeWithdraw'
       );
       await relayManager.gasFeeAccumulated().then(res => {
         expect(res.toString()).to.eq('0');
-      });
-    });
-  });
-
-  describe('#pause', async () => {
-    it('should be paused/unpaused by operator', async () => {
-      await relayManager.pause({from: bob});
-      expect(await relayManager.paused()).to.eq(true);
-      await relayManager.unpause({from: bob});
-      expect(await relayManager.paused()).to.eq(false);
-    });
-    describe('reverts if', async () => {
-      it('pause/unpause by non-operator', async () => {
-        await expectRevert(
-          relayManager.pause({from: carol}),
-          'RelayManagerETH: CALLER_NO_OPERATOR_ROLE'
-        );
       });
     });
   });
