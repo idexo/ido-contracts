@@ -45,10 +45,18 @@ jobs:
       run: |
         date +%T
         npm install --quiet --no-progress --loglevel=error --g truffle
+        npm install --quiet --no-progress --loglevel=error --g coveralls
         date +%T
         npm install --quiet --no-progress --loglevel=error
+        date +%T
+        npm run coverage
         date +%T
         truffle develop &
         sleep 5
         truffle test
         date +%T
+
+    - name: Coveralls
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
