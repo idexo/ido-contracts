@@ -39,7 +39,6 @@ contract RelayManagerETH is AccessControl, ReentrancyGuard {
     event Deposited(address indexed from, address indexed receiver, uint256 toChainId, uint256 amount, uint256 nonce);
     event Sent(address indexed receiver, uint256 indexed amount, uint256 indexed transferredAmount, bytes32 depositHash);
     event AdminFeeChanged(uint256 indexed AdminFee);
-    event TrustedForwarderChanged(address indexed TrustedForwarder);
     event EthReceived(address indexed sender, uint256 amount);
     event AdminFeeWithdraw(address indexed receiver, uint256 amount);
     event GasFeeWithdraw(address indexed receiver, uint256 amount);
@@ -175,7 +174,7 @@ contract RelayManagerETH is AccessControl, ReentrancyGuard {
     |__________________________*/
 
     /**
-     * @dev Deposit funds to the relay contract for cross-chain transfer
+     * @dev Deposit (lock) funds to the relay contract for cross-chain transfer
      */
     function deposit(
         address receiver,
@@ -192,7 +191,7 @@ contract RelayManagerETH is AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @dev Deposit funds to the relay contract for cross-chain transfer
+     * @dev Permit and deposit (lock) funds to the relay contract for cross-chain transfer
      */
     function permitAndDeposit(
         address receiver,
@@ -212,7 +211,7 @@ contract RelayManagerETH is AccessControl, ReentrancyGuard {
     }
 
     /**
-     * @dev Send (mint) funds to the receiver to process cross-chain transfer
+     * @dev Send (unlock) funds to the receiver to process cross-chain transfer
      * `depositHash = keccak256(abi.encodePacked(senderAddress, tokenAddress, nonce))`
      */
     function send(
@@ -250,13 +249,13 @@ contract RelayManagerETH is AccessControl, ReentrancyGuard {
 
     /**
      * @dev Withdraw admin fee accumulated
-     * Only operators can call
+     * Only `owner` can call
      */
     function withdrawAdminFee(
         address receiver,
         uint256 amount
-    ) external onlyOperator {
-        require(amount > 0, "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
+    ) external onlyOwner {
+        require(amount > 0, "RelayManagerETH: AMOUNT_INVALID");
         require(adminFeeAccumulated >= amount, "RelayManagerETH: INSUFFICIENT_ADMIN_FEE");
         adminFeeAccumulated -= amount;
         ido.safeTransfer(receiver, amount);
@@ -266,13 +265,13 @@ contract RelayManagerETH is AccessControl, ReentrancyGuard {
 
     /**
      * @dev Withdraw gas fee accumulated
-     * Only operators can call
+     * Only `owner` can call
      */
     function withdrawGasFee(
         address receiver,
         uint256 amount
-    ) external onlyOperator {
-        require(amount > 0, "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
+    ) external onlyOwner {
+        require(amount > 0, "RelayManagerETH: AMOUNT_INVALID");
         require(gasFeeAccumulated >= amount, "RelayManagerETH: INSUFFICIENT_GAS_FEE");
         gasFeeAccumulated -= amount;
         ido.safeTransfer(receiver, amount);
