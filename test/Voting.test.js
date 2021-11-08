@@ -1,4 +1,4 @@
-const Voting = artifacts.require('Voting');
+const Voting = artifacts.require('contracts/voting/Voting.sol:Voting');
 const StakePool = artifacts.require('StakePool');
 const ERC20 = artifacts.require('ERC20Mock');
 

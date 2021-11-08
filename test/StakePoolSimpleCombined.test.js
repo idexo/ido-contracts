@@ -1,6 +1,6 @@
 const { expect } = require('chai');
 const { BN, expectEvent } = require('@openzeppelin/test-helpers');
-const StakePool = artifacts.require('StakePoolSimpleCombined');
+const StakePool = artifacts.require('contracts/staking/StakePoolSimpleCombined.sol:StakePoolSimpleCombined');
 const ERC20 = artifacts.require('ERC20Mock');
 
 contract('::StakePoolSimpleCombined', async accounts => {
