@@ -10,7 +10,7 @@ const {
 
 const StakePool = artifacts.require('StakePool');
 const ERC20 = artifacts.require('ERC20Mock');
-const IDO = artifacts.require('IDO');
+const IDO = artifacts.require('ERC20Mock');
 
 contract('::StakePool', async accounts => {
   let stakePool;
@@ -25,7 +25,7 @@ contract('::StakePool', async accounts => {
   const decimals = 18;
 
   before(async () => {
-    ido = await IDO.new({from: alice});
+    ido = await IDO.new('IDO', 'IDO', {from: alice});
     erc20 = await ERC20.new(erc20Name, erc20Symbol, {from: alice});
     stakePool = await StakePool.new(stakeTokenName, stakeTokenSymbol, ido.address, erc20.address, {from: alice});
     await stakePool.addOperator(bob);
