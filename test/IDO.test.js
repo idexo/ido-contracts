@@ -15,7 +15,7 @@ const {
   sign
 } = require('./helpers/signature');
 
-const IDO = artifacts.require('IDO');
+const IDO = artifacts.require('contracts/token/IDO.sol:IDO');
 
 contract('::IDO', async accounts => {
   let token;

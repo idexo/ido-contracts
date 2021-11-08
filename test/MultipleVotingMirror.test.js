@@ -1,5 +1,5 @@
 const MultipleVotingMirror = artifacts.require('MultipleVotingMirror');
-const StakeMirrorNFT = artifacts.require('StakeMirrorNFT');
+const StakeMirrorNFT = artifacts.require('contracts/staking/StakeMirrorNFT.sol:StakeMirrorNFT');
 const ERC20 = artifacts.require('ERC20Mock');
 
 const { expect } = require('chai');
