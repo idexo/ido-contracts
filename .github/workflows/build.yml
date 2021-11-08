@@ -49,7 +49,7 @@ jobs:
         date +%T
         npm install --quiet --no-progress --loglevel=error
         date +%T
-        npm run coverage
+        npx truffle run coverage
         date +%T
         truffle develop &
         sleep 5
