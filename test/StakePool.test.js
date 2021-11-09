@@ -28,7 +28,7 @@ contract('::StakePool', async accounts => {
     ido = await IDO.new('IDO', 'IDO', {from: alice});
     erc20 = await ERC20.new(erc20Name, erc20Symbol, {from: alice});
     stakePool = await StakePool.new(stakeTokenName, stakeTokenSymbol, ido.address, erc20.address, {from: alice});
-    await stakePool.addOperator(bob);
+    await stakePool.addOperator(bob, {from: alice});
   });
 
   describe('#Role', async () => {
@@ -36,7 +36,7 @@ contract('::StakePool', async accounts => {
       expect(await stakePool.checkOperator(bob)).to.eq(true);
     });
     it('should remove operator', async () => {
-      await stakePool.removeOperator(bob);
+      await stakePool.removeOperator(bob, {from: alice});
       expect(await stakePool.checkOperator(bob)).to.eq(false);
     });
     describe('reverts if', async () => {
@@ -47,7 +47,7 @@ contract('::StakePool', async accounts => {
         );
       });
       it('remove operator by non-admin', async () => {
-        await stakePool.addOperator(bob);
+        await stakePool.addOperator(bob, {from: alice});
         await expectRevert(
           stakePool.removeOperator(bob, {from: bob}),
           'StakePool#onlyAdmin: CALLER_NO_ADMIN_ROLE'

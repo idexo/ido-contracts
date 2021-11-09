@@ -19,8 +19,8 @@ contract('MultipleVoting', async accounts => {
   const [alice, bob, carol] = accounts;
 
   before(async () => {
-    ido = await ERC20.new('Idexo Community', 'IDO');
-    erc20 = await ERC20.new('USD Tether', 'USDT');
+    ido = await ERC20.new('Idexo Community', 'IDO', {from: alice});
+    erc20 = await ERC20.new('USD Tether', 'USDT', {from: alice});
     sPool1 = await StakePool.new('Idexo Stake Token', 'IDS', ido.address, erc20.address);
     sPool2 = await StakePool.new('Idexo Stake Token', 'IDS', ido.address, erc20.address);
     sPool3 = await StakePool.new('Idexo Stake Token', 'IDS', ido.address, erc20.address);
@@ -93,13 +93,13 @@ contract('MultipleVoting', async accounts => {
     before(async () => {
       await ido.mint(alice, toWei(new BN(10000000)));
       await ido.mint(bob, toWei(new BN(10000000)));
-      await ido.approve(sPool1.address, toWei(new BN(10000000)));
-      await ido.approve(sPool2.address, toWei(new BN(10000000)));
+      await ido.approve(sPool1.address, toWei(new BN(10000000)), {from: alice});
+      await ido.approve(sPool2.address, toWei(new BN(10000000)), {from: alice});
       await ido.approve(sPool1.address, toWei(new BN(10000000)), {from: bob});
       await ido.approve(sPool2.address, toWei(new BN(10000000)), {from: bob});
-      await sPool1.deposit(toWei(new BN(4000)));
+      await sPool1.deposit(toWei(new BN(4000)), {from: alice});
       await sPool1.deposit(toWei(new BN(7000)), {from: bob});
-      await sPool2.deposit(toWei(new BN(8000)));
+      await sPool2.deposit(toWei(new BN(8000)), {from: alice});
       await sPool2.deposit(toWei(new BN(14000)), {from: bob});
       await timeTraveler.advanceTime(time.duration.months(1));
     });

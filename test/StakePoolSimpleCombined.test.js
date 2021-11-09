@@ -8,10 +8,10 @@ contract('::StakePoolSimpleCombined', async accounts => {
   const [alice, bob, carol] = accounts;
 
   before(async () => {
-    ido = await ERC20.new('Idexo Community', 'IDO');
-    erc20 = await ERC20.new('USD Tether', 'USDT');
+    ido = await ERC20.new('Idexo Community', 'IDO', {from: alice});
+    erc20 = await ERC20.new('USD Tether', 'USDT', {from: alice});
     stakePool = await StakePool.new('Idexo Stake Token', 'IDS', ido.address, erc20.address, {from: alice});
-    await stakePool.addOperator(bob);
+    await stakePool.addOperator(bob, {from: alice});
   });
 
   describe('# Stake', async () => {
