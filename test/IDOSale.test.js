@@ -323,6 +323,10 @@ contract('IDOSale', async accounts => {
           saleContract.acceptOwnership({from: carol}),
           'IDOSale: CALLER_NO_NEW_OWNER'
         );
+        expectEvent(
+          await saleContract.renounceOwnership({from: bob}),
+          'OwnershipTransferred'
+        )
       })
     });
   });
