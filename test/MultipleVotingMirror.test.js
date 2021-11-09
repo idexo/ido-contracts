@@ -92,7 +92,7 @@ contract('MultipleVotingMirror', async accounts => {
     });
     it('createPoll castVote getWeight checkIfVoted endPoll', async () => {
       // create and start poll
-      const startTime = Math.floor(Date.now() / 1000) + 500;
+      const startTime = Math.floor(Date.now() / 1000) + time.duration.days(100);
       const endTime = startTime + time.duration.days(10);
       const newEndTime = endTime + time.duration.days(5);
       // non-operator can not create the poll
@@ -157,7 +157,7 @@ contract('MultipleVotingMirror', async accounts => {
         voting.getVoterInfo(1, alice, {from: carol}),
         'POLL_NOT_ENDED__CALLER_NO_OPERATOR'
       );
-      await timeTraveler.advanceTimeAndBlock(time.duration.days(16));
+      await timeTraveler.advanceTimeAndBlock(time.duration.days(200));
       // poll ended, anybody can call
       await voting.getPollVotingInfo(1, {from: carol}).then(res => {
         expect(res[0][0].toString()).to.eq('0');
@@ -170,6 +170,7 @@ contract('MultipleVotingMirror', async accounts => {
         expect(res[0].toString()).to.eq('1');
         expect(res[1].toString()).to.eq('12000000000000000000000');
       });
+      await timeTraveler.advanceTimeAndBlock(time.duration.days(-200));
     });
   });
 });

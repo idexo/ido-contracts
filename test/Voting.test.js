@@ -181,5 +181,8 @@ contract('Voting', async accounts => {
         );
       });
     });
+    after(async () => {
+      await timeTraveler.advanceTime(time.duration.months(-1));
+    });
   });
 });
