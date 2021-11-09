@@ -317,6 +317,12 @@ contract('IDOSale', async accounts => {
           'IDOSale: INVALID_ADDRESS'
         );
       });
+      it('non owner call renounceOwnership', async () => {
+        await expectRevert(
+           saleContract.renounceOwnership({from: darren}),
+          'IDOSale: CALLER_NO_OWNER'
+        );
+      });
       it('non new owner call acceptOwnership', async () => {
         await saleContract.transferOwnership(alice, {from: bob});
         await expectRevert(
