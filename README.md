@@ -4,35 +4,30 @@ Supported chains: Ethereum, Binance Smart Chain, Polygon and Avalanche
 ## Dependencies
 - NPM: https://nodejs.org
 - Truffle: https://www.trufflesuite.com/
-- Ganache CLI: https://github.com/trufflesuite/ganache
 
 ## Step 1. Clone the project
 `git clone https://github.com/idexo/ido-contracts`
 
 ## Step 2. Install dependencies
 ```
-$ cd avalanche
-$ npm install
+npm install
 ```
 
-## Step 3. Start Ganache
-`$ ganache-cli`
-
-## Step 4. Compile & Test
+## Step 3. Compile & Test
 ```
-$ truffle compile
-$ truffle test
+npm run compile
+npm run test
 ```
 
-## Step 5. Flatten
+## Step 4. Flatten
 ```
-$ npm run build-contracts
+npm run build-contracts
 ```
 
-## Step 6. Deploy
+## Step 5. Deploy
 ```
-$ truffle migrate --network ropsten
-$ truffle migrate --network mainnet
+truffle migrate --network ropsten
+truffle migrate --network mainnet
 ```
 
 ## Features
