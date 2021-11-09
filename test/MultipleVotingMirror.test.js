@@ -92,7 +92,7 @@ contract('MultipleVotingMirror', async accounts => {
     });
     it('createPoll castVote getWeight checkIfVoted endPoll', async () => {
       // create and start poll
-      const startTime = Math.floor(Date.now() / 1000) + 100;
+      const startTime = Math.floor(Date.now() / 1000) + 500;
       const endTime = startTime + time.duration.days(10);
       const newEndTime = endTime + time.duration.days(5);
       // non-operator can not create the poll
@@ -107,7 +107,7 @@ contract('MultipleVotingMirror', async accounts => {
       );
       // startTime and endTime must not be same
       await expectRevert(
-        voting.createPoll('Which network is next target?', ['Solana', 'Tezos', 'Cardano'], startTime, 0, 0, {from: bob}),
+        voting.createPoll('Which network is next target?', ['Solana', 'Tezos', 'Cardano'], startTime, startTime, 0, {from: bob}),
         'END_TIME_INVALID'
       );
       // operator can create
