@@ -34,8 +34,6 @@ contract('IDOSale', async accounts => {
     const currentTime = Math.floor(Date.now() / 1000);
     startTime = currentTime + duration.days(1);
     endTime = startTime + duration.days(7);
-    console.log('startTime: ', startTime);
-    console.log('endTime: ', endTime);
 
     saleContract = await IDOSale.new(ido.address, usdt.address, new BN(450000), web3.utils.toWei(new BN(11111)), startTime, endTime);
     await saleContract.addOperator(alice);
@@ -141,9 +139,9 @@ contract('IDOSale', async accounts => {
           'Deposited'
         );
         await usdt.approve(saleContract.address, toUSDTWei(new BN(10000)), {from: bob});
-        await usdt.balanceOf(bob).then(res => {
+        /*await usdt.balanceOf(bob).then(res => {
           console.log(res.toString());
-        });
+        });*/
         expectEvent(
           await saleContract.purchase(web3.utils.toWei(new BN(20)), {from: bob}),
           'Purchased'
@@ -163,10 +161,6 @@ contract('IDOSale', async accounts => {
         })
         await saleContract.purchaseHistory().then(res => {
           expect(res.length).to.eq(4);
-          console.log(res[0]);
-          console.log(res[1]);
-          console.log(res[2]);
-          console.log(res[3]);
         });
       });
     });
@@ -323,12 +317,22 @@ contract('IDOSale', async accounts => {
           'IDOSale: INVALID_ADDRESS'
         );
       });
+      it('non owner call renounceOwnership', async () => {
+        await expectRevert(
+           saleContract.renounceOwnership({from: darren}),
+          'IDOSale: CALLER_NO_OWNER'
+        );
+      });
       it('non new owner call acceptOwnership', async () => {
         await saleContract.transferOwnership(alice, {from: bob});
         await expectRevert(
           saleContract.acceptOwnership({from: carol}),
           'IDOSale: CALLER_NO_NEW_OWNER'
         );
+        expectEvent(
+          await saleContract.renounceOwnership({from: bob}),
+          'OwnershipTransferred'
+        )
       })
     });
   });
