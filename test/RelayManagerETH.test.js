@@ -25,14 +25,17 @@ contract('RelayManagerETH', async accounts => {
   const idoSymbol = 'IDO';
   const ownerPrivateKey = Buffer.from('08c83289b1b8cce629a1e58b65c25b1c8062d5c9ec6375dc8265ad13ba25c630', 'hex');
 
+  before(async () => {
+    ido = await ERC20PermitMock.new(idoName, idoSymbol);
+    relayManager = await RelayManagerETH.new(ido.address, new BN(30));
+
+    ido.mint(alice, web3.utils.toWei(new BN(1000)));
+    ido.mint(carol, web3.utils.toWei(new BN(1000)));
+    await ido.approve(relayManager.address, web3.utils.toWei(new BN(1000)), {from: alice});
+  });
+
   describe('#Role', async () => {
     it ('should add operator', async () => {
-      ido = await ERC20PermitMock.new(idoName, idoSymbol);
-      relayManager = await RelayManagerETH.new(ido.address, new BN(30));
-
-      ido.mint(alice, web3.utils.toWei(new BN(1000)));
-      ido.mint(carol, web3.utils.toWei(new BN(1000)));
-      await ido.approve(relayManager.address, web3.utils.toWei(new BN(1000)));
       await relayManager.addOperator(bob);
       expect(await relayManager.checkOperator(bob)).to.eq(true);
     });
@@ -66,7 +69,7 @@ contract('RelayManagerETH', async accounts => {
     it('deposit', async () => {
       // Start transfer to Polygon (alice => bob)
       expectEvent(
-        await relayManager.deposit(bob, sendAmount, polygonChainId),
+        await relayManager.deposit(bob, sendAmount, polygonChainId, {from: alice}),
         'Deposited'
       );
       await ido.balanceOf(relayManager.address).then(res => {
@@ -89,21 +92,16 @@ contract('RelayManagerETH', async accounts => {
       // Get the user's nonce
       const nonce = await ido.nonces(carol);
       // Get the EIP712 digest
+      console.log(nonce.toNumber())
       const digest = getPermitDigest(idoName, ido.address, chainId, approve, nonce.toNumber(), deadline);
       // Sign it
       // NOTE: Using web3.eth.sign will hash the message internally again which
       // we do not want, so we're manually signing here
       const { v, r, s } = sign(digest, ownerPrivateKey);
-      const permitOptions = {
-        nonce,
-        deadline,
-        v,
-        r,
-        s
-      };
+      const permitOptions = { nonce, deadline, v, r, s };
       // Approve it
       expectEvent(
-        await relayManager.permitAndDeposit(bob, 100, polygonChainId, permitOptions, {from: carol}),
+        await relayManager.permitAndDeposit(bob, new BN(100), polygonChainId, permitOptions, {from: carol}),
         'Deposited'
       );
     });
@@ -123,7 +121,7 @@ contract('RelayManagerETH', async accounts => {
         expect(res.toString()).to.eq(receiveAmount.toString());
       });
     });
-    it('withdrawAdminFee, withdrawGasFee', async () => {
+    it('withdrawAdminFee', async () => {
       expectEvent(
         await relayManager.withdrawAdminFee(carol, adminFee),
         'AdminFeeWithdraw'
@@ -131,6 +129,8 @@ contract('RelayManagerETH', async accounts => {
       await relayManager.adminFeeAccumulated().then(res => {
         expect(res.toString()).to.eq('0');
       });
+    });
+    it('withdrawGasFee', async () => {
       expectEvent(
         await relayManager.withdrawGasFee(carol, gasFee),
         'GasFeeWithdraw'
