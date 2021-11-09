@@ -11,3 +11,5 @@ node_modules
 .env.production.local
 build
 artifacts
+coverage
+coverage.json

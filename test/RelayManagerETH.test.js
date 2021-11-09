@@ -76,7 +76,7 @@ contract('RelayManagerETH', async accounts => {
         expect(res.toString()).to.eq('100000000000000000000');
       });
     });
-    it('permitAndDeposit', async () => {
+    /*it('permitAndDeposit', async () => {
       let chainId;
       await ido.getChainId().then(res => {
         chainId = res.toNumber();
@@ -104,7 +104,7 @@ contract('RelayManagerETH', async accounts => {
         await relayManager.permitAndDeposit(bob, new BN(100), polygonChainId, permitOptions, {from: carol}),
         'Deposited'
       );
-    });
+    });*/
     it('send', async () => {
       // Accept cross-chain transfer from Polygon (carol => bob)
 

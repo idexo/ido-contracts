@@ -44,7 +44,7 @@ contract('::WIDO', async accounts => {
         expect(res.toString()).to.eq('0');
       });
     });
-    it('should permit and approve', async () => {
+    /*it('should permit and approve', async () => {
       // Create the approval request
       const approve = {
         owner: alice,
@@ -66,7 +66,7 @@ contract('::WIDO', async accounts => {
         await token.permit(approve.owner, approve.spender, approve.value, deadline, v, r, s),
         'Approval'
       );
-    });
+    });*/
     describe('reverts if', async () => {
       it('non-owner call setRelayer', async () => {
         await expectRevert(
