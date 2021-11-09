@@ -22,24 +22,27 @@ contract('IDOSale', async accounts => {
   const [alice, bob, carol, darren] = accounts;
   let startTime, endTime;
 
+  before(async () => {
+    ido = await ERC20Mock.new('Idexo token', 'IDO');
+    ido.mint(alice, web3.utils.toWei(new BN(10000)));
+    // USDT decimals is 6
+    usdt = await ERC20Mock.new('USDT token', 'USDT');
+    usdt.mint(alice, toUSDTWei(10000));
+    usdt.mint(bob, toUSDTWei(10000));
+    usdt.mint(carol, toUSDTWei(10000));
+
+    const currentTime = Math.floor(Date.now() / 1000);
+    startTime = currentTime + duration.days(1);
+    endTime = startTime + duration.days(7);
+    console.log('startTime: ', startTime);
+    console.log('endTime: ', endTime);
+
+    saleContract = await IDOSale.new(ido.address, usdt.address, new BN(450000), web3.utils.toWei(new BN(11111)), startTime, endTime);
+    await saleContract.addOperator(alice);
+  });
+
   describe('#Role', async () => {
     it ('should add operator', async () => {
-      ido = await ERC20Mock.new('Idexo token', 'IDO');
-      ido.mint(alice, web3.utils.toWei(new BN(10000)));
-      // USDT decimals is 6
-      usdt = await ERC20Mock.new('USDT token', 'USDT');
-      usdt.mint(alice, toUSDTWei(10000));
-      usdt.mint(bob, toUSDTWei(10000));
-      usdt.mint(carol, toUSDTWei(10000));
-
-      const currentTime = Math.floor(Date.now() / 1000);
-      startTime = currentTime + duration.days(2);
-      endTime = startTime + duration.days(7);
-      console.log('startTime: ', startTime);
-      console.log('endTime: ', endTime);
-
-      saleContract = await IDOSale.new(ido.address, usdt.address, new BN(450000), web3.utils.toWei(new BN(11111)), startTime, endTime);
-
       await saleContract.addOperator(bob);
       expect(await saleContract.checkOperator(bob)).to.eq(true);
     });
@@ -63,8 +66,6 @@ contract('IDOSale', async accounts => {
       });
     });
   });
-
-
 
   describe('#Whitelist', async () => {
     it('addWhitelist, removeWhitelist', async () => {
@@ -104,7 +105,7 @@ contract('IDOSale', async accounts => {
     });
   });
 
-  describe('#Token Management', async () => {
+  describe('#Token Management 1', async () => {
     describe('reverts if (before sale start)', async () => {
       it('non-operator call depositTokens', async () => {
         await expectRevert(
@@ -125,16 +126,21 @@ contract('IDOSale', async accounts => {
         );
       });
     });
-    describe('depositTokens, purcahse', async () => {
-      it('depositTokens, purcahse', async () => {
-        await ido.approve(saleContract.address, web3.utils.toWei(new BN(10000)));
+  });
+
+  describe('#Token Management 2', async () => {
+    before(async () => {
+      // 2 days passed
+      timeTraveler.advanceTime(duration.days(2));
+    });
+    describe('depositTokens, purchase', async () => {
+      it('depositTokens, purchase', async () => {
+        await ido.approve(saleContract.address, web3.utils.toWei(new BN(10000)), {from: alice});
         expectEvent(
-          await saleContract.depositTokens(web3.utils.toWei(new BN(200))),
+          await saleContract.depositTokens(web3.utils.toWei(new BN(200)), {from: alice}),
           'Deposited'
         );
         await usdt.approve(saleContract.address, toUSDTWei(new BN(10000)), {from: bob});
-        // 2 days passed
-        timeTraveler.advanceTime(duration.days(2));
         await usdt.balanceOf(bob).then(res => {
           console.log(res.toString());
         });
