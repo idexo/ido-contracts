@@ -271,7 +271,7 @@ contract RelayManagerETH is AccessControl, ReentrancyGuard {
     uint256 amount,
     bytes32 depositHash,
     uint256 gasPrice
-  ) private {
+  ) internal {
     uint256 initialGas = gasleft();
     require(receiver != address(0), "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
     require(amount > minTransferAmount, "RelayManagerETH: SEND_AMOUNT_INVALID");
