@@ -5,6 +5,7 @@ import "./RelayManagerETH.sol";
 
 contract RelayManagerETHBatch is RelayManagerETH {
   using SafeERC20 for IERC20;
+
   constructor(IERC20 _ido, uint256 _adminFee) RelayManagerETH(_ido, _adminFee) { }
 
   /**

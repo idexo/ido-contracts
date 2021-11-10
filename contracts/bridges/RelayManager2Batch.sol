@@ -5,6 +5,7 @@ import "./RelayManager2.sol";
 
 contract RelayManager2Batch is RelayManager2 {
   using SafeERC20 for IWIDO;
+
   constructor(IWIDO _wIDO, uint256 _adminFee) RelayManager2(_wIDO, _adminFee) { }
 
   /**
