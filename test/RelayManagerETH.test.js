@@ -146,9 +146,25 @@ contract('RelayManagerETH', async accounts => {
       await relayManager.transferOwnership(bob);
       await relayManager.acceptOwnership({from: bob});
       expect(await relayManager.owner()).to.eq(bob);
+      expectEvent(
+        await relayManager.setAdminFee(1,{from: bob}),
+        'AdminFeeChanged'
+      )
     });
     describe('reverts if', async () => {
-      it('non-owner call transferOwnership', async () => {
+        it('non-owner call setAdminFee', async () => {
+          await expectRevert(
+            relayManager.setAdminFee(bob, {from: carol}),
+            'RelayManagerETH: CALLER_NO_OWNER'
+          );
+        });
+        it('non-owner call setBaseGas', async () => {
+          await expectRevert(
+            relayManager.setBaseGas(bob, {from: carol}),
+            'RelayManagerETH: CALLER_NO_OWNER'
+          );
+        });
+        it('non-owner call transferOwnership', async () => {
         await expectRevert(
           relayManager.transferOwnership(bob, {from: carol}),
           'RelayManagerETH: CALLER_NO_OWNER'
