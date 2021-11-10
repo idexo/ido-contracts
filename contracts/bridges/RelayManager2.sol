@@ -251,7 +251,7 @@ contract RelayManager2 is AccessControl, ReentrancyGuard {
     uint256 amount,
     bytes32 depositHash,
     uint256 gasPrice
-  ) private {
+  ) internal {
     uint256 initialGas = gasleft();
     require(receiver != address(0), "RelayManager2: RECEIVER_ZERO_ADDRESS");
     require(amount > minTransferAmount, "RelayManager2: SEND_AMOUNT_INVALID");
