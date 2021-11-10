@@ -152,15 +152,21 @@ contract('RelayManagerETH', async accounts => {
       )
     });
     describe('reverts if', async () => {
+        it('non-owner call setMinTransferAmount', async () => {
+            await expectRevert(
+              relayManager.setMinTransferAmount(1, {from: carol}),
+              'RelayManagerETH: CALLER_NO_OWNER'
+            );
+          });
         it('non-owner call setAdminFee', async () => {
           await expectRevert(
-            relayManager.setAdminFee(bob, {from: carol}),
+            relayManager.setAdminFee(1, {from: carol}),
             'RelayManagerETH: CALLER_NO_OWNER'
           );
         });
         it('non-owner call setBaseGas', async () => {
           await expectRevert(
-            relayManager.setBaseGas(bob, {from: carol}),
+            relayManager.setBaseGas(1, {from: carol}),
             'RelayManagerETH: CALLER_NO_OWNER'
           );
         });
