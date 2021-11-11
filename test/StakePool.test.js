@@ -103,6 +103,7 @@ contract('::StakePool', async accounts => {
       });
     });
     describe('##getters', async () => {
+
       it('getStakeTokenIds, getStakeAmount, isHolder, getEligibleStakeAmount', async () => {
         await stakePool.deposit(web3.utils.toWei(new BN(3000)), {from: alice});
         await stakePool.getStakeTokenIds(alice).then(res => {
@@ -226,6 +227,24 @@ contract('::StakePool', async accounts => {
         await stakePool.claimableRewards(alice).then(res => {
           expect(res.toString()).to.eq('2539864864864864859750');
         });
+      });
+    });
+  });
+
+  describe('#Multiplier', async () => {
+    before(async () => {
+      await ido.mint(alice, web3.utils.toWei(new BN(20000000)));
+      await ido.approve(stakePool.address, web3.utils.toWei(new BN(20000000)), {from: alice});
+    });
+    it('getStakeInfo', async () => {
+      for (let i = 0; i < 310; i++) {
+          await stakePool.deposit(web3.utils.toWei(new BN(3000)), {from: alice});
+      }
+      await stakePool.getStakeInfo(299).then(res => {
+        expect(res[1].toString()).to.eq('120');
+      });
+      await stakePool.getStakeInfo(301).then(res => {
+        expect(res[1].toString()).to.eq('110');
       });
     });
   });
