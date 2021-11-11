@@ -15,6 +15,7 @@ const IDOSale = artifacts.require('IDOSale');
 const ERC20Mock = artifacts.require('ERC20Mock');
 
 const toUSDTWei = (amount) => new BN(amount).mul(new BN(10).pow(new BN(6)));
+const dummyHash = '0xf408509b00caba5d37325ab33a92f6185c9b5f007a965dfbeff7b81ab1ec871b';
 
 contract('IDOSale', async accounts => {
   let saleContract;
@@ -201,6 +202,25 @@ contract('IDOSale', async accounts => {
           'IDOSale: SALE_NOT_ENDED'
         );
       });
+      it('permit and purchase 0 amount', async () => {
+        await expectRevert(
+          saleContract.permitAndPurchase(new BN(0), { nonce: 0, deadline: 0, v: 0, r: dummyHash, s: dummyHash }),
+          'IDOSale: PURCHASE_AMOUNT_INVALID'
+        );
+      });
+      it('permit and purchase no whitelist', async () => {
+        await expectRevert(
+          saleContract.permitAndPurchase(new BN(10), { nonce: 0, deadline: 0, v: 0, r: dummyHash, s: dummyHash }, {from: darren}),
+          'IDOSale: CALLER_NO_WHITELIST'
+        );
+      });
+      it('permit and purchase over cap', async () => {
+        await saleContract.setPurchaseCap(web3.utils.toWei(new BN(0)))
+        await expectRevert(
+          saleContract.permitAndPurchase(new BN(1000000), { nonce: 0, deadline: 0, v: 0, r: dummyHash, s: dummyHash }, {from: bob}),
+          'IDOSale: PURCHASE_CAP_EXCEEDED'
+        );
+      });
     });
     describe('claim, sweep', async () => {
       it('claim', async () => {
@@ -247,6 +267,12 @@ contract('IDOSale', async accounts => {
         await expectRevert(
           saleContract.sweep(constants.ZERO_ADDRESS),
           'IDOSale: ADDRESS_INVALID'
+        );
+      });
+      it('permit and purchase', async () => {
+        await expectRevert(
+          saleContract.permitAndPurchase(new BN(1), { nonce: 0, deadline: 0, v: 0, r: dummyHash, s: dummyHash }),
+          'IDOSale: SALE_ALREADY_ENDED'
         );
       });
     });
