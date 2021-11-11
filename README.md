@@ -6,10 +6,12 @@ Supported chains: Ethereum, Binance Smart Chain, Polygon and Avalanche
 - Truffle: https://www.trufflesuite.com/
 
 ## Step 1. Clone the project
-`git clone https://github.com/idexo/ido-contracts`
+```
+git clone https://github.com/idexo/ido-contracts
+```
 
 ## Step 2. Install dependencies
-```
+
 npm install
 ```
 
