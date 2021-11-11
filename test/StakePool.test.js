@@ -120,6 +120,16 @@ contract('::StakePool', async accounts => {
         });
         expect(await stakePool.isHolder(alice)).to.eq(true);
         expect(await stakePool.isHolder(bob)).to.eq(false);
+        stakePool.getEligibleStakeAmount(0, {from: alice})
+      });
+      describe('reverts if', async () => {
+        it('elegible stake amount date is invalid', async () => {
+          const currentTime = Math.floor(Date.now() / 1000) + 10000;
+          await expectRevert(
+            stakePool.getEligibleStakeAmount(currentTime, {from: alice}),
+            'StakeToken#getEligibleStakeAmount: NO_PAST_DATE'
+          );
+        });
       });
     });
   });
