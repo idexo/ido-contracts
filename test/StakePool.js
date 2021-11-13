@@ -264,10 +264,17 @@ function testStakePool(contractName, errorHead, timeIncrease) {
             expect(res.toString()).to.eq(timeIncrease[7] > 0 ? '2539864864864864859750': '0');
           });
         });
+        it('distribute after a year', async () => {
+          timeTraveler.advanceTime(time.duration.months(15));
+          await stakePool.distribute({from: bob}).then(res => {
+            expect(res).to.not.null;
+          });
+        });
         after(async () => {
           for (let i = 0; i < timeIncrease.length; i++) {
             timeTraveler.advanceTime(time.duration.days(timeIncrease[i] * -1));
           }
+          timeTraveler.advanceTime(time.duration.months(-15));
         });
       });
     });
