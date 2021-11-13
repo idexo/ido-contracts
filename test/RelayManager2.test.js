@@ -60,7 +60,7 @@ contract('RelayManager2', async accounts => {
     });
   });
 
-  /*describe('cross-chain transfer', async () => {
+  describe('cross-chain transfer', async () => {
     let adminFee, gasFee, receiveAmount;
     const sendAmount = web3.utils.toWei(new BN(100));
     const dummyDepositHash = '0xf408509b00caba5d37325ab33a92f6185c9b5f007a965dfbeff7b81ab1ec871b';
@@ -72,13 +72,8 @@ contract('RelayManager2', async accounts => {
         await relayManager.deposit(bob, sendAmount, polygonChainId, {from: alice}),
         'Deposited'
       );
-      await ido.balanceOf(relayManager.address).then(res => {
-        expect(res.toString()).to.eq('100000000000000000000');
-      });
     });
     it('send', async () => {
-      // Accept cross-chain transfer from Polygon (carol => bob)
-
       expectEvent(
         await relayManager.send(bob, sendAmount, dummyDepositHash, 1, {from: bob}),
         'Sent'
@@ -86,13 +81,12 @@ contract('RelayManager2', async accounts => {
       adminFee = await relayManager.adminFeeAccumulated();
       expect(adminFee.toString()).to.eq('300000000000000000');
       gasFee = await relayManager.gasFeeAccumulated();
-      console.log('Gas fee:', gasFee.toString());
       receiveAmount = sendAmount.sub(adminFee).sub(gasFee);
       await ido.balanceOf(bob).then(res => {
         expect(res.toString()).to.eq(receiveAmount.toString());
       });
     });
-    it('withdrawAdminFee', async () => {
+    /*it('withdrawAdminFee', async () => {
       expectEvent(
         await relayManager.withdrawAdminFee(carol, adminFee),
         'AdminFeeWithdraw'
@@ -109,8 +103,8 @@ contract('RelayManager2', async accounts => {
       await relayManager.gasFeeAccumulated().then(res => {
         expect(res.toString()).to.eq('0');
       });
-    });
-  });*/
+    });*/
+  });
 
   describe('#Ownership', async () => {
     it('should transfer ownership', async () => {
