@@ -189,6 +189,26 @@ function testStakePool(contractName, errorHead, timeIncrease) {
           await ido.mint(bob, web3.utils.toWei(new BN(10000)));
           await ido.approve(stakePool.address, web3.utils.toWei(new BN(10000)), {from: bob});
         });
+        describe('reverts if', async () => {          
+          it('distribute non-operator', async () => {
+            await expectRevert(
+              stakePool.distribute({from: carol}),
+              errorHead + '#onlyOperator: CALLER_NO_OPERATOR_ROLE'
+            );
+          });
+          it('claim not owner', async () => {
+            await expectRevert(
+              stakePool.claimReward(100, {from: carol}),
+              errorHead + '#claimReward: CALLER_NO_TOKEN_OWNER'
+            );
+          });
+          it('claim without funds', async () => {
+            await expectRevert(
+              stakePool.claimReward(web3.utils.toWei(new BN(1000000)), {from: bob}),
+              errorHead + '#claimReward: INSUFFICIENT_FUNDS'
+            );
+          });
+        });
         it('distribute', async () => {
           // After 5 days
           timeTraveler.advanceTime(time.duration.days(timeIncrease[0]));
