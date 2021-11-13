@@ -189,12 +189,14 @@ function testStakePool(contractName, errorHead, timeIncrease) {
           // After 15 days (1 month passed)
           timeTraveler.advanceTime(time.duration.days(timeIncrease[4]));
           await stakePool.distribute({from: bob});
-          await stakePool.claimableRewards(alice).then(res => {
-            expect(res.toString()).to.eq('2124999999999999997875');
-          })
-          await stakePool.mDistributes(0).then(res => {
-            expect(res[0].toString()).to.eq('2124999999999999997875');
-          });
+          if (timeIncrease[4] > 0) {
+            await stakePool.claimableRewards(alice).then(res => {
+              expect(res.toString()).to.eq('2124999999999999997875');
+            })
+            await stakePool.mDistributes(0).then(res => {
+              expect(res[0].toString()).to.eq('2124999999999999997875');
+            });
+          }
 
           // After 10 days
           timeTraveler.advanceTime(time.duration.days(timeIncrease[5]));
@@ -205,23 +207,25 @@ function testStakePool(contractName, errorHead, timeIncrease) {
           // After 15 days (2 months passed)
           timeTraveler.advanceTime(time.duration.days(timeIncrease[7]));
           await stakePool.distribute({from: bob});
-          await stakePool.mDistributes(1).then(res => {
-            expect(res[0].toString()).to.eq('1874999999999999996250');
-          });
-          await stakePool.claimableRewards(alice).then(res => {
-            expect(res.toString()).to.eq('3239864864864864859750');
-          });
-          await stakePool.claimableRewards(bob).then(res => {
-            expect(res.toString()).to.eq('760135135135135134375');
-          });
+          if (timeIncrease[7] > 0) {
+            await stakePool.mDistributes(1).then(res => {
+              expect(res[0].toString()).to.eq('1874999999999999996250');
+            });
+            await stakePool.claimableRewards(alice).then(res => {
+              expect(res.toString()).to.eq('3239864864864864859750');
+            });
+            await stakePool.claimableRewards(bob).then(res => {
+              expect(res.toString()).to.eq('760135135135135134375');
+            });
 
-          expectEvent(
-            await stakePool.claimReward(web3.utils.toWei(new BN(700)), {from: alice}),
-            'RewardClaimed'
-          );
-          await stakePool.claimableRewards(alice).then(res => {
-            expect(res.toString()).to.eq('2539864864864864859750');
-          });
+            expectEvent(
+              await stakePool.claimReward(web3.utils.toWei(new BN(700)), {from: alice}),
+              'RewardClaimed'
+            );
+            await stakePool.claimableRewards(alice).then(res => {
+              expect(res.toString()).to.eq('2539864864864864859750');
+            });
+          }
         });
         after(async () => {
           for (let i = 0; i < timeIncrease.length; i++) {
