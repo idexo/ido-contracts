@@ -1,5 +1,7 @@
 # Idexo Core Contracts
 Supported chains: Ethereum, Binance Smart Chain, Polygon and Avalanche
+____
+[![codecov](https://codecov.io/gh/idexo/ido-contracts/branch/main/graph/badge.svg?token=HLKWVOLF1E)](https://codecov.io/gh/idexo/ido-contracts)
 
 ## Dependencies
 - NPM: https://nodejs.org
