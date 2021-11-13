@@ -150,7 +150,13 @@ function testStakePool(contractName, errorHead, timeIncrease) {
             expect(res[1].toString()).to.eq('4000000000000000000000');
           });
         });
-        describe('reverts if', async () => {
+        it('sweep', async () => {
+          expectEvent(
+            await stakePool.sweep(ido.address, alice, 1, {from: alice}),
+            'Swept'
+          );
+        });
+        describe('reverts if', async () => {          
           it('deposit amount is 0', async () => {
             await expectRevert(
               stakePool.depositReward(new BN(0), {from: alice}),
@@ -160,6 +166,12 @@ function testStakePool(contractName, errorHead, timeIncrease) {
           it('non-operator call', async () => {
             await expectRevert(
               stakePool.depositReward(web3.utils.toWei(new BN(4000)), {from: carol}),
+              errorHead + '#onlyOperator: CALLER_NO_OPERATOR_ROLE'
+            );
+          });
+          it('non-operator call sweep', async () => {
+            await expectRevert(
+              stakePool.sweep(ido.address, alice, 1, {from: carol}),
               errorHead + '#onlyOperator: CALLER_NO_OPERATOR_ROLE'
             );
           });
