@@ -11,7 +11,7 @@ git clone https://github.com/idexo/ido-contracts
 ```
 
 ## Step 2. Install dependencies
-
+```
 npm install
 ```
 
