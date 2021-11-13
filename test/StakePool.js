@@ -189,6 +189,26 @@ function testStakePool(contractName, errorHead, timeIncrease) {
           await ido.mint(bob, web3.utils.toWei(new BN(10000)));
           await ido.approve(stakePool.address, web3.utils.toWei(new BN(10000)), {from: bob});
         });
+        describe('reverts if', async () => {          
+          it('distribute non-operator', async () => {
+            await expectRevert(
+              stakePool.distribute({from: carol}),
+              errorHead + '#onlyOperator: CALLER_NO_OPERATOR_ROLE'
+            );
+          });
+          it('claim not owner', async () => {
+            await expectRevert(
+              stakePool.claimReward(100, {from: carol}),
+              errorHead + '#claimReward: CALLER_NO_TOKEN_OWNER'
+            );
+          });
+          it('claim without funds', async () => {
+            await expectRevert(
+              stakePool.claimReward(web3.utils.toWei(new BN(1000000)), {from: bob}),
+              errorHead + '#claimReward: INSUFFICIENT_FUNDS'
+            );
+          });
+        });
         it('distribute', async () => {
           // After 5 days
           timeTraveler.advanceTime(time.duration.days(timeIncrease[0]));
@@ -244,10 +264,17 @@ function testStakePool(contractName, errorHead, timeIncrease) {
             expect(res.toString()).to.eq(timeIncrease[7] > 0 ? '2539864864864864859750': '0');
           });
         });
+        it('distribute after a year', async () => {
+          timeTraveler.advanceTime(time.duration.months(15));
+          await stakePool.distribute({from: bob}).then(res => {
+            expect(res).to.not.null;
+          });
+        });
         after(async () => {
           for (let i = 0; i < timeIncrease.length; i++) {
             timeTraveler.advanceTime(time.duration.days(timeIncrease[i] * -1));
           }
+          timeTraveler.advanceTime(time.duration.months(-15));
         });
       });
     });
