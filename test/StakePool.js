@@ -98,7 +98,11 @@ function testStakePool(contractName, errorHead, timeIncrease) {
         });
       });
       describe('##getters', async () => {
-
+        it('supportsInterface', async () => {
+          await stakePool.supportsInterface("0x00").then(res => {
+            expect(res).to.eq(false);
+          });
+        });
         it('getStakeTokenIds, getStakeAmount, isHolder, getEligibleStakeAmount', async () => {
           await stakePool.deposit(web3.utils.toWei(new BN(3000)), {from: alice});
           await stakePool.getStakeTokenIds(alice).then(res => {
