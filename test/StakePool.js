@@ -1,4 +1,4 @@
-function testStakePool(contractName, errorHead) {
+function testStakePool(contractName, errorHead, timeIncrease) {
   const { expect } = require('chai');
   const time = require('./helpers/time');
   const timeTraveler = require('ganache-time-traveler');
@@ -175,19 +175,19 @@ function testStakePool(contractName, errorHead) {
         });
         it('distribute', async () => {
           // After 5 days
-          timeTraveler.advanceTime(time.duration.days(5));
+          timeTraveler.advanceTime(time.duration.days(timeIncrease[0]));
           await stakePool.deposit(web3.utils.toWei(new BN(3000)), {from: alice});
           // After 1 day
-          timeTraveler.advanceTime(time.duration.days(1));
+          timeTraveler.advanceTime(time.duration.days(timeIncrease[1]));
           await stakePool.deposit(web3.utils.toWei(new BN(6000)), {from: bob});
           // After 10 days
-          timeTraveler.advanceTime(time.duration.days(10));
+          timeTraveler.advanceTime(time.duration.days(timeIncrease[2]));
           await stakePool.depositReward(web3.utils.toWei(new BN(4000)), {from: alice});
           // After 1 day
-          timeTraveler.advanceTime(time.duration.days(1));
+          timeTraveler.advanceTime(time.duration.days(timeIncrease[3]));
           await stakePool.depositReward(web3.utils.toWei(new BN(4500)), {from: alice});
           // After 15 days (1 month passed)
-          timeTraveler.advanceTime(time.duration.days(15));
+          timeTraveler.advanceTime(time.duration.days(timeIncrease[4]));
           await stakePool.distribute({from: bob});
           await stakePool.claimableRewards(alice).then(res => {
             expect(res.toString()).to.eq('2124999999999999997875');
@@ -197,13 +197,13 @@ function testStakePool(contractName, errorHead) {
           });
 
           // After 10 days
-          timeTraveler.advanceTime(time.duration.days(10));
+          timeTraveler.advanceTime(time.duration.days(timeIncrease[5]));
           await stakePool.depositReward(web3.utils.toWei(new BN(3000)), {from: alice});
           // After 11 days
-          timeTraveler.advanceTime(time.duration.days(11));
+          timeTraveler.advanceTime(time.duration.days(timeIncrease[6]));
           await stakePool.depositReward(web3.utils.toWei(new BN(4500)), {from: alice});
           // After 15 days (2 months passed)
-          timeTraveler.advanceTime(time.duration.days(15));
+          timeTraveler.advanceTime(time.duration.days(timeIncrease[7]));
           await stakePool.distribute({from: bob});
           await stakePool.mDistributes(1).then(res => {
             expect(res[0].toString()).to.eq('1874999999999999996250');
@@ -222,6 +222,11 @@ function testStakePool(contractName, errorHead) {
           await stakePool.claimableRewards(alice).then(res => {
             expect(res.toString()).to.eq('2539864864864864859750');
           });
+        });
+        after(async () => {
+          for (let i = 0; i < timeIncrease.length; i++) {
+            timeTraveler.advanceTime(time.duration.days(timeIncrease[i] * -1));
+          }
         });
       });
     });
