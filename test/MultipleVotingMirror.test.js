@@ -61,16 +61,23 @@ contract('MultipleVotingMirror', async accounts => {
       expect(await voting.isStakePool(sPool2.address)).to.eq(true);
       expect(await voting.isStakePool(sPool3.address)).to.eq(true);
     });
+    it('supportsInterface', async () => {
+      await sPool1.supportsInterface("0x00").then(res => {
+        expect(res).to.eq(false);
+      });
+    });
     it('addOperator removeOperator', async () => {
       await sPool1.addOperator(bob);
       expect(await sPool1.checkOperator(bob)).to.eq(true);
       await sPool1.removeOperator(bob);
       expect(await sPool1.checkOperator(bob)).to.eq(false);
     });
-    it('getStakeAmount isHolder decreaseStakeAmount', async () => {
+    it('getStakeAmount isHolder setTokenURI tokenURI decreaseStakeAmount', async () => {
       await sPool1.getStakeAmount(bob).then(res => { expect(res.words[0]).to.eq(0) });
       await sPool1.mint(bob, 1, toWei(new BN(4000)), 120, 1632842216);
       expect(await sPool1.isHolder(bob)).to.eq(true);
+      await sPool1.setTokenURI(1, "test");
+      expect(await sPool1.tokenURI(1)).to.eq("https://idexo.io/metadata/test");
       await sPool1.decreaseStakeAmount(1, toWei(new BN(4000)));
       await sPool1.getStakeAmount(bob).then(res => { expect(res.words[0]).to.eq(0) });
     });
