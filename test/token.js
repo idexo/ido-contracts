@@ -1,7 +1,7 @@
 function testToken(contractName, contractPath, requireName) {
   contract("::" + contractName, async (accounts) => {
     let token;
-    const [alice, bob, carol] = accounts;
+    const [alice, bob, carol, darren] = accounts;
     const name = "Idexo Token"; // token name
     let chainId; // buidlerevm chain id
     // this key is from the first address on test evm
@@ -124,12 +124,22 @@ function testToken(contractName, contractPath, requireName) {
             requireName + ": INVALID_ADDRESS"
           );
         });
+        it('non owner call renounceOwnership', async () => {
+          await expectRevert(
+            token.renounceOwnership({from: darren}),
+            requireName + ": CALLER_NO_OWNER"
+          );
+        });
         it("non new owner call acceptOwnership", async () => {
           await token.transferOwnership(alice, { from: bob });
           await expectRevert(
             token.acceptOwnership({ from: carol }),
             requireName + ": CALLER_NO_NEW_OWNER"
           );
+          expectEvent(
+            await token.renounceOwnership({from: bob}),
+            'OwnershipTransferred'
+          )
         });
       });
     });
