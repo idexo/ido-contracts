@@ -61,6 +61,19 @@ contract('MultipleVotingMirror', async accounts => {
       expect(await voting.isStakePool(sPool2.address)).to.eq(true);
       expect(await voting.isStakePool(sPool3.address)).to.eq(true);
     });
+    it('addOperator removeOperator', async () => {
+      await sPool1.addOperator(bob);
+      expect(await sPool1.checkOperator(bob)).to.eq(true);
+      await sPool1.removeOperator(bob);
+      expect(await sPool1.checkOperator(bob)).to.eq(false);
+    });
+    it('getStakeAmount isHolder decreaseStakeAmount', async () => {
+      await sPool1.getStakeAmount(bob).then(res => { expect(res.words[0]).to.eq(0) });
+      await sPool1.mint(bob, 1, toWei(new BN(4000)), 120, 1632842216);
+      expect(await sPool1.isHolder(bob)).to.eq(true);
+      await sPool1.decreaseStakeAmount(1, toWei(new BN(4000)));
+      await sPool1.getStakeAmount(bob).then(res => { expect(res.words[0]).to.eq(0) });
+    });
     it('removeStakePool', async () => {
       await voting.removeStakePool(sPool3.address, {from: bob});
       expect(await voting.isStakePool(sPool3.address)).to.eq(false);
