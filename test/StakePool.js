@@ -5,7 +5,7 @@ function testStakePool(contractName, errorHead, timeIncrease) {
   const { BN, expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
   const StakePool = artifacts.require(contractName);
   const ERC20 = artifacts.require('ERC20Mock');
-  const IDO = artifacts.require('ERC20Mock');  
+  const IDO = artifacts.require('ERC20Mock');
 
   contract('::'+ contractName, async accounts => {
     let stakePool;
@@ -137,8 +137,9 @@ function testStakePool(contractName, errorHead, timeIncrease) {
     describe('#Reward', async () => {
       describe('##deposit', async () => {
         before(async () => {
-          await erc20.mint(alice, web3.utils.toWei(new BN(10000)));
+          await erc20.mint(alice, web3.utils.toWei(new BN(10001)));
           await erc20.approve(stakePool.address, web3.utils.toWei(new BN(10000)), {from: alice});
+          await erc20.burn(alice, web3.utils.toWei(new BN(1)));
         });
         it('should deposit', async () => {
           await stakePool.depositReward(web3.utils.toWei(new BN(4000)), {from: alice});
@@ -156,7 +157,7 @@ function testStakePool(contractName, errorHead, timeIncrease) {
             'Swept'
           );
         });
-        describe('reverts if', async () => {          
+        describe('reverts if', async () => {
           it('deposit amount is 0', async () => {
             await expectRevert(
               stakePool.depositReward(new BN(0), {from: alice}),
@@ -189,7 +190,7 @@ function testStakePool(contractName, errorHead, timeIncrease) {
           await ido.mint(bob, web3.utils.toWei(new BN(10000)));
           await ido.approve(stakePool.address, web3.utils.toWei(new BN(10000)), {from: bob});
         });
-        describe('reverts if', async () => {          
+        describe('reverts if', async () => {
           it('distribute non-operator', async () => {
             await expectRevert(
               stakePool.distribute({from: carol}),
