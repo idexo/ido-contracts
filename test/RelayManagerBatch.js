@@ -8,7 +8,7 @@ function testRelayManagerBatch(contractName, contractNameParent) {
 
     const { expect } = require('chai');
     const { BN, expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
-    
+
     const RelayManager = artifacts.require(contractName);
     const ERC20PermitMock = artifacts.require('ERC20PermitMock');
 
@@ -58,6 +58,7 @@ function testRelayManagerBatch(contractName, contractNameParent) {
           await relayManager.deposit(bob, sendAmount, polygonChainId, {from: alice}),
           'Deposited'
         );
+        expect(await ido.getChainId()).to.not.null
       });
 
       it('send', async () => {
