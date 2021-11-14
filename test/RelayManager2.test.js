@@ -117,25 +117,39 @@ contract('RelayManager2', async accounts => {
       )
     });
     describe('reverts if', async () => {
-        it('non-owner call setMinTransferAmount', async () => {
-            await expectRevert(
-              relayManager.setMinTransferAmount(1, {from: carol}),
-              'RelayManager2: CALLER_NO_OWNER'
-            );
-          });
-        it('non-owner call setAdminFee', async () => {
-          await expectRevert(
-            relayManager.setAdminFee(1, {from: carol}),
-            'RelayManager2: CALLER_NO_OWNER'
-          );
-        });
-        it('non-owner call setBaseGas', async () => {
-          await expectRevert(
-            relayManager.setBaseGas(1, {from: carol}),
-            'RelayManager2: CALLER_NO_OWNER'
-          );
-        });
-        it('non-owner call transferOwnership', async () => {
+      it('withdrawAdminFee insuficient funds', async () => {
+        adminFee = await relayManager.adminFeeAccumulated();
+        await expectRevert(
+          relayManager.withdrawAdminFee(carol, adminFee + 100, {from: bob}),
+          'RelayManager2: INSUFFICIENT_ADMIN_FEE'
+        );
+      });
+      it('withdrawGasFee insuficient funds', async () => {
+        gasFee = await relayManager.gasFeeAccumulated();
+        await expectRevert(
+          relayManager.withdrawGasFee(carol, gasFee + 100, {from: bob}),
+          'RelayManager2: INSUFFICIENT_GAS_FEE'
+        );
+      });
+      it('non-owner call setMinTransferAmount', async () => {
+        await expectRevert(
+          relayManager.setMinTransferAmount(1, {from: carol}),
+          'RelayManager2: CALLER_NO_OWNER'
+        );
+      });
+      it('non-owner call setAdminFee', async () => {
+        await expectRevert(
+          relayManager.setAdminFee(1, {from: carol}),
+          'RelayManager2: CALLER_NO_OWNER'
+        );
+      });
+      it('non-owner call setBaseGas', async () => {
+        await expectRevert(
+          relayManager.setBaseGas(1, {from: carol}),
+          'RelayManager2: CALLER_NO_OWNER'
+        );
+      });
+      it('non-owner call transferOwnership', async () => {
         await expectRevert(
           relayManager.transferOwnership(bob, {from: carol}),
           'RelayManager2: CALLER_NO_OWNER'
