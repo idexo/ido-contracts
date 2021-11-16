@@ -2,24 +2,16 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
+import "../lib/Ownable.sol";
 import "../interfaces/IWIDO.sol";
 
-contract WIDO is IWIDO, ERC20Permit {
-    // Contract owner address
-    address public owner;
-    // Proposed new contract owner address
-    address public newOwner;
+contract WIDO is IWIDO, ERC20Permit, Ownable {
     // Cross-chain transfer relayer contract address
     address public relayer;
 
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event RelayerAddressChanged(address indexed relayer);
 
-    constructor() ERC20("Wrapped Idexo Token", "WIDO") ERC20Permit("Wrapped Idexo Token") {
-        owner = _msgSender();
-        emit OwnershipTransferred(address(0), _msgSender());
-    }
+    constructor() ERC20("Wrapped Idexo Token", "WIDO") ERC20Permit("Wrapped Idexo Token") { }
 
     /**************************|
     |          Setters         |
@@ -34,53 +26,6 @@ contract WIDO is IWIDO, ERC20Permit {
         relayer = newRelayer;
 
         emit RelayerAddressChanged(newRelayer);
-    }
-
-    /****************************|
-    |          Ownership         |
-    |___________________________*/
-
-    /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        require(owner == _msgSender(), "WIDO: CALLER_NO_OWNER");
-        _;
-    }
-
-    /**
-     * @dev Leaves the contract without owner. It will not be possible to call
-     * `onlyOwner` functions anymore. Can only be called by the current owner.
-     *
-     * NOTE: Renouncing ownership will leave the contract without an owner,
-     * thereby removing any functionality that is only available to the owner.
-     */
-    function renounceOwnership() external override onlyOwner {
-        emit OwnershipTransferred(owner, address(0));
-        owner = address(0);
-    }
-
-    /**
-     * @dev Transfer the contract ownership.
-     * The new owner still needs to accept the transfer.
-     * can only be called by the contract owner.
-     *
-     * @param _newOwner new contract owner.
-     */
-    function transferOwnership(address _newOwner) external override onlyOwner {
-        require(_newOwner != address(0), "WIDO: INVALID_ADDRESS");
-        require(_newOwner != owner, "WIDO: OWNERSHIP_SELF_TRANSFER");
-        newOwner = _newOwner;
-    }
-
-    /**
-     * @dev The new owner accept an ownership transfer.
-     */
-    function acceptOwnership() external override {
-        require(_msgSender() == newOwner, "WIDO: CALLER_NO_NEW_OWNER");
-        emit OwnershipTransferred(owner, newOwner);
-        owner = newOwner;
-        newOwner = address(0);
     }
 
     /************************|
