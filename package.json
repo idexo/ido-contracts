@@ -47,7 +47,6 @@
     "@openzeppelin/contracts": "^4.1.0",
     "@openzeppelin/docs-utils": "^0.1.0",
     "@openzeppelin/test-helpers": "^0.5.11",
-    "@prettier/plugin-xml": "^1.1.0",
     "@truffle/abi-utils": "^0.2.3",
     "chai": "^4.3.4",
     "dotenv": "^10.0.0",
