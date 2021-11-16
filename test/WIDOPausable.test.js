@@ -1,62 +1,75 @@
-const { ethers } = require('hardhat');
 const { expect } = require('chai');
+const WIDOPausable = artifacts.require('WIDOPausable');
+const { BN, constants, expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 
-const setup = async () => {
-  const [owner, relayer, alice, bob, carol] = await ethers.getSigners();
-  const WIDOPausable = await ethers.getContractFactory('WIDOPausable');
-  const contract = await WIDOPausable.deploy();
-  return {contract, owner, relayer, alice, bob, carol};
-};
-
-describe('WIDOPausable', () => {
+contract('WIDOPausable', async accounts => {
   let contract;
-  let owner, relayer, alice, bob, carol;
+  const [relayer, alice, bob, carol] = accounts;
+
+  before(async () => {
+    contract = await WIDOPausable.new();
+  });
 
   describe('Token', async () => {
     it('expect to mint and burn', async () => {
-      ({contract, owner, relayer, alice, bob, carol} = await setup());      
-      await contract.setRelayer(relayer.address);
-      await expect(contract.connect(relayer).mint(alice.address, ethers.utils.parseEther('100')))
-        .to.emit(contract, 'Transfer');
-      await expect(contract.connect(relayer).burn(alice.address, ethers.utils.parseEther('100')))
-        .to.emit(contract, 'Transfer');
-      await contract.balanceOf(alice.address).then(res => {
+      await contract.setRelayer(relayer);
+      expectEvent(
+        await contract.mint(alice, web3.utils.toWei(new BN(100)), {from: relayer}),
+        'Transfer'
+      );
+      expectEvent(
+        await contract.burn(alice, web3.utils.toWei(new BN(100)), {from: relayer}),
+        'Transfer'
+      );
+      await contract.balanceOf(alice).then(res => {
         expect(res.toString()).to.eq('0');
       });
     });
     describe('reverts if', async () => {
       it('non-owner call setRelayer', async () => {
-        await expect(contract.connect(bob).setRelayer(bob.address))
-          .to.be.revertedWith('Ownable: CALLER_NO_OWNER');
+        await expectRevert(
+          contract.setRelayer(bob, {from: bob}),
+          'Ownable: CALLER_NO_OWNER'
+        );
       });
       it('non-relayer call mint/burn', async () => {
-        await expect(contract.connect(bob).mint(alice.address, ethers.utils.parseEther('100')))
-          .to.be.revertedWith('WIDOPausable: CALLER_NO_RELAYER');
-        await expect(contract.connect(bob).burn(alice.address, ethers.utils.parseEther('100')))
-          .to.be.revertedWith('WIDOPausable: CALLER_NO_RELAYER');
+        await expectRevert(
+          contract.mint(alice, web3.utils.toWei(new BN(100)), {from: bob}),
+          'WIDOPausable: CALLER_NO_RELAYER'
+        );
+        await expectRevert(
+          contract.burn(alice, web3.utils.toWei(new BN(100)), {from: bob}),
+          'WIDOPausable: CALLER_NO_RELAYER'
+        );
       });
     });
   });
 
   describe('#Ownership', async () => {
     it('should transfer ownership', async () => {
-      await contract.transferOwnership(bob.address);
-      await contract.connect(bob).acceptOwnership();
-      expect(await contract.owner()).to.eq(bob.address);
+      await contract.transferOwnership(bob);
+      await contract.acceptOwnership({from: bob});
+      expect(await contract.owner()).to.eq(bob);
     });
     describe('reverts if', async () => {
       it('non-owner call transferOwnership', async () => {
-        await expect(contract.connect(carol).transferOwnership(bob.address))
-          .to.be.revertedWith('Ownable: CALLER_NO_OWNER');
+        await expectRevert(
+          contract.transferOwnership(bob, {from: carol}),
+          'Ownable: CALLER_NO_OWNER'
+        );
       });
       it('call transferOwnership with zero address', async () => {
-        await expect(contract.connect(bob).transferOwnership(ethers.constants.AddressZero))
-          .to.be.revertedWith('Ownable: INVALID_ADDRESS');
+        await expectRevert(
+          contract.transferOwnership(constants.ZERO_ADDRESS, {from: bob}),
+          'Ownable: INVALID_ADDRESS'
+        );
       });
       it('non new owner call acceptOwnership', async () => {
-        await contract.connect(bob).transferOwnership(alice.address);
-        await expect(contract.connect(carol).acceptOwnership())
-          .to.be.revertedWith('Ownable: CALLER_NO_NEW_OWNER');
+        await contract.transferOwnership(alice, {from: bob});
+        await expectRevert(
+          contract.acceptOwnership({from: carol}),
+          'Ownable: CALLER_NO_NEW_OWNER'
+        );
       })
     });
   });
