@@ -5,14 +5,20 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../interfaces/IWIDO.sol";
 
 contract RelayManager2Secure is AccessControl, ReentrancyGuard {
   using SafeERC20 for IWIDO;
+
+  mapping(address => bool) private signers;
+
   // The contract owner address
   address public owner;
   // Proposed contract new owner address
   address public newOwner;
+
+  uint256 public threshold = 1;
 
   bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
   // Wrapped IDO token address
@@ -47,9 +53,16 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
 
   constructor(
     IWIDO _wIDO,
-    uint256 _adminFee
+    uint256 _adminFee,
+    uint256 _threshold,
+    address[] memory _signers
+
   ) {
     require(_adminFee != 0, "RelayManager2: ADMIN_FEE_INVALID");
+    threshold = _threshold;
+    for (uint256 i = 0; i < _signers.length; i++) {
+            signers[_signers[i]] = true;
+        }
     address sender = _msgSender();
     wIDO = _wIDO;
     owner = sender;
@@ -80,6 +93,46 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
 
     emit AdminFeeChanged(newAdminFee);
   }
+
+  // gov
+  function changeThreshold(uint256 _newThreshold, bytes[] calldata _signatures)
+      external
+      onlyOwner
+  {
+      require(
+          verify(
+              keccak256(abi.encodePacked(_newThreshold)),
+              _signatures
+          ),
+          "Minter: invalid signature"
+      );
+      threshold = _newThreshold;
+  }
+
+  function addSigner(address _signer, bytes[] calldata _signatures)
+        external
+        onlyOwner
+  {
+      require(
+          verify(keccak256(abi.encodePacked(_signer)), _signatures),
+          "Minter: invalid signature"
+      );
+
+      signers[_signer] = true;
+  }
+
+  function removeSigner(address _signer, bytes[] calldata _signatures)
+      external
+      onlyOwner
+  {
+      require(
+          verify(keccak256(abi.encodePacked(_signer)), _signatures),
+          "Minter: invalid signature"
+      );
+      
+      signers[_signer] = false;
+  }
+
 
   /**
     * @dev Set base gas
@@ -208,9 +261,9 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
     uint256 amount,
     bytes32 depositHash,
     uint256 nonce,
-    bytes calldata signature
+    bytes[] calldata signatures
   ) external nonReentrant onlyOperator {
-    _send(from, receiver, amount, depositHash, nonce, signature);
+    _send(from, receiver, amount, depositHash, nonce, signatures);
   }
 
   /**********************|
@@ -255,13 +308,22 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
     uint256 amount,
     bytes32 depositHash,
     uint256 nonce,
-    bytes calldata signature
+    bytes[] calldata _signatures
   ) internal {
     
     require(receiver != address(0), "RelayManager2: RECEIVER_ZERO_ADDRESS");
     require(amount > minTransferAmount, "RelayManager2: SEND_AMOUNT_INVALID");
     require(amount > adminFee, "RelayManager2: AMOUNT LESS THAN ADMIN FEE");
-    bytes32 hash = keccak256(abi.encodePacked(from, depositHash, receiver, amount, nonce));
+    require(
+      verify(
+        keccak256(
+            abi.encodePacked(from, receiver, amount, depositHash, nonce)
+          ),
+        _signatures
+        ),
+      "RelayerManager2: INVALID_SIGNATURE"
+      );
+    bytes32 hash = keccak256(abi.encodePacked(from, receiver, amount, depositHash, nonce));
     require(!processedHashes[hash], "RelayManager2: ALREADY_PROCESSED");
     require(processedNonces[from][nonce] == false, 'transfer already processed');
    
@@ -313,4 +375,39 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
       return ecrecover(message, v, r, s);
     }
   }
+
+ 
+  function isSigner(address _candidate) public view returns (bool) {
+      return signers[_candidate];
+  }
+
+  function verify(bytes32 _hash, bytes[] memory _signatures)
+        public
+        view
+        returns (bool)
+    {
+        bytes32 h = ECDSA.toEthSignedMessageHash(_hash);
+        address lastSigner = address(0x0);
+        address currentSigner;
+
+        for (uint256 i = 0; i < _signatures.length; i++) {
+            currentSigner = ECDSA.recover(h, _signatures[i]);
+
+            if (currentSigner <= lastSigner) {
+                return false;
+            }
+            if (!signers[currentSigner]) {
+                return false;
+            }
+            lastSigner = currentSigner;
+        }
+
+        if (_signatures.length < threshold) {
+            return false;
+        }
+
+        return true;
+    }
+
+
 }
