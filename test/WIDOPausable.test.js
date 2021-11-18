@@ -74,6 +74,23 @@ contract('WIDOPausable', async accounts => {
           contract.acceptOwnership({from: carol}),
           'Ownable: CALLER_NO_NEW_OWNER'
         );
+      });
+      it('non owner call renounceOwnership', async () => {
+        await expectRevert(
+            contract.renounceOwnership({from: carol}),
+          'Ownable: CALLER_NO_OWNER'
+        );
+      });
+      it('non new owner call acceptOwnership', async () => {
+        await contract.transferOwnership(alice, {from: bob});
+        await expectRevert(
+            contract.acceptOwnership({from: carol}),
+          'Ownable: CALLER_NO_NEW_OWNER'
+        );
+        expectEvent(
+          await contract.renounceOwnership({from: bob}),
+          'OwnershipTransferred'
+        )
       })
     });
   });
