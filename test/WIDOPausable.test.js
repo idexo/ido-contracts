@@ -3,7 +3,7 @@ const WIDOPausable = artifacts.require('WIDOPausable');
 const { BN, constants, expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 
 contract('WIDOPausable', async accounts => {
-  let contract;
+  let contract, chainId;
   const [relayer, alice, bob, carol] = accounts;
 
   before(async () => {
@@ -12,6 +12,10 @@ contract('WIDOPausable', async accounts => {
 
   describe('Token', async () => {
     it('expect to mint and burn', async () => {
+      await contract.getChainId().then(res => {
+        expect(res).to.not.null;
+        chainId = res.toNumber();
+      })
       await contract.setRelayer(relayer);
       expectEvent(
         await contract.mint(alice, web3.utils.toWei(new BN(100)), {from: relayer}),
