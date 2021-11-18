@@ -18,23 +18,24 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
   // Proposed contract new owner address
   address public newOwner;
 
-  uint256 public threshold = 1;
+  // Bridge wallet for collecting fees
+  address public bridgeWallet;
+
+  uint256 public threshold = 0;
 
   bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
   // Wrapped IDO token address
   IWIDO public wIDO;
 
-  uint256 public baseGas;
+  
   uint256 public adminFee; // bps
   uint256 public adminFeeAccumulated;
-  uint256 public gasFeeAccumulated;
   uint256 public minTransferAmount;
 
   // Transfer nonce
   mapping(address => uint256) public nonces;
   mapping(address => mapping(uint => bool)) public processedNonces;
-  // Transfer hash processed status
-  mapping(bytes32 => bool) public processedHashes;
+  
   // ERC20Permit
   struct PermitRequest {
     uint256 nonce;
@@ -45,11 +46,12 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
   }
   // Events
   event Deposited(address indexed from, address indexed receiver, uint256 toChainId, uint256 amount, uint256 nonce);
-  event Sent(address indexed receiver, uint256 indexed amount, uint256 indexed transferredAmount, bytes32 depositHash);
+  event Sent(address indexed receiver, uint256 indexed amount, uint256 indexed transferredAmount);
   event AdminFeeChanged(uint256 indexed AdminFee);
+  event BridgeWalletChanged(address indexed bridgeWallet);
   event EthReceived(address indexed sender, uint256 amount);
   event AdminFeeWithdraw(address indexed receiver, uint256 amount);
-  event GasFeeWithdraw(address indexed receiver, uint256 amount);
+  
 
   constructor(
     IWIDO _wIDO,
@@ -67,7 +69,7 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
     wIDO = _wIDO;
     owner = sender;
     adminFee = _adminFee;
-    baseGas = 21000; // default block gas limit
+    
 
     _setupRole(DEFAULT_ADMIN_ROLE, sender);
     _setupRole(OPERATOR_ROLE, sender);
@@ -92,6 +94,15 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
     adminFee = newAdminFee;
 
     emit AdminFeeChanged(newAdminFee);
+  }
+
+  //set bridge wallet address for collecting admin fees
+
+  function setBridgeWallet(address newBridgeWallet) external onlyOwner {
+      require(newBridgeWallet != address(0), "WIDO: NEW_WALLET_ADDRESS_INVALID");
+      bridgeWallet = newBridgeWallet;
+
+      emit BridgeWalletChanged(newBridgeWallet);
   }
 
   // gov
@@ -134,13 +145,7 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
   }
 
 
-  /**
-    * @dev Set base gas
-    * Only `owner` can call
-    */
-  function setBaseGas(uint256 newBaseGas) external onlyOwner {
-    baseGas = newBaseGas;
-  }
+  
 
   /**
     * @dev Set minimum transfer amount
@@ -259,11 +264,10 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
     address from,
     address receiver,
     uint256 amount,
-    bytes32 depositHash,
     uint256 nonce,
     bytes[] calldata signatures
   ) external nonReentrant onlyOperator {
-    _send(from, receiver, amount, depositHash, nonce, signatures);
+    _send(from, receiver, amount, nonce, signatures);
   }
 
   /**********************|
@@ -286,27 +290,12 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
     emit AdminFeeWithdraw(receiver, amount);
   }
 
-  /**
-    * @dev Withdraw gas fee accumulated
-    * Only `owner` can call
-    */
-  function withdrawGasFee(
-    address receiver,
-    uint256 amount
-  ) external onlyOwner {
-    require(amount > 0, "RelayManager2: AMOUNT_INVALID");
-    require(gasFeeAccumulated >= amount, "RelayManager2: INSUFFICIENT_GAS_FEE");
-    gasFeeAccumulated -= amount;
-    wIDO.safeTransfer(receiver, amount);
-
-    emit GasFeeWithdraw(receiver, amount);
-  }
+ 
 
   function _send(
     address from,
     address receiver,
     uint256 amount,
-    bytes32 depositHash,
     uint256 nonce,
     bytes[] calldata _signatures
   ) internal {
@@ -317,27 +306,27 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
     require(
       verify(
         keccak256(
-            abi.encodePacked(from, receiver, amount, depositHash, nonce)
+            abi.encodePacked(from, receiver, amount, nonce)
           ),
         _signatures
         ),
       "RelayerManager2: INVALID_SIGNATURE"
       );
-    bytes32 hash = keccak256(abi.encodePacked(from, receiver, amount, depositHash, nonce));
-    require(!processedHashes[hash], "RelayManager2: ALREADY_PROCESSED");
-    require(processedNonces[from][nonce] == false, 'transfer already processed');
+    
+    require(!processedNonces[from][nonce], "RelayManager2Secure: TRANSFER_NONCE_ALREADY_PROCESSED");
    
     // Mark the nonce processed state true to avoid double sending
     processedNonces[from][nonce] = true;
 
-    // Mark the depositHash state true to avoid double sending
-    processedHashes[depositHash] = true;
    
     uint256 amountToTransfer = amount - adminFee;
-    // Mint tokens
+    adminFeeAccumulated += adminFee;
+    // Mint tokens to receiver
     wIDO.mint(receiver, amountToTransfer);
+    // Mint tokens to bridge wallet
+    wIDO.mint(bridgeWallet, adminFee);
 
-    emit Sent(receiver, amount, amountToTransfer, depositHash);
+    emit Sent(receiver, amount, amountToTransfer);
   }
 
   function recoverSigner(bytes32 message, bytes memory sig)
