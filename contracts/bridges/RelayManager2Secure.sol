@@ -151,14 +151,14 @@ contract RelayManager2Secure is Operatorable {
     address newBridgeWallet,
     bytes[] calldata signatures
   ) external onlyOperator {
-      require(newBridgeWallet != address(0), "RelayManager2Secure: BRIDGE_WALLET_ADDRESS_INVALID");
-      require(
-        _verify(keccak256(abi.encodePacked(newBridgeWallet)), signatures),
-        "RelayManager2Secure: INVALID_SIGNATURE"
-      );
-      bridgeWallet = newBridgeWallet;
+    require(newBridgeWallet != address(0), "RelayManager2Secure: BRIDGE_WALLET_ADDRESS_INVALID");
+    require(
+      _verify(keccak256(abi.encodePacked(newBridgeWallet)), signatures),
+      "RelayManager2Secure: INVALID_SIGNATURE"
+    );
+    bridgeWallet = newBridgeWallet;
 
-      emit BridgeWalletChanged(newBridgeWallet);
+    emit BridgeWalletChanged(newBridgeWallet);
   }
 
   /***************************|
