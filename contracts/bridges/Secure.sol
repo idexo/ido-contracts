@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../interfaces/IWIDO.sol";
-import "../lib/Operatorable.sol";
+import "../lib/Ownable.sol";
 
-contract RelayManager2Secure is Operatorable, ReentrancyGuard {
+contract RelayManager2Secure is Ownable, ReentrancyGuard {
   using SafeERC20 for IWIDO;
 
   // ERC20Permit
@@ -27,7 +27,6 @@ contract RelayManager2Secure is Operatorable, ReentrancyGuard {
 
   uint8 public threshold = 1;
   uint8 public signerLength;
-  uint256 public baseGas;
   uint256 public adminFee; // fixd amount in WIDO
   uint256 public adminFeeAccumulated;
 
@@ -49,11 +48,13 @@ contract RelayManager2Secure is Operatorable, ReentrancyGuard {
   constructor(
     IWIDO _wIDO,
     uint256 _adminFee,
+    address _bridgeWallet,
     uint8 _threshold,
     address[] memory signers_
   ) {
     require(_adminFee != 0, "RelayManager2Secure: ADMIN_FEE_INVALID");
     require(_threshold >= 1, "RelayManager2Secure: THRESHOLD_INVALID");
+    require(_bridgeWallet != address(0), "RelayManager2Secure: BRIDGE_WALLET_ADDRESS_INVALID");
     threshold = _threshold;
 
     for (uint8 i = 0; i < signers_.length; i++) {
@@ -68,7 +69,7 @@ contract RelayManager2Secure is Operatorable, ReentrancyGuard {
 
     wIDO = _wIDO;
     adminFee = _adminFee;
-    baseGas = 21000; // default block gas limit
+    bridgeWallet = _bridgeWallet;
   }
 
   receive() external payable {
@@ -93,10 +94,10 @@ contract RelayManager2Secure is Operatorable, ReentrancyGuard {
   function changeThreshold(
     uint8 newThreshold,
     bytes[] calldata signatures
-  ) external onlyOwner {
+  ) external {
     require(newThreshold >= 1, "RelayManager2Secure: THRESHOLD_INVALID");
     require(
-      verify(keccak256(abi.encodePacked(newThreshold)), signatures),
+      _verify(keccak256(abi.encodePacked(newThreshold)), signatures),
       "RelayManager2Secure: INVALID_SIGNATURE"
     );
     threshold = newThreshold;
@@ -105,9 +106,9 @@ contract RelayManager2Secure is Operatorable, ReentrancyGuard {
   function addSigner(
     address signer,
     bytes[] calldata signatures
-  ) external onlyOwner {
+  ) external {
     require(
-      verify(keccak256(abi.encodePacked(signer)), signatures),
+      _verify(keccak256(abi.encodePacked(signer)), signatures),
       "RelayManager2Secure: INVALID_SIGNATURE"
     );
 
@@ -120,9 +121,9 @@ contract RelayManager2Secure is Operatorable, ReentrancyGuard {
   function removeSigner(
     address signer,
     bytes[] calldata signatures
-  ) external onlyOwner {
+  ) external {
     require(
-      verify(keccak256(abi.encodePacked(signer)), signatures),
+      _verify(keccak256(abi.encodePacked(signer)), signatures),
       "RelayManager2Secure: INVALID_SIGNATURE"
     );
 
@@ -132,18 +133,10 @@ contract RelayManager2Secure is Operatorable, ReentrancyGuard {
   }
 
   /**
-    * @dev Set base gas
-    * Only `owner` can call
-    */
-  function setBaseGas(uint256 newBaseGas) external onlyOwner {
-    baseGas = newBaseGas;
-  }
-
-  /**
     * @dev Set bridge wallet address for collecting admin fees
    */
   function setBridgeWallet(address newBridgeWallet) external onlyOwner {
-      require(newBridgeWallet != address(0), "RelayManager2Secure: NEW_BRIDGE_WALLET_ADDRESS_INVALID");
+      require(newBridgeWallet != address(0), "RelayManager2Secure: BRIDGE_WALLET_ADDRESS_INVALID");
       bridgeWallet = newBridgeWallet;
 
       emit BridgeWalletChanged(newBridgeWallet);
@@ -171,7 +164,6 @@ contract RelayManager2Secure is Operatorable, ReentrancyGuard {
 
   /**
     * @dev Send (mint) funds to the receiver to process cross-chain transfer
-    * `depositHash = keccak256(abi.encodePacked(senderAddress, tokenAddress, nonce))`
     */
   function send(
     address from,
@@ -179,7 +171,7 @@ contract RelayManager2Secure is Operatorable, ReentrancyGuard {
     uint256 amount,
     uint256 nonce,
     bytes[] calldata signatures
-  ) external nonReentrant onlyOperator {
+  ) external nonReentrant {
     _send(from, receiver, amount, nonce, signatures);
   }
 
@@ -213,7 +205,7 @@ contract RelayManager2Secure is Operatorable, ReentrancyGuard {
     require(receiver != address(0), "RelayManager2Secure: RECEIVER_ZERO_ADDRESS");
     require(amount > adminFee, "RelayManager2Secure: SEND_AMOUNT_INVALID");
     require(
-      verify(keccak256(abi.encodePacked(from, receiver, amount, nonce)), _signatures),
+      _verify(keccak256(abi.encodePacked(from, receiver, amount, nonce)), _signatures),
       "RelayManager2Secure: INVALID_SIGNATURE"
     );
     require(!processedNonces[from][nonce], 'RelayManager2Secure: TRANSFER_NONCE_ALREADY_PROCESSED');
@@ -234,10 +226,10 @@ contract RelayManager2Secure is Operatorable, ReentrancyGuard {
     return _signers[_candidate];
   }
 
-  function verify(
+  function _verify(
     bytes32 _hash,
     bytes[] memory _signatures
-  ) public view returns (bool) {
+  ) private view returns (bool) {
     bytes32 h = ECDSA.toEthSignedMessageHash(_hash);
     address lastSigner = address(0x0);
     address currentSigner;
