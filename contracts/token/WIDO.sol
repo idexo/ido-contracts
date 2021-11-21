@@ -2,7 +2,6 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "../interfaces/IWIDO.sol";
 
 contract WIDO is IWIDO, ERC20Permit {
@@ -12,6 +11,7 @@ contract WIDO is IWIDO, ERC20Permit {
     address public newOwner;
     // Cross-chain transfer relayer contract address
     address public relayer;
+    uint256 public constant cap = 100 * 1000 * 1000 * 1 ether;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event RelayerAddressChanged(address indexed relayer);
@@ -96,6 +96,7 @@ contract WIDO is IWIDO, ERC20Permit {
         uint256 amount
     ) external override {
         require(_msgSender() == relayer, "WIDO: CALLER_NO_RELAYER");
+        require(totalSupply() + amount <= cap, "WIDO: AMOUNT_EXCEEDS_CAP");
         _mint(account, amount);
     }
 

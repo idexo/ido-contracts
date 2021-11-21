@@ -5,9 +5,12 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract RelayManagerETH is AccessControl, ReentrancyGuard {
   using SafeERC20 for IERC20;
+  using ECDSA for bytes32;
+  
   // The contract owner address
   address public owner;
   // Proposed contract new owner address
@@ -17,43 +20,64 @@ contract RelayManagerETH is AccessControl, ReentrancyGuard {
   // IDO token address
   IERC20 public ido;
 
-  uint256 public baseGas;
+  // Bridge wallet for collecting fees
+  address public bridgeWallet;
+  // Signer check length threshold
+  uint8 public threshold = 1;
+  // Signer count
+  uint8 public signerLength;
 
+  // Fixed Admin Fee in IDO
   uint256 public adminFee; // bps
   uint256 public adminFeeAccumulated;
-  uint256 public gasFeeAccumulated;
   uint256 public minTransferAmount;
+
+    // address => signer status
+  mapping(address => bool) private _signers;
 
   // Transfer nonce
   mapping(address => uint256) public nonces;
-  // Transfer hash processed status
-  mapping(bytes32 => bool) public processedHashes;
-  // ERC20Permit
-  struct PermitRequest {
-    uint256 nonce;
-    uint256 deadline;
-    uint8 v;
-    bytes32 r;
-    bytes32 s;
-  }
+
+  // transfer from address => nonce => processed status
+  mapping(address => mapping(uint256 => bool)) public processedNonces;
+ 
+  
   // Events
   event Deposited(address indexed from, address indexed receiver, uint256 toChainId, uint256 amount, uint256 nonce);
-  event Sent(address indexed receiver, uint256 indexed amount, uint256 indexed transferredAmount, bytes32 depositHash);
+  event Sent(address indexed receiver, uint256 indexed amount, uint256 indexed transferredAmount, uint256 nonce);
   event AdminFeeChanged(uint256 indexed AdminFee);
   event EthReceived(address indexed sender, uint256 amount);
-  event AdminFeeWithdraw(address indexed receiver, uint256 amount);
-  event GasFeeWithdraw(address indexed receiver, uint256 amount);
+  event BridgeWalletChanged(address indexed bridgeWallet);
+  event ThresholdChanged(uint8 threshold);
+  event SignerAdded(address indexed signer);
+  event SignerRemoved(address indexed signer);
 
   constructor(
     IERC20 _ido,
-    uint256 _adminFee
+    uint256 _adminFee,
+    address _bridgeWallet,
+    uint8 _threshold,
+    address[] memory signers_
   ) {
     require(_adminFee != 0, "RelayManagerETH: ADMIN_FEE_INVALID");
+    require(_threshold >= 1, "RelayManager2Secure: THRESHOLD_INVALID");
+    require(_bridgeWallet != address(0), "RelayManager2Secure: BRIDGE_WALLET_ADDRESS_INVALID");
     address sender = _msgSender();
+
+    for (uint8 i = 0; i < signers_.length; i++) {
+      if (signers_[i] != address(0) && !_signers[signers_[i]]) {
+        _signers[signers_[i]] = true;
+        signerLength++;
+      }
+    }
+
+    // signer length must not be less than threshold
+    require(signerLength >= _threshold, "RelayManager2Secure: SIGNERS_NOT_ENOUGH");
     ido = _ido;
     owner = sender;
     adminFee = _adminFee;
-    baseGas = 21000; // default block gas limit
+    bridgeWallet = _bridgeWallet;
+    threshold = _threshold;
 
     _setupRole(DEFAULT_ADMIN_ROLE, sender);
     _setupRole(OPERATOR_ROLE, sender);
@@ -70,23 +94,96 @@ contract RelayManagerETH is AccessControl, ReentrancyGuard {
   |_________________________*/
 
   /**
-    * @dev Set admin fee bps
-    * Only `owner` can call
+    * @dev Set admin fee
     */
-  function setAdminFee(uint256 newAdminFee) external onlyOwner {
-    require(newAdminFee != 0, "RelayManagerETH: ADMIN_FEE_INVALID");
+  function setAdminFee(
+    uint256 newAdminFee,
+    bytes[] calldata signatures
+  ) external onlyOperator {
+    require(newAdminFee != 0, "RelayManager2Secure: ADMIN_FEE_INVALID");
+    require(
+      _verify(keccak256(abi.encodePacked(newAdminFee)), signatures),
+      "RelayManager2Secure: INVALID_SIGNATURE"
+    );
     adminFee = newAdminFee;
 
     emit AdminFeeChanged(newAdminFee);
   }
 
-  /**
-    * @dev Set base gas
-    * Only `owner` can call
+    /**
+    * @dev Set threshold
     */
-  function setBaseGas(uint256 newBaseGas) external onlyOwner {
-    baseGas = newBaseGas;
+  function setThreshold(
+    uint8 newThreshold,
+    bytes[] calldata signatures
+  ) external onlyOperator {
+    require(newThreshold >= 1, "RelayManager2Secure: THRESHOLD_INVALID");
+    require(
+      _verify(keccak256(abi.encodePacked(newThreshold)), signatures),
+      "RelayManager2Secure: INVALID_SIGNATURE"
+    );
+    threshold = newThreshold;
+
+    emit ThresholdChanged(newThreshold);
   }
+
+   /**
+    * @dev Add new signer
+    * `signer` must not be zero address
+    */
+  function addSigner(
+    address signer,
+    bytes[] calldata signatures
+  ) external onlyOperator {
+    require(
+      _verify(keccak256(abi.encodePacked(signer)), signatures),
+      "RelayManager2Secure: INVALID_SIGNATURE"
+    );
+
+    if (signer != address(0) && !_signers[signer]) {
+      _signers[signer] = true;
+      signerLength++;
+    }
+
+    emit SignerAdded(signer);
+  }
+
+    /**
+    * @dev Remove signer
+    */
+  function removeSigner(
+    address signer,
+    bytes[] calldata signatures
+  ) external onlyOperator {
+    require(
+      _verify(keccak256(abi.encodePacked(signer)), signatures),
+      "RelayManager2Secure: INVALID_SIGNATURE"
+    );
+
+    if (_signers[signer] && --signerLength >= threshold) {
+      _signers[signer] = false;
+    }
+
+    emit SignerRemoved(signer);
+  }
+
+  /**
+    * @dev Set bridge wallet address for collecting admin fees
+   */
+  function setBridgeWallet(
+    address newBridgeWallet,
+    bytes[] calldata signatures
+  ) external onlyOperator {
+    require(newBridgeWallet != address(0), "RelayManager2Secure: BRIDGE_WALLET_ADDRESS_INVALID");
+    require(
+      _verify(keccak256(abi.encodePacked(newBridgeWallet)), signatures),
+      "RelayManager2Secure: INVALID_SIGNATURE"
+    );
+    bridgeWallet = newBridgeWallet;
+
+    emit BridgeWalletChanged(newBridgeWallet);
+  }
+
 
   /**
     * @dev Set minimum transfer amount
@@ -197,101 +294,87 @@ contract RelayManagerETH is AccessControl, ReentrancyGuard {
     emit Deposited(sender, receiver, toChainId, amount, nonces[sender]++);
   }
 
-  /**
-    * @dev Permit and deposit (lock) funds to the relay contract for cross-chain transfer
-    */
-  function permitAndDeposit(
-    address receiver,
-    uint256 amount,
-    uint256 toChainId,
-    PermitRequest calldata permitOptions
-  ) external {
-    require(amount > 0, "RelayManagerETH: DEPOSIT_AMOUNT_INVALID");
-    require(receiver != address(0), "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
-    address sender = _msgSender();
-    // Approve the relay manager contract to spend tokens on behalf of `sender`
-    IERC20Permit(address(ido)).permit(_msgSender(), address(this), amount, permitOptions.deadline, permitOptions.v, permitOptions.r, permitOptions.s);
-    // Lock tokens
-    ido.safeTransferFrom(sender, address(this), amount);
 
-    emit Deposited(sender, receiver, toChainId, amount, nonces[sender]++);
-  }
 
   /**
     * @dev Send (unlock) funds to the receiver to process cross-chain transfer
     * `depositHash = keccak256(abi.encodePacked(senderAddress, tokenAddress, nonce))`
     */
   function send(
+    address from,
     address receiver,
     uint256 amount,
-    bytes32 depositHash,
-    uint256 gasPrice
+    uint256 nonce,
+    bytes[] calldata signatures
   ) external nonReentrant onlyOperator {
-    _send(receiver, amount, depositHash, gasPrice);
+    _send(from, receiver, amount, nonce, signatures);
   }
 
   /**********************|
   |          Fee         |
   |_____________________*/
 
-  /**
-    * @dev Withdraw admin fee accumulated
-    * Only `owner` can call
-    */
-  function withdrawAdminFee(
-    address receiver,
-    uint256 amount
-  ) external onlyOwner {
-    require(amount > 0, "RelayManagerETH: AMOUNT_INVALID");
-    require(adminFeeAccumulated >= amount, "RelayManagerETH: INSUFFICIENT_ADMIN_FEE");
-    adminFeeAccumulated -= amount;
-    ido.safeTransfer(receiver, amount);
-
-    emit AdminFeeWithdraw(receiver, amount);
-  }
-
-  /**
-    * @dev Withdraw gas fee accumulated
-    * Only `owner` can call
-    */
-  function withdrawGasFee(
-    address receiver,
-    uint256 amount
-  ) external onlyOwner {
-    require(amount > 0, "RelayManagerETH: AMOUNT_INVALID");
-    require(gasFeeAccumulated >= amount, "RelayManagerETH: INSUFFICIENT_GAS_FEE");
-    gasFeeAccumulated -= amount;
-    ido.safeTransfer(receiver, amount);
-
-    emit GasFeeWithdraw(receiver, amount);
-  }
+  
 
   function _send(
+    address from,
     address receiver,
     uint256 amount,
-    bytes32 depositHash,
-    uint256 gasPrice
+    uint256 nonce,
+    bytes[] calldata _signatures
   ) internal {
-    uint256 initialGas = gasleft();
     require(receiver != address(0), "RelayManagerETH: RECEIVER_ZERO_ADDRESS");
-    require(amount > minTransferAmount, "RelayManagerETH: SEND_AMOUNT_INVALID");
-    require(ido.balanceOf(address(this)) >= amount, "RelayManagerETH: INSUFFICIENT_LIQUIDITY");
-    bytes32 hash = keccak256(abi.encodePacked(depositHash, address(ido), receiver, amount));
-    require(!processedHashes[hash], "RelayManagerETH: ALREADY_PROCESSED");
-    // Mark the depositHash state true to avoid double sending
-    processedHashes[hash] = true;
-    // Calculate adminFee
-    uint256 calculatedAdminFee = amount * adminFee / 10000;
-    adminFeeAccumulated += calculatedAdminFee;
-    // Calculate total used gas price for sending
-    uint256 totalGasUsed = initialGas - gasleft();
-    totalGasUsed += baseGas;
-    gasFeeAccumulated += totalGasUsed * gasPrice;
+    require(amount > adminFee, "RelayManagerETH: SEND_AMOUNT_INVALID");
+    require(
+      _verify(keccak256(abi.encodePacked(from, receiver, amount, nonce)), _signatures),
+      "RelayManager2Secure: INVALID_SIGNATURE"
+    );
+    require(!processedNonces[from][nonce], 'RelayManager2Secure: TRANSFER_NONCE_ALREADY_PROCESSED');
+    // Mark the nonce processed state true to avoid double sending
+    processedNonces[from][nonce] = true;
+    
+    
     // Calculate real amount to transfer considering adminFee and gasFee
-    uint256 amountToTransfer = amount - calculatedAdminFee - totalGasUsed * gasPrice;
+    adminFeeAccumulated += adminFee;
+    uint256 amountToTransfer = amount - adminFee;
     // Unlock tokens
     ido.safeTransfer(receiver, amountToTransfer);
+    ido.safeTransfer(bridgeWallet, adminFee);
 
-    emit Sent(receiver, amount, amountToTransfer, depositHash);
+    emit Sent(receiver, amount, amountToTransfer, nonce);
+  }
+ /**
+    * @dev Check signer status of `_candidate`
+   */
+  function isSigner(address _candidate) public view returns (bool) {
+    return _signers[_candidate];
+  }
+
+  function _verify(
+    bytes32 _hash,
+    bytes[] memory _signatures
+  ) private view returns (bool) {
+    bytes32 h = _hash.toEthSignedMessageHash();
+    address lastSigner = address(0x0);
+    address currentSigner;
+
+    for (uint256 i = 0; i < _signatures.length; i++) {
+      currentSigner = h.recover( _signatures[i]);
+
+      if (currentSigner <= lastSigner) {
+        return false;
+      }
+      if (!_signers[currentSigner]) {
+        return false;
+      }
+      lastSigner = currentSigner;
+    }
+
+    if (_signatures.length < threshold) {
+      return false;
+    }
+
+    return true;
   }
 }
+
