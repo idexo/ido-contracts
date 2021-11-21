@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../interfaces/IWIDO.sol";
 import "../lib/Operatorable.sol";
 
-contract RelayManager2Secure is Operatorable {
+contract RelayManager2Secure is Operatorable, ReentrancyGuard {
   using SafeERC20 for IWIDO;
   using ECDSA for bytes32;
 
@@ -190,7 +191,7 @@ contract RelayManager2Secure is Operatorable {
     uint256 amount,
     uint256 nonce,
     bytes[] calldata signatures
-  ) external onlyOperator {
+  ) external nonReentrant onlyOperator {
     _send(from, receiver, amount, nonce, signatures);
   }
 
