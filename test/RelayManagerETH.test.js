@@ -20,14 +20,14 @@ const ERC20PermitMock = artifacts.require('ERC20PermitMock');
 contract('RelayManagerETH', async accounts => {
   let relayManager;
   let ido;
-  const [alice, bob, carol] = accounts;
+  const [alice, bob, carol, bridge] = accounts;
   const idoName = 'Idexo Token';
   const idoSymbol = 'IDO';
   const ownerPrivateKey = Buffer.from('08c83289b1b8cce629a1e58b65c25b1c8062d5c9ec6375dc8265ad13ba25c630', 'hex');
 
   before(async () => {
     ido = await ERC20PermitMock.new(idoName, idoSymbol);
-    relayManager = await RelayManagerETH.new(ido.address, new BN(30));
+    relayManager = await RelayManagerETH.new(ido.address, new BN(30), bridge, new BN(2), [alice, carol]);
 
     ido.mint(alice, web3.utils.toWei(new BN(1000)));
     ido.mint(carol, web3.utils.toWei(new BN(1000)));
@@ -104,7 +104,7 @@ contract('RelayManagerETH', async accounts => {
         await relayManager.permitAndDeposit(bob, new BN(100), polygonChainId, permitOptions, {from: carol}),
         'Deposited'
       );
-    });*/
+    });
     it('send', async () => {
       // Accept cross-chain transfer from Polygon (carol => bob)
 
@@ -120,25 +120,7 @@ contract('RelayManagerETH', async accounts => {
       await ido.balanceOf(bob).then(res => {
         expect(res.toString()).to.eq(receiveAmount.toString());
       });
-    });
-    it('withdrawAdminFee', async () => {
-      expectEvent(
-        await relayManager.withdrawAdminFee(carol, adminFee),
-        'AdminFeeWithdraw'
-      );
-      await relayManager.adminFeeAccumulated().then(res => {
-        expect(res.toString()).to.eq('0');
-      });
-    });
-    it('withdrawGasFee', async () => {
-      expectEvent(
-        await relayManager.withdrawGasFee(carol, gasFee),
-        'GasFeeWithdraw'
-      );
-      await relayManager.gasFeeAccumulated().then(res => {
-        expect(res.toString()).to.eq('0');
-      });
-    });
+    });*/
   });
 
   describe('#Ownership', async () => {
@@ -146,10 +128,10 @@ contract('RelayManagerETH', async accounts => {
       await relayManager.transferOwnership(bob);
       await relayManager.acceptOwnership({from: bob});
       expect(await relayManager.owner()).to.eq(bob);
-      expectEvent(
+      /*expectEvent(
         await relayManager.setAdminFee(1,{from: bob}),
         'AdminFeeChanged'
-      )
+      )*/
     });
     describe('reverts if', async () => {
         it('non-owner call setMinTransferAmount', async () => {
@@ -158,16 +140,10 @@ contract('RelayManagerETH', async accounts => {
               'RelayManagerETH: CALLER_NO_OWNER'
             );
           });
-        it('non-owner call setAdminFee', async () => {
-          await expectRevert(
-            relayManager.setAdminFee(1, {from: carol}),
-            'RelayManagerETH: CALLER_NO_OWNER'
-          );
-        });
-        it('non-owner call setBaseGas', async () => {
-          await expectRevert(
-            relayManager.setBaseGas(1, {from: carol}),
-            'RelayManagerETH: CALLER_NO_OWNER'
+        it('non-operator call setAdminFee', async () => {
+           await expectRevert(
+            relayManager.setAdminFee(1, [], {from: carol}),
+            'RelayManagerETH: CALLER_NO_OPERATOR_ROLE'
           );
         });
         it('non-owner call transferOwnership', async () => {

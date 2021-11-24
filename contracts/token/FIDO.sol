@@ -2,9 +2,9 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
-import "../interfaces/IWIDO.sol";
+import "../interfaces/IFIDO.sol";
 
-contract WIDO is IWIDO, ERC20Permit {
+contract FIDO is IFIDO, ERC20Permit {
     // Contract owner address
     address public owner;
     // Proposed new contract owner address
@@ -16,7 +16,7 @@ contract WIDO is IWIDO, ERC20Permit {
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event RelayerAddressChanged(address indexed relayer);
 
-    constructor() ERC20("Wrapped Idexo Token", "WIDO") ERC20Permit("Wrapped Idexo Token") {
+    constructor() ERC20("Fantom Idexo Token", "FIDO") ERC20Permit("Fantom Idexo Token") {
         owner = _msgSender();
         emit OwnershipTransferred(address(0), _msgSender());
     }
