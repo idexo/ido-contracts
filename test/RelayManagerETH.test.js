@@ -140,10 +140,10 @@ contract('RelayManagerETH', async accounts => {
               'RelayManagerETH: CALLER_NO_OWNER'
             );
           });
-        it('non-owner call setAdminFee', async () => {
-          await expectRevert(
-            relayManager.setAdminFee(1, {from: carol}),
-            'RelayManagerETH: CALLER_NO_OWNER'
+        it('non-operator call setAdminFee', async () => {
+           await expectRevert(
+            relayManager.setAdminFee(1, [], {from: carol}),
+            'RelayManagerETH: CALLER_NO_OPERATOR_ROLE'
           );
         });
         it('non-owner call transferOwnership', async () => {
