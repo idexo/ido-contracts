@@ -146,12 +146,6 @@ contract('RelayManagerETH', async accounts => {
             'RelayManagerETH: CALLER_NO_OWNER'
           );
         });
-        it('non-owner call setBaseGas', async () => {
-          await expectRevert(
-            relayManager.setBaseGas(1, {from: carol}),
-            'RelayManagerETH: CALLER_NO_OWNER'
-          );
-        });
         it('non-owner call transferOwnership', async () => {
         await expectRevert(
           relayManager.transferOwnership(bob, {from: carol}),
