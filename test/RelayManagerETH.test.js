@@ -121,15 +121,6 @@ contract('RelayManagerETH', async accounts => {
         expect(res.toString()).to.eq(receiveAmount.toString());
       });
     });
-    it('withdrawGasFee', async () => {
-      expectEvent(
-        await relayManager.withdrawGasFee(carol, gasFee),
-        'GasFeeWithdraw'
-      );
-      await relayManager.gasFeeAccumulated().then(res => {
-        expect(res.toString()).to.eq('0');
-      });
-    });
   });
 
   describe('#Ownership', async () => {
