@@ -20,14 +20,14 @@ const ERC20PermitMock = artifacts.require('ERC20PermitMock');
 contract('RelayManagerETH', async accounts => {
   let relayManager;
   let ido;
-  const [alice, bob, carol] = accounts;
+  const [alice, bob, carol, bridge] = accounts;
   const idoName = 'Idexo Token';
   const idoSymbol = 'IDO';
   const ownerPrivateKey = Buffer.from('08c83289b1b8cce629a1e58b65c25b1c8062d5c9ec6375dc8265ad13ba25c630', 'hex');
 
   before(async () => {
     ido = await ERC20PermitMock.new(idoName, idoSymbol);
-    relayManager = await RelayManagerETH.new(ido.address, new BN(30));
+    relayManager = await RelayManagerETH.new(ido.address, new BN(30), bridge, new BN(2), [alice, carol]);
 
     ido.mint(alice, web3.utils.toWei(new BN(1000)));
     ido.mint(carol, web3.utils.toWei(new BN(1000)));
