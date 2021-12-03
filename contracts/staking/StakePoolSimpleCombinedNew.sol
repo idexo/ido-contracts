@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./StakeTokenNew.sol";
-import "../interfaces/IStakePool.sol";
+import "../interfaces/IStakePoolNew.sol";
 
-contract StakePoolSimpleCombinedNew is IStakePool, StakeTokenNew, AccessControl, ReentrancyGuard {
+contract StakePoolSimpleCombinedNew is IStakePoolNew, StakeTokenNew, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");

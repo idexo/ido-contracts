@@ -14,6 +14,10 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
     // Last stake token id, start from 1
     uint256 public tokenIds;
     uint256 public constant multiplierDenominator = 100;
+  
+
+    // Base NFT URI
+    string public baseURI;
 
     struct Stake {
         uint256 amount;
@@ -21,9 +25,9 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
         uint256 depositedAt;
     }
     // stake id => stake info
-    mapping(uint256 => Stake) public stakes;
+    mapping(uint256 => Stake) public override stakes;
     // staker wallet => stake id array
-    mapping(address => uint256[]) public stakerIds;
+    mapping(address => uint256[]) public override stakerIds;
 
     event StakeAmountDecreased(uint256 stakeId, uint256 decreaseAmount);
 
@@ -34,7 +38,10 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
     )
         ERC721(name_, symbol_) { 
         baseURI = baseURI_;
+        
     }
+
+   
 
      /**********************|
     |          URI         |
@@ -57,7 +64,7 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
     function setTokenURI(
         uint256 tokenId,
         string memory _tokenURI
-    ) public onlyOperator {
+    ) public onlyOwner {
         super._setTokenURI(tokenId, _tokenURI);
     }
 
@@ -65,7 +72,7 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
      * @dev Set `baseURI`
      * Only `operator` can call
      */
-    function setBaseURI(string memory baseURI_) public onlyOperator {
+    function setBaseURI(string memory baseURI_) public onlyOwner {
         baseURI = baseURI_;
     }
 
@@ -238,7 +245,7 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
         uint256 stakeId
     )
         internal
-        override
+        override(ERC721, ERC721URIStorage)
     {
         require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
         address stakeOwner = ownerOf(stakeId);
