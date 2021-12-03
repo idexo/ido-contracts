@@ -7,9 +7,9 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "../interfaces/IStakeToken.sol";
+import "../interfaces/IStakeTokenNew.sol";
 
-contract StakeToken is IStakeToken, ERC721, Ownable {
+contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
     using SafeMath for uint256;
     // Last stake token id, start from 1
     uint256 public tokenIds;
@@ -29,10 +29,53 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
 
     constructor(
         string memory name_,
-        string memory symbol_
+        string memory symbol_,
+        string memory baseURI_
     )
-        ERC721(name_, symbol_)
-    { }
+        ERC721(name_, symbol_) { 
+        baseURI = baseURI_;
+    }
+
+     /**********************|
+    |          URI         |
+    |_____________________*/
+
+    /**
+     * @dev Return token URI
+     * Override {ERC721URIStorage:tokenURI}
+     */
+    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+        return ERC721URIStorage.tokenURI(tokenId);
+    }
+
+    /**
+     * @dev Set token URI
+     * Only `operator` can call
+     *
+     * - `tokenId` must exist, see {ERC721URIStorage:_setTokenURI}
+     */
+    function setTokenURI(
+        uint256 tokenId,
+        string memory _tokenURI
+    ) public onlyOperator {
+        super._setTokenURI(tokenId, _tokenURI);
+    }
+
+    /**
+     * @dev Set `baseURI`
+     * Only `operator` can call
+     */
+    function setBaseURI(string memory baseURI_) public onlyOperator {
+        baseURI = baseURI_;
+    }
+
+    /**
+     * @dev Return base URI
+     * Override {ERC721:_baseURI}
+     */
+    function _baseURI() internal view override returns (string memory) {
+        return baseURI;
+    }
 
     /**
      * @dev Get stake token id array owned by wallet address.
