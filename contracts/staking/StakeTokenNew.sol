@@ -7,13 +7,17 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "../interfaces/IStakeToken.sol";
+import "../interfaces/IStakeTokenNew.sol";
 
-contract StakeToken is IStakeToken, ERC721, Ownable {
+contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
     using SafeMath for uint256;
     // Last stake token id, start from 1
     uint256 public tokenIds;
     uint256 public constant multiplierDenominator = 100;
+  
+
+    // Base NFT URI
+    string public baseURI;
 
     struct Stake {
         uint256 amount;
@@ -21,18 +25,64 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
         uint256 depositedAt;
     }
     // stake id => stake info
-    mapping(uint256 => Stake) public stakes;
+    mapping(uint256 => Stake) public override stakes;
     // staker wallet => stake id array
-    mapping(address => uint256[]) public stakerIds;
+    mapping(address => uint256[]) public override stakerIds;
 
     event StakeAmountDecreased(uint256 stakeId, uint256 decreaseAmount);
 
     constructor(
         string memory name_,
-        string memory symbol_
+        string memory symbol_,
+        string memory baseURI_
     )
-        ERC721(name_, symbol_)
-    { }
+        ERC721(name_, symbol_) { 
+        baseURI = baseURI_;
+        
+    }
+
+   
+
+     /**********************|
+    |          URI         |
+    |_____________________*/
+
+    /**
+     * @dev Return token URI
+     * Override {ERC721URIStorage:tokenURI}
+     */
+    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+        return ERC721URIStorage.tokenURI(tokenId);
+    }
+
+    /**
+     * @dev Set token URI
+     * Only `operator` can call
+     *
+     * - `tokenId` must exist, see {ERC721URIStorage:_setTokenURI}
+     */
+    function setTokenURI(
+        uint256 tokenId,
+        string memory _tokenURI
+    ) public onlyOwner {
+        super._setTokenURI(tokenId, _tokenURI);
+    }
+
+    /**
+     * @dev Set `baseURI`
+     * Only `operator` can call
+     */
+    function setBaseURI(string memory baseURI_) public onlyOwner {
+        baseURI = baseURI_;
+    }
+
+    /**
+     * @dev Return base URI
+     * Override {ERC721:_baseURI}
+     */
+    function _baseURI() internal view override returns (string memory) {
+        return baseURI;
+    }
 
     /**
      * @dev Get stake token id array owned by wallet address.
@@ -195,7 +245,7 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
         uint256 stakeId
     )
         internal
-        override
+        override(ERC721, ERC721URIStorage)
     {
         require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
         address stakeOwner = ownerOf(stakeId);
