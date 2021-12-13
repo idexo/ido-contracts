@@ -16,7 +16,7 @@ contract Whitelist is Ownable {
    * @dev Add wallet to whitelist
    * `_account` must not be zero address
    */
-  function addWhitelist(address[] memory accounts) external onlyOwner {
+  function addWhitelist(address[] memory accounts) public onlyOwner {
     for (uint256 i = 0; i < accounts.length; i++) {
       if (accounts[i] != address(0) && !whitelist[accounts[i]]) {
         whitelist[accounts[i]] = true;
@@ -29,7 +29,7 @@ contract Whitelist is Ownable {
   /**
    * @dev Remove wallet from whitelist
    */
-  function removeWhitelist(address[] memory accounts) external onlyOwner {
+  function removeWhitelist(address[] memory accounts) public onlyOwner {
     for (uint256 i = 0; i < accounts.length; i++) {
       if (whitelist[accounts[i]]) {
         whitelist[accounts[i]] = false;

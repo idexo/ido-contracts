@@ -14,36 +14,42 @@ import "./lib/Whitelist.sol";
 contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, ReentrancyGuard {
   using SafeERC20 for IERC20;
 
+  bytes32 public immutable ONE_TIME_TICKET_HASH = keccak256("One time access");
+  bytes32 public immutable ONE_MONTH_TICKET_HASH = keccak256("One month access");
+  bytes32 public immutable THREE_MONTH_TICKET_HASH = keccak256("Three month access");
+  bytes32 public immutable SIX_MONTH_TICKET_HASH = keccak256("Six month access");
+  bytes32 public immutable TWELEVE_MONTH_TICKET_HASH = keccak256("Tweleve month access");
+  bytes32 public immutable UNLIMITED_TICKET_HASH = keccak256("Unlimited access");
+
   // WIDO token address
   IERC20 wido;
-  // Coupon NFT structure
-  struct CouponInfo {
+  // Access ticket NFT structure
+  struct TicketInfo {
+    uint256 startTime;
     uint256 duration;
   }
-  // Last stake NFT id, start from 1
-  uint256 public tokenIds;
-  // Entrance fee for whitelist in WIDO
-  uint256 public entranceFee;
-  // One time coupon fee
-  uint256 public fee0;
-  // 1 month coupon fee
-  uint256 public fee1;
-  // 3 month coupon fee
-  uint256 public fee2;
+  // Last ticket NFT id, start from 1
+  uint256 public ticketIds;
+  // Coupon NFT price in WIDO
+  uint256 public couponPrice;
 
-  // Coupon id => info
-  mapping(uint256 => CouponInfo) public coupons;
+  // Ticket id => info
+  mapping(uint256 => TicketInfo) public tickets;
+  // Ticket type hash => price in WIDO
+  mapping(bytes32 => uint256) public ticketPrices;
+  // Wallet address => purchased coupon number
+  mapping(address => uint256) public coupons;
 
   constructor(
     string memory _name,
     string memory _symbol,
     IERC20 _wido,
-    uint256 _entranceFee
+    uint256 _couponPrice
   ) ERC721(_name, _symbol) {
     require(address(_wido) != address(0), "PriceStabilityPool: WIDO_ADDRESS_INVALID");
-    require(_entranceFee != 0, "PriceStabilityPool: ENTRNACE_FEE_INVALID");
+    require(_couponPrice != 0, "PriceStabilityPool: COUPON_PRICE_INVALID");
     wido = _wido;
-    entranceFee = _entranceFee;
+    couponPrice = _couponPrice;
   }
 
   /**
@@ -54,45 +60,83 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
   }
 
   /**
-   * @dev Apply for whitelist, need to pay entrance fee
+   * @dev Set all access ticket prices in WIDO
    */
-  function applyForWhitelist() external {
-    require(!whitelist[msg.sender], "PriceStabilityPool: CALLER_ALREADY_WHITELISTED");
-    wido.safeTransferFrom(msg.sender, address(this), entranceFee);
+  function setAllTicketPrices(
+    uint256 _oneTime,
+    uint256 _oneMonth,
+    uint256 _threeMonth,
+    uint256 _sixMonth,
+    uint256 _tweleveMonth,
+    uint256 _unlimited
+  ) external onlyOwner {
+    ticketPrices[ONE_TIME_TICKET_HASH] = _oneTime;
+    ticketPrices[ONE_MONTH_TICKET_HASH] = _oneMonth;
+    ticketPrices[THREE_MONTH_TICKET_HASH] = _threeMonth;
+    ticketPrices[SIX_MONTH_TICKET_HASH] = _sixMonth;
+    ticketPrices[TWELEVE_MONTH_TICKET_HASH] = _tweleveMonth;
+    ticketPrices[UNLIMITED_TICKET_HASH] = _unlimited;
   }
 
   /**
-   * @dev Purchase proper coupon(0, 1, 2)
-   * Need to pay coupon fee
+   * @dev Set `_ticketHash` price
+   * `_ticketHash` must be valid
    */
-  function purchaseCoupon(uint8 _type) external {
-    if (_type == 0) {
-      wido.safeTransferFrom(msg.sender, address(this), fee0);
-    } else  if (_type == 1) {
-      wido.safeTransferFrom(msg.sender, address(this), fee1);
-    } else if (_type == 2) {
-      wido.safeTransferFrom(msg.sender, address(this), fee2);
-    } else {
-      revert("PriceStabilityPool: COUPON_TYPE_INVALID");
-    }
-
-    _mint(msg.sender, ++tokenIds);
-    CouponInfo storage newCoupon = coupons[tokenIds];
-
-    if (_type == 0) {
-      // one time available
-      newCoupon.duration = 1;
-    } else  if (_type == 1) {
-      newCoupon.duration = 31 days;
-    } else {
-      newCoupon.duration = 93 days;
-    }
+  function setTicketPrice(
+    bytes32 _ticketHash,
+    uint256 _price
+  ) external onlyOwner {
+    require(ticketPrices[_ticketHash] != 0, "PriceStabilityPool: TICKET_HASH_INVALID");
+    ticketPrices[_ticketHash] = _price;
   }
 
   /**
-   * @dev Burn `_couponId`
+   * @dev Purchase access tickets
+   * `_ticketHash` must be valid
    */
-  function burnCoupon(uint256 _couponId) external onlyOperator {
-    _burn(_couponId);
+  function purchaseTicket(bytes32 _ticketHash) external {
+    require(whitelist[msg.sender], "PriceStabilityPool: CALLER_NO_WHITELIST");
+    uint256 ticketPrice = ticketPrices[_ticketHash];
+    require(ticketPrice != 0, "PriceStabilityPool: TICKET_HASH_INVALID");
+    wido.safeTransferFrom(msg.sender, address(this), ticketPrice);
+    // TODO check multiple purchase or ticket update
+    require(balanceOf(msg.sender) == 0, "PriceStabilityPool: CALLER_HAS_ALREADY_TICKET");
+    uint256 newId = ++ticketIds;
+    tickets[newId].startTime = block.timestamp;
+    if (_ticketHash == ONE_TIME_TICKET_HASH) {
+      // TODO check again
+      tickets[newId].duration = 1;
+    } else if (_ticketHash == ONE_MONTH_TICKET_HASH) {
+      tickets[newId].duration = 31 days;
+    } else if (_ticketHash == THREE_MONTH_TICKET_HASH) {
+      tickets[newId].duration = 3 * 31 days;
+    } else if (_ticketHash == SIX_MONTH_TICKET_HASH) {
+      tickets[newId].duration = 6 * 31 days;
+    } else if (_ticketHash == TWELEVE_MONTH_TICKET_HASH) {
+      tickets[newId].duration = 12 * 31 days;
+    } else {
+      // TODO check again
+      tickets[newId].duration = 0;
+    }
+    super._mint(msg.sender, newId);
+  }
+
+  /**
+   * @dev Purchase coupons
+   * TODO check burning expired tickets
+   */
+  function purchaseCoupon(uint256 _amount) external {
+    require(_amount != 0, "PriceStabilityPool: AMOUNT_INVALID");
+    uint256 ticketId = tokenOfOwnerByIndex(msg.sender, 0);
+    require(ticketId != 0, "PriceStabilityPool: CALLER_NO_ACCESS_TICKET");
+    TicketInfo memory ticket = tickets[ticketId];
+    require(ticket.startTime != 0, "PriceStabilityPool: ACCESS_TICKET_INVALID");
+    require(ticket.duration <= 1 || (ticket.duration > 1 && ticket.startTime + ticket.duration >= block.timestamp), "PriceStabilityPool: ACCESS_TICKET_INVALID");
+    wido.safeTransferFrom(msg.sender, address(this), _amount * couponPrice);
+    // delete one-time access ticket
+    if (ticket.duration == 1) {
+      _burn(ticketId);
+      delete tickets[ticketId];
+    }
   }
 }
