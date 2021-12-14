@@ -18,13 +18,13 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
   bytes32 public immutable ONE_MONTH_TICKET_HASH = keccak256("One month access");
   bytes32 public immutable THREE_MONTH_TICKET_HASH = keccak256("Three month access");
   bytes32 public immutable SIX_MONTH_TICKET_HASH = keccak256("Six month access");
-  bytes32 public immutable TWELEVE_MONTH_TICKET_HASH = keccak256("Tweleve month access");
+  bytes32 public immutable TWELVE_MONTH_TICKET_HASH = keccak256("Twelve month access");
   bytes32 public immutable UNLIMITED_TICKET_HASH = keccak256("Unlimited access");
 
   // WIDO token address
-  IERC20 wido;
+  IERC20 public wido;
   // Stable coin address
-  IERC20 usdt;
+  IERC20 public usdt;
   // Length of time that price is stable until
   uint256 public stabilityPeriod;
   // Deployed timestamp
@@ -86,14 +86,14 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
     uint256 _oneMonth,
     uint256 _threeMonth,
     uint256 _sixMonth,
-    uint256 _tweleveMonth,
+    uint256 _twelveMonth,
     uint256 _unlimited
   ) external onlyOwner {
     ticketPrices[ONE_TIME_TICKET_HASH] = _oneTime;
     ticketPrices[ONE_MONTH_TICKET_HASH] = _oneMonth;
     ticketPrices[THREE_MONTH_TICKET_HASH] = _threeMonth;
     ticketPrices[SIX_MONTH_TICKET_HASH] = _sixMonth;
-    ticketPrices[TWELEVE_MONTH_TICKET_HASH] = _tweleveMonth;
+    ticketPrices[TWELVE_MONTH_TICKET_HASH] = _twelveMonth;
     ticketPrices[UNLIMITED_TICKET_HASH] = _unlimited;
   }
 
@@ -109,6 +109,12 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
     ticketPrices[_ticketHash] = _price;
   }
 
+  /**
+   * @dev Create coupon
+   * `msg.sender` must be whitelisted
+   * `msg.value` must be sufficient
+   * pool stability period must not be ended
+   */
   function createCoupon(uint256 _amount) external payable {
     require(whitelist[msg.sender], "PriceStabilityPool: CALLER_NO_WHITELIST");
     require(_amount != 0, "PriceStabilityPool: COUPON_AMOUNT_INVALID");
@@ -145,7 +151,7 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
       tickets[msg.sender].duration = 3 * 31 days;
     } else if (_ticketHash == SIX_MONTH_TICKET_HASH) {
       tickets[msg.sender].duration = 6 * 31 days;
-    } else if (_ticketHash == TWELEVE_MONTH_TICKET_HASH) {
+    } else if (_ticketHash == TWELVE_MONTH_TICKET_HASH) {
       tickets[msg.sender].duration = 12 * 31 days;
     } else {
       // TODO check again
