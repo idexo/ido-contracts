@@ -159,16 +159,15 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
    */
   function purchaseCoupon(uint256 _amount) external {
     require(_amount != 0, "PriceStabilityPool: COUPON_AMOUNT_INVALID");
-    uint256 ticketId = tokenOfOwnerByIndex(msg.sender, 0);
-    require(ticketId != 0, "PriceStabilityPool: CALLER_NO_ACCESS_TICKET");
-    TicketInfo memory ticket = tickets[ticketId];
+    // uint256 ticketId = tokenOfOwnerByIndex(msg.sender, 0);
+    // require(ticketId != 0, "PriceStabilityPool: CALLER_NO_ACCESS_TICKET");
+    TicketInfo memory ticket = tickets[msg.sender];
     require(ticket.startTime != 0, "PriceStabilityPool: ACCESS_TICKET_INVALID");
     require(ticket.duration <= 1 || (ticket.duration > 1 && ticket.startTime + ticket.duration >= block.timestamp), "PriceStabilityPool: ACCESS_TICKET_INVALID");
-    wido.safeTransferFrom(msg.sender, address(this), _amount * couponPrice);
+    usdt.safeTransferFrom(msg.sender, address(this), _amount * couponStablePrice);
     // delete one-time access ticket
     if (ticket.duration == 1) {
-      _burn(ticketId);
-      delete tickets[ticketId];
+      delete tickets[msg.sender];
     }
   }
 }
