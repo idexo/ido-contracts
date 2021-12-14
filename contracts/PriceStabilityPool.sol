@@ -23,33 +23,52 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
 
   // WIDO token address
   IERC20 wido;
+  // Stable coin address
+  IERC20 usdt;
+  // Length of time that price is stable until
+  uint256 public stabilityPeriod;
+  // Deployed timestamp
+  uint256 public deployedTime;
+  // Gas utilization in native token
+  uint256 public couponGasPrice;
+  // Gas price in stable coin
+  uint256 public couponStablePrice;
+  // Last stake NFT id, start from 1
+  uint256 public stakeId;
+
   // Access ticket NFT structure
   struct TicketInfo {
     uint256 startTime;
     uint256 duration;
   }
-  // Last ticket NFT id, start from 1
-  uint256 public ticketIds;
-  // Coupon NFT price in WIDO
-  uint256 public couponPrice;
 
-  // Ticket id => info
-  mapping(uint256 => TicketInfo) public tickets;
+  // stake NFT id => created coupon amount
+  mapping(uint256 => uint256) public stakedCoupons;
+  // Wallet address => ticket info
+  mapping(address => TicketInfo) public tickets;
   // Ticket type hash => price in WIDO
   mapping(bytes32 => uint256) public ticketPrices;
-  // Wallet address => purchased coupon number
-  mapping(address => uint256) public coupons;
+  // Wallet address => purchased coupon amount
+  mapping(address => uint256) public purchasedCoupons;
 
   constructor(
     string memory _name,
     string memory _symbol,
     IERC20 _wido,
-    uint256 _couponPrice
+    IERC20 _usdt,
+    uint256 _stabilityPeriod,
+    uint256 _couponGasPrice,
+    uint256 _couponStablePrice
   ) ERC721(_name, _symbol) {
     require(address(_wido) != address(0), "PriceStabilityPool: WIDO_ADDRESS_INVALID");
-    require(_couponPrice != 0, "PriceStabilityPool: COUPON_PRICE_INVALID");
+    require(address(_usdt) != address(0), "PriceStabilityPool: USDT_ADDRESS_INVALID");
+    require(_stabilityPeriod != 0, "PriceStabilityPool: STABILITY_PERIOD_INVALID");
     wido = _wido;
-    couponPrice = _couponPrice;
+    usdt = _usdt;
+    stabilityPeriod = _stabilityPeriod;
+    couponGasPrice = _couponGasPrice;
+    couponStablePrice = _couponStablePrice;
+    deployedTime = block.timestamp;
   }
 
   /**
@@ -90,35 +109,48 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
     ticketPrices[_ticketHash] = _price;
   }
 
+  function createCoupon(uint256 _amount) external payable {
+    require(whitelist[msg.sender], "PriceStabilityPool: CALLER_NO_WHITELIST");
+    require(_amount != 0, "PriceStabilityPool: COUPON_AMOUNT_INVALID");
+    require(msg.value >= _amount * couponGasPrice, "PriceStabilityPool: INSUFFICIENT_FUNDS");
+    require(block.timestamp <= deployedTime + stabilityPeriod, "PriceStabilityPool: STABILITY_PERIOD_ENDED");
+    uint256 newId = ++stakeId;
+    super._mint(msg.sender, newId);
+    stakedCoupons[newId] = _amount;
+    // return change if any
+    uint256 change = msg.value - _amount * couponGasPrice;
+    if (change > 0) {
+      (bool success, ) = payable(msg.sender).call{value: change}("");
+      require(success, "PriceStabilityPool: TRANSFER_FAILED");
+    }
+  }
+
   /**
    * @dev Purchase access tickets
    * `_ticketHash` must be valid
    */
+  // TODO check multiple ticket purchase or ticket update
   function purchaseTicket(bytes32 _ticketHash) external {
-    require(whitelist[msg.sender], "PriceStabilityPool: CALLER_NO_WHITELIST");
     uint256 ticketPrice = ticketPrices[_ticketHash];
     require(ticketPrice != 0, "PriceStabilityPool: TICKET_HASH_INVALID");
     wido.safeTransferFrom(msg.sender, address(this), ticketPrice);
-    // TODO check multiple purchase or ticket update
-    require(balanceOf(msg.sender) == 0, "PriceStabilityPool: CALLER_HAS_ALREADY_TICKET");
-    uint256 newId = ++ticketIds;
-    tickets[newId].startTime = block.timestamp;
+    require(tickets[msg.sender].startTime == 0, "PriceStabilityPool: CALLER_HAS_ALREADY_TICKET");
+    tickets[msg.sender].startTime = block.timestamp;
     if (_ticketHash == ONE_TIME_TICKET_HASH) {
       // TODO check again
-      tickets[newId].duration = 1;
+      tickets[msg.sender].duration = 1;
     } else if (_ticketHash == ONE_MONTH_TICKET_HASH) {
-      tickets[newId].duration = 31 days;
+      tickets[msg.sender].duration = 31 days;
     } else if (_ticketHash == THREE_MONTH_TICKET_HASH) {
-      tickets[newId].duration = 3 * 31 days;
+      tickets[msg.sender].duration = 3 * 31 days;
     } else if (_ticketHash == SIX_MONTH_TICKET_HASH) {
-      tickets[newId].duration = 6 * 31 days;
+      tickets[msg.sender].duration = 6 * 31 days;
     } else if (_ticketHash == TWELEVE_MONTH_TICKET_HASH) {
-      tickets[newId].duration = 12 * 31 days;
+      tickets[msg.sender].duration = 12 * 31 days;
     } else {
       // TODO check again
-      tickets[newId].duration = 0;
+      tickets[msg.sender].duration = 0;
     }
-    super._mint(msg.sender, newId);
   }
 
   /**
@@ -126,7 +158,7 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
    * TODO check burning expired tickets
    */
   function purchaseCoupon(uint256 _amount) external {
-    require(_amount != 0, "PriceStabilityPool: AMOUNT_INVALID");
+    require(_amount != 0, "PriceStabilityPool: COUPON_AMOUNT_INVALID");
     uint256 ticketId = tokenOfOwnerByIndex(msg.sender, 0);
     require(ticketId != 0, "PriceStabilityPool: CALLER_NO_ACCESS_TICKET");
     TicketInfo memory ticket = tickets[ticketId];
