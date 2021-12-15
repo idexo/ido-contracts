@@ -27,8 +27,8 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
   IERC20 public usdt;
   // Length of time that price is stable until
   uint256 public stabilityPeriod;
-  // Deployed timestamp
-  uint256 public deployedTime;
+  // Stability starting timestamp
+  uint256 public stabilityStartTime;
   // Gas utilization in native token
   uint256 public couponGasPrice;
   // Gas price in stable coin
@@ -57,18 +57,20 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
     IERC20 _wido,
     IERC20 _usdt,
     uint256 _stabilityPeriod,
+    uint256 _stabilityStartTime,
     uint256 _couponGasPrice,
     uint256 _couponStablePrice
   ) ERC721(_name, _symbol) {
     require(address(_wido) != address(0), "PriceStabilityPool: WIDO_ADDRESS_INVALID");
     require(address(_usdt) != address(0), "PriceStabilityPool: USDT_ADDRESS_INVALID");
     require(_stabilityPeriod != 0, "PriceStabilityPool: STABILITY_PERIOD_INVALID");
+    require(_stabilityStartTime >= block.timestamp, "PriceStabilityPool: STABILITY_START_TIME_INVALID");
     wido = _wido;
     usdt = _usdt;
     stabilityPeriod = _stabilityPeriod;
     couponGasPrice = _couponGasPrice;
     couponStablePrice = _couponStablePrice;
-    deployedTime = block.timestamp;
+    stabilityStartTime = _stabilityStartTime;
   }
 
   /**
@@ -119,7 +121,8 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
     require(whitelist[msg.sender], "PriceStabilityPool: CALLER_NO_WHITELIST");
     require(_amount != 0, "PriceStabilityPool: COUPON_AMOUNT_INVALID");
     require(msg.value >= _amount * couponGasPrice, "PriceStabilityPool: INSUFFICIENT_FUNDS");
-    require(block.timestamp <= deployedTime + stabilityPeriod, "PriceStabilityPool: STABILITY_PERIOD_ENDED");
+    require(block.timestamp > stabilityStartTime, "PriceStabilityPool: STABILITY_PERIOD_NOT_STARTED");
+    require(block.timestamp <= stabilityStartTime + stabilityPeriod, "PriceStabilityPool: STABILITY_PERIOD_ENDED");
     uint256 newId = ++stakeId;
     super._mint(msg.sender, newId);
     stakedCoupons[newId] = _amount;
@@ -165,8 +168,6 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
    */
   function purchaseCoupon(uint256 _amount) external {
     require(_amount != 0, "PriceStabilityPool: COUPON_AMOUNT_INVALID");
-    // uint256 ticketId = tokenOfOwnerByIndex(msg.sender, 0);
-    // require(ticketId != 0, "PriceStabilityPool: CALLER_NO_ACCESS_TICKET");
     TicketInfo memory ticket = tickets[msg.sender];
     require(ticket.startTime != 0, "PriceStabilityPool: ACCESS_TICKET_INVALID");
     require(ticket.duration <= 1 || (ticket.duration > 1 && ticket.startTime + ticket.duration >= block.timestamp), "PriceStabilityPool: ACCESS_TICKET_INVALID");
