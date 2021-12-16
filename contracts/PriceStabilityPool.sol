@@ -128,6 +128,7 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
 
   /**
    * @dev Create coupon
+   * callable any time before stability period ending
    * `msg.sender` must be whitelisted
    * `msg.value` must be sufficient
    * pool stability period must not be ended
@@ -155,19 +156,19 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
 
   /**
    * @dev Purchase access tickets
+   * callable any time before stability period ending
    * `_ticketHash` must be valid
    */
   // TODO check multiple ticket purchase or ticket update
   function purchaseTicket(bytes32 _ticketHash) external {
     require(block.timestamp <= stabilityStartTime + stabilityPeriod, "PriceStabilityPool: STABILITY_PERIOD_ENDED");
+    require(tickets[msg.sender].startTime == 0, "PriceStabilityPool: CALLER_HAS_ALREADY_TICKET");
+    tickets[msg.sender].startTime = block.timestamp;
     uint256 ticketPrice = ticketPrices[_ticketHash];
     require(ticketPrice != 0, "PriceStabilityPool: TICKET_HASH_INVALID");
     uint256 entranceFee = ticketPrice * entranceFeeBP / 10000;
-    wido.safeTransferFrom(msg.sender, address(this), ticketPrice * (10000 + entranceFeeBP) / 10000);
-    require(tickets[msg.sender].startTime == 0, "PriceStabilityPool: CALLER_HAS_ALREADY_TICKET");
-    tickets[msg.sender].startTime = block.timestamp;
+    wido.safeTransferFrom(msg.sender, address(this), ticketPrice + entranceFee);
     if (_ticketHash == ONE_TIME_TICKET_HASH) {
-      // TODO check again
       tickets[msg.sender].duration = 1;
     } else if (_ticketHash == ONE_MONTH_TICKET_HASH) {
       tickets[msg.sender].duration = 31 days;
@@ -178,7 +179,7 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
     } else if (_ticketHash == TWELVE_MONTH_TICKET_HASH) {
       tickets[msg.sender].duration = 12 * 31 days;
     } else {
-      // TODO check again
+      // unlimited access
       tickets[msg.sender].duration = 0;
     }
     _distributeEntranceFee(entranceFee);
@@ -186,31 +187,40 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
 
   /**
    * @dev Purchase coupons
-   * TODO check burning expired tickets
+   * callable any time before stability period ending
    */
   function purchaseCoupon(uint256 _amount) external {
     require(block.timestamp <= stabilityStartTime + stabilityPeriod, "PriceStabilityPool: STABILITY_PERIOD_ENDED");
+    // check insufficient coupons case
     require(_amount != 0 && _amount <= totalCoupon, "PriceStabilityPool: COUPON_AMOUNT_INVALID");
     TicketInfo memory ticket = tickets[msg.sender];
-    // TODO check time manage again
     require(ticket.startTime != 0, "PriceStabilityPool: ACCESS_TICKET_INVALID");
-    require(ticket.duration <= 1 || (ticket.duration > 1 && ticket.startTime + ticket.duration >= block.timestamp), "PriceStabilityPool: ACCESS_TICKET_INVALID");
 
+    if (ticket.duration > 1 && ticket.startTime + ticket.duration < block.timestamp) {
+      // delete expired ticket
+      delete tickets[msg.sender];
+      revert("PriceStabilityPool: ACCESS_TICKET_INVALID");
+    }
+
+    // buy coupons FIFO
     while(_amount > 0) {
       uint256 firstStakeAmount = stakedCoupons[firstStakeId];
+      address firstStaker = ownerOf(firstStakeId);
       if (firstStakeAmount > _amount) {
         // TODO check fee here
-        usdt.safeTransferFrom(msg.sender, ownerOf(firstStakeId), _amount * couponStablePrice);
+        usdt.safeTransferFrom(msg.sender, firstStaker, _amount * couponStablePrice);
         stakedCoupons[firstStakeId] -= _amount;
         _amount = 0;
+        purchasedCoupons[msg.sender] += _amount;
       } else {
-        address firstStaker = ownerOf(firstStakeId);
         // TODO check fee here
         usdt.safeTransferFrom(msg.sender, firstStaker, firstStakeAmount * couponStablePrice);
         _burn(firstStakeId);
+        delete stakedCoupons[firstStakeId];
         totalCoupon -= firstStakeAmount;
         couponBalances[firstStaker] -= firstStakeAmount;
-        // remove first staker from `stakers` array
+
+        // remove first staker address from `stakers` array without hole
         if (couponBalances[firstStaker] == 0) {
           for (uint256 i = 0; i < stakers.length; i++) {
             if (stakers[i] == firstStaker) {
@@ -220,8 +230,10 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
             }
           }
         }
+
         firstStakeId++;
         _amount -= firstStakeAmount;
+        purchasedCoupons[msg.sender] += firstStakeAmount;
       }
     }
 
@@ -229,6 +241,18 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
     if (ticket.duration == 1) {
       delete tickets[msg.sender];
     }
+  }
+
+  /**
+   * @dev Spend coupons
+   * `_amount` must not be zero and less than purchased coupon amount
+   */
+  function useCoupon(uint256 _amount) external nonReentrant {
+    require(_amount != 0 && _amount <= purchasedCoupons[msg.sender], "PriceStabilityPool: COUPON_AMOUNT_INVALID");
+    require(block.timestamp >= stabilityStartTime && block.timestamp < stabilityStartTime + stabilityPeriod, "PriceStabilityPool: NO_STABILITY_PERIOD");
+    (bool success, ) = payable(msg.sender).call{value: _amount * couponGasPrice}("");
+    require(success, "PriceStabilityPool: TRANSFER_FAILED");
+    purchasedCoupons[msg.sender] -= _amount;
   }
 
   /**
