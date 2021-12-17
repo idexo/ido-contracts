@@ -63,6 +63,13 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
   // Staker address => premium (entrance fee)
   mapping(address => uint256) public premiums;
 
+  event TicketPriceSet(bytes32 indexed ticketHash, uint256 price);
+  event TicketPurchased(bytes32 indexed ticketHash, address indexed account);
+  event CouponCreated(address indexed account, uint256 amount);
+  event CouponPurchased(address indexed account, uint256 amount);
+  event CouponUsed(address indexed account, uint256 amount);
+  event Claimed(address indexed account, uint256 amount);
+
   constructor(
     string memory _name,
     string memory _symbol,
@@ -124,6 +131,8 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
   ) external onlyOwner {
     require(ticketPrices[_ticketHash] != 0, "PriceStabilityPool: TICKET_HASH_INVALID");
     ticketPrices[_ticketHash] = _price;
+
+    emit TicketPriceSet(_ticketHash, _price);
   }
 
   /**
@@ -152,6 +161,8 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
       (bool success, ) = payable(msg.sender).call{value: change}("");
       require(success, "PriceStabilityPool: TRANSFER_FAILED");
     }
+
+    emit CouponCreated(msg.sender, _amount);
   }
 
   /**
@@ -183,6 +194,8 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
       tickets[msg.sender].duration = 0;
     }
     _distributeEntranceFee(entranceFee);
+
+    emit TicketPurchased(_ticketHash, msg.sender);
   }
 
   /**
@@ -241,6 +254,8 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
     if (ticket.duration == 1) {
       delete tickets[msg.sender];
     }
+
+    emit CouponPurchased(msg.sender, _amount);
   }
 
   /**
@@ -253,6 +268,8 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
     (bool success, ) = payable(msg.sender).call{value: _amount * couponGasPrice}("");
     require(success, "PriceStabilityPool: TRANSFER_FAILED");
     purchasedCoupons[msg.sender] -= _amount;
+
+    emit CouponUsed(msg.sender, _amount);
   }
 
   /**
@@ -263,6 +280,8 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
     require(_amount != 0 && _amount <= premiums[msg.sender], "PriceStabilityPool: CLAIM_AMOUNT_INVALID");
     wido.safeTransfer(msg.sender, _amount);
     premiums[msg.sender] -= _amount;
+
+    emit Claimed(msg.sender, _amount);
   }
 
   /**
