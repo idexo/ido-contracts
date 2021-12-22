@@ -12,6 +12,11 @@ contract Whitelist is Ownable {
 
   constructor() { }
 
+  modifier onlyWhitelist() {
+    require(whitelist[msg.sender], "Whitelist: CALLER_NO_WHITELIST");
+    _;
+  }
+
   /**
    * @dev Add wallet to whitelist
    * `_account` must not be zero address

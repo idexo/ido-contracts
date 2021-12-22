@@ -75,8 +75,8 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
     string memory _symbol,
     IERC20 _wido,
     IERC20 _usdt,
-    uint256 _stabilityPeriod,
     uint256 _stabilityStartTime,
+    uint256 _stabilityPeriod,
     uint256 _couponGasPrice,
     uint256 _couponStablePrice,
     uint256 _entranceFeeBP
@@ -142,8 +142,7 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
    * `msg.value` must be sufficient
    * pool stability period must not be ended
    */
-  function createCoupon(uint256 _amount) external payable {
-    require(whitelist[msg.sender], "PriceStabilityPool: CALLER_NO_WHITELIST");
+  function createCoupon(uint256 _amount) onlyWhitelist external payable {
     require(_amount != 0, "PriceStabilityPool: COUPON_AMOUNT_INVALID");
     require(msg.value >= _amount * couponGasPrice, "PriceStabilityPool: INSUFFICIENT_FUNDS");
     require(block.timestamp <= stabilityStartTime + stabilityPeriod, "PriceStabilityPool: STABILITY_PERIOD_ENDED");
