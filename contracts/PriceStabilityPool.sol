@@ -214,22 +214,24 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
       revert("PriceStabilityPool: ACCESS_TICKET_INVALID");
     }
 
+    // amount variable for loop
+    uint256 __amount = _amount;
+
     // buy coupons FIFO
-    while(_amount > 0) {
+    while(__amount > 0) {
       uint256 firstStakeAmount = stakedCoupons[firstStakeId];
       address firstStaker = ownerOf(firstStakeId);
-      if (firstStakeAmount > _amount) {
+      if (firstStakeAmount > __amount) {
         // TODO check fee here
-        usdt.safeTransferFrom(msg.sender, firstStaker, _amount * couponStablePrice);
-        stakedCoupons[firstStakeId] -= _amount;
-        _amount = 0;
-        purchasedCoupons[msg.sender] += _amount;
+        usdt.safeTransferFrom(msg.sender, firstStaker, __amount * couponStablePrice);
+        stakedCoupons[firstStakeId] -= __amount;
+        couponBalances[firstStaker] -= __amount;
+        __amount = 0;
       } else {
         // TODO check fee here
         usdt.safeTransferFrom(msg.sender, firstStaker, firstStakeAmount * couponStablePrice);
         _burn(firstStakeId);
         delete stakedCoupons[firstStakeId];
-        totalCoupon -= firstStakeAmount;
         couponBalances[firstStaker] -= firstStakeAmount;
 
         // remove first staker address from `stakers` array without hole
@@ -244,10 +246,12 @@ contract PriceStabilityPool is ERC721Enumerable, Operatorable, Whitelist, Reentr
         }
 
         firstStakeId++;
-        _amount -= firstStakeAmount;
-        purchasedCoupons[msg.sender] += firstStakeAmount;
+        __amount -= firstStakeAmount;
       }
     }
+
+    totalCoupon -= _amount;
+    purchasedCoupons[msg.sender] += _amount;
 
     // delete one-time access ticket
     if (ticket.duration == 1) {

@@ -69,7 +69,7 @@ describe('PriceStabilityPool', async () => {
     });
   });
 
-  describe('Access Ticket price', async () => {
+  describe('Access Ticket', async () => {
     it('setAllTicketPrices()', async () => {
       await contract.setAllTicketPrices(
         ethers.utils.parseEther('0.5'), // reset later
@@ -121,5 +121,55 @@ describe('PriceStabilityPool', async () => {
           .to.be.revertedWith('Ownable: CALLER_NO_OWNER');
       });
     });
+  });
+
+  describe('purchaseCoupon()', async () => {
+    it('expect to purchase coupon', async () => {
+      // mocks
+      await usdt.mock.transferFrom.withArgs(alice.address, alice.address, ethers.utils.parseEther('10')).returns(true);
+      await usdt.mock.transferFrom.withArgs(alice.address, bob.address, ethers.utils.parseEther('4')).returns(true);
+
+      await contract.connect(alice).purchaseCoupon(7);
+
+      // check state variable update
+      await expect(contract.ownerOf(1))
+        .to.be.revertedWith('ERC721: owner query for nonexistent token');
+      await contract.stakedCoupons(1).then(res => {
+        expect(res.toString()).to.eq('0');
+      });
+      await contract.stakedCoupons(2).then(res => {
+        expect(res.toString()).to.eq('13');
+      });
+      await contract.couponBalances(alice.address).then(res => {
+        expect(res.toString()).to.eq('0');
+      });
+      await contract.couponBalances(bob.address).then(res => {
+        expect(res.toString()).to.eq('13');
+      });
+      await contract.totalCoupon().then(res => {
+        expect(res.toString()).to.eq('13');
+      });
+      await contract.firstStakeId().then(res => {
+        expect(res.toString()).to.eq('2');
+      });
+    });
+    describe('reverts if', async () => {
+      it('purchase amount is zero', async () => {
+        await expect(contract.connect(alice).purchaseCoupon(0))
+          .to.be.revertedWith('PriceStabilityPool: COUPON_AMOUNT_INVALID');
+      });
+      it('purchase amount is greater than total coupon amount', async () => {
+        await expect(contract.connect(alice).purchaseCoupon(21))
+          .to.be.revertedWith('PriceStabilityPool: COUPON_AMOUNT_INVALID');
+      });
+      it('caller has no valid access tickets', async () => {
+        await expect(contract.connect(carol).purchaseCoupon(7))
+          .to.be.revertedWith('PriceStabilityPool: ACCESS_TICKET_INVALID');
+      });
+    });
+  });
+
+  describe('useCoupon()', async () => {
+
   });
 });
