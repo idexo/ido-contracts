@@ -35,9 +35,32 @@ describe('PriceStabilityPool', async () => {
   let wido, usdt, contract;
   let owner, alice, bob, carol;
 
+  describe('Coupon', async () => {
+    it('createCoupon()', async () => {
+      ({wido, usdt, contract, owner, alice, bob, carol} = await setup());
+      // whitelist
+      await contract.addWhitelist([alice.address, bob.address]);
+
+      await contract.connect(alice).createCoupon(5, {value: ethers.utils.parseEther('0.001')});
+      // check
+      expect(await contract.ownerOf(1)).to.eq(alice.address);
+      await contract.couponBalances(alice.address).then(res => {
+        expect(res.toString()).to.eq('5');
+      });
+      await contract.totalCoupon().then(res => {
+        expect(res.toString()).to.eq('5');
+      });
+    });
+    describe('reverts if', async () => {
+      it('non whitelisted wallet call createCoupon()', async () => {
+        await expect(contract.connect(carol).createCoupon(5))
+          .to.be.revertedWith('');
+      });
+    });
+  });
+
   describe('Access Ticket', async () => {
     it('setAllTicketPrices()', async () => {
-      ({wido, usdt, contract, owner, alice, bob, carol} = await setup());
       await contract.setAllTicketPrices(
         ethers.utils.parseEther('0.5'), // reset later
         ethers.utils.parseEther('2'),
@@ -55,6 +78,12 @@ describe('PriceStabilityPool', async () => {
         .to.emit(contract, 'TicketPriceSet')
         .withArgs(ONE_TIME_TICKET_HASH, ethers.utils.parseEther('1'));
     });
+    it('purchaseTicket()', async () => {
+      // mocks
+      await wido.mock.transferFrom.withArgs(alice.address, contract.address, ethers.utils.parseEther('2.2')).returns(true);
+
+      await contract.connect(alice).purchaseTicket(ONE_MONTH_TICKET_HASH);
+    });
     describe('reverts if', async () => {
       it('non owner call setAllTicketPrices()', async () => {
         await expect(contract.connect(alice).setAllTicketPrices(
@@ -65,6 +94,10 @@ describe('PriceStabilityPool', async () => {
           ethers.utils.parseEther('5'),
           ethers.utils.parseEther('6'),
         )).to.be.revertedWith('Ownable: CALLER_NO_OWNER');
+      });
+      it('non owner call setTicketPrice()', async () => {
+        await expect(contract.connect(alice).setTicketPrice(ONE_TIME_TICKET_HASH, ethers.utils.parseEther('1')))
+          .to.be.revertedWith('Ownable: CALLER_NO_OWNER');
       });
     });
   });
