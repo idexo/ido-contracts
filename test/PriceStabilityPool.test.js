@@ -46,12 +46,8 @@ describe('PriceStabilityPool', async () => {
 
       // check state variable update
       expect(await contract.ownerOf(1)).to.eq(alice.address);
-      await contract.couponBalances(alice.address).then(res => {
-        expect(res.toString()).to.eq('5');
-      });
-      await contract.totalCoupon().then(res => {
-        expect(res.toString()).to.eq('20');
-      });
+      expect(await contract.couponBalances(alice.address)).to.eq(5);
+      expect(await contract.totalCoupon()).to.eq(20);
     });
     describe('reverts if', async () => {
       it('non whitelisted wallet call', async () => {
@@ -79,9 +75,7 @@ describe('PriceStabilityPool', async () => {
         ethers.utils.parseEther('5'),
         ethers.utils.parseEther('6'),
       );
-      await contract.ticketPrices(ONE_TIME_TICKET_HASH).then(res => {
-        expect(res.toString()).to.eq('500000000000000000');
-      });
+      expect(await contract.ticketPrices(ONE_TIME_TICKET_HASH)).to.eq(ethers.utils.parseEther('0.5'));
     });
     it('setTicketPrice()', async () => {
       await expect(contract.setTicketPrice(ONE_TIME_TICKET_HASH, ethers.utils.parseEther('1')))
@@ -95,14 +89,10 @@ describe('PriceStabilityPool', async () => {
       await contract.connect(alice).purchaseTicket(ONE_MONTH_TICKET_HASH);
 
       // check state variable update
-      await contract.premiums(alice.address).then(res => {
-        expect(res.toString()).to.eq('50000000000000000');
-      });
-      await contract.premiums(bob.address).then(res => {
-        expect(res.toString()).to.eq('150000000000000000');
-      });
+      expect(await contract.premiums(alice.address)).to.eq(ethers.utils.parseEther('0.05'));
+      expect(await contract.premiums(bob.address)).to.eq(ethers.utils.parseEther('0.15'));
       await contract.tickets(alice.address).then(res => {
-        expect(res['duration'].toString()).to.eq('2678400'); // 1 month
+        expect(res['duration']).to.eq(2678400); // 1 month
       });
     });
     describe('reverts if', async () => {
@@ -134,24 +124,12 @@ describe('PriceStabilityPool', async () => {
       // check state variable update
       await expect(contract.ownerOf(1))
         .to.be.revertedWith('ERC721: owner query for nonexistent token');
-      await contract.stakedCoupons(1).then(res => {
-        expect(res.toString()).to.eq('0');
-      });
-      await contract.stakedCoupons(2).then(res => {
-        expect(res.toString()).to.eq('13');
-      });
-      await contract.couponBalances(alice.address).then(res => {
-        expect(res.toString()).to.eq('0');
-      });
-      await contract.couponBalances(bob.address).then(res => {
-        expect(res.toString()).to.eq('13');
-      });
-      await contract.totalCoupon().then(res => {
-        expect(res.toString()).to.eq('13');
-      });
-      await contract.firstStakeId().then(res => {
-        expect(res.toString()).to.eq('2');
-      });
+      expect(await contract.stakedCoupons(1)).to.eq(0);
+      expect(await contract.stakedCoupons(2)).to.eq(13);
+      expect(await contract.couponBalances(alice.address)).to.eq(0);
+      expect(await contract.couponBalances(bob.address)).to.eq(13);
+      expect(await contract.totalCoupon()).to.eq(13);
+      expect(await contract.firstStakeId()).to.eq(2);
     });
     describe('reverts if', async () => {
       it('purchase amount is zero', async () => {
@@ -178,9 +156,7 @@ describe('PriceStabilityPool', async () => {
       await contract.connect(alice).useCoupon(5);
 
       // check state variable update
-      await contract.purchasedCoupons(alice.address).then(res => {
-        expect(res.toString()).to.eq('2');
-      });
+      expect(await contract.purchasedCoupons(alice.address)).to.eq(2);
     });
     describe('reverts if', async () => {
       it('coupon amount is zero', async () => {
@@ -190,6 +166,28 @@ describe('PriceStabilityPool', async () => {
       it('coupon amount is greater than purchased amount', async () => {
         await expect(contract.connect(alice).useCoupon(3))
           .to.be.revertedWith('PriceStabilityPool: COUPON_AMOUNT_INVALID');
+      });
+    });
+  });
+
+  describe('claim()', async () => {
+    it('expect to claim premuim', async () => {
+      // mocks
+      await wido.mock.transfer.withArgs(alice.address, ethers.utils.parseEther('0.04')).returns(true);
+
+      await contract.connect(alice).claim(ethers.utils.parseEther('0.04'));
+
+      // check state variable update
+      expect(await contract.premiums(alice.address)).to.eq(ethers.utils.parseEther('0.01'));
+    });
+    describe('reverts if', async () => {
+      it('claim amount is zero', async () => {
+        await expect(contract.connect(alice).claim(0))
+          .to.be.revertedWith('PriceStabilityPool: CLAIM_AMOUNT_INVALID');
+      });
+      it('claim amount is greater than available amount', async () => {
+        await expect(contract.connect(alice).claim(ethers.utils.parseEther('0.02')))
+          .to.be.revertedWith('PriceStabilityPool: CLAIM_AMOUNT_INVALID');
       });
     });
   });
