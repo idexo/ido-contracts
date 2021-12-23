@@ -22,7 +22,7 @@ async function setup() {
     'PSP',
     wido.address,
     usdt.address,
-    Math.floor(Date.now() / 1000 + duration.days(3)), // when the pool stability period start
+    Math.floor(Date.now() / 1000 + duration.days(3)), // the pool stability period starts after 3 days
     duration.months(1), // the pool stability period
     ethers.utils.parseEther('0.0002'), // coupon gas price
     ethers.utils.parseEther('2'), // coupon stable coin price
@@ -170,6 +170,27 @@ describe('PriceStabilityPool', async () => {
   });
 
   describe('useCoupon()', async () => {
+    it('expect to use coupon', async () => {
+      // 3 days passed
+      await network.provider.send("evm_increaseTime", [duration.days(3)]);
+      await network.provider.send("evm_mine");
 
+      await contract.connect(alice).useCoupon(5);
+
+      // check state variable update
+      await contract.purchasedCoupons(alice.address).then(res => {
+        expect(res.toString()).to.eq('2');
+      });
+    });
+    describe('reverts if', async () => {
+      it('coupon amount is zero', async () => {
+        await expect(contract.connect(alice).useCoupon(0))
+          .to.be.revertedWith('PriceStabilityPool: COUPON_AMOUNT_INVALID');
+      });
+      it('coupon amount is greater than purchased amount', async () => {
+        await expect(contract.connect(alice).useCoupon(3))
+          .to.be.revertedWith('PriceStabilityPool: COUPON_AMOUNT_INVALID');
+      });
+    });
   });
 });
