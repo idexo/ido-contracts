@@ -56,6 +56,12 @@ describe('PriceStabilityPool', async () => {
         await expect(contract.connect(carol).createCoupon(5))
           .to.be.revertedWith('Whitelist: CALLER_NO_WHITELIST');
       });
+      it('non whitelisted wallet call after remove', async () => {
+        await contract.removeWhitelist([bob.address]);
+        await expect(contract.connect(bob).createCoupon(5))
+          .to.be.revertedWith('Whitelist: CALLER_NO_WHITELIST');
+        await contract.addWhitelist([bob.address]);
+      });
       it('zero coupon amount', async () => {
         await expect(contract.connect(alice).createCoupon(0, {value: ethers.utils.parseEther('0.0001')}))
           .to.be.revertedWith('PriceStabilityPool: COUPON_AMOUNT_INVALID');
