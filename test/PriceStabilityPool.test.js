@@ -17,12 +17,14 @@ async function setup() {
   const wido = await deployMockContract(owner, IWIDO.abi);
   const usdt = await deployMockContract(owner, IWIDO.abi);
   const PriceStabilityPool = await ethers.getContractFactory('PriceStabilityPool');
+  const number = await ethers.provider.getBlockNumber();
+  const block = await ethers.provider.getBlock(number);
   const contract = await PriceStabilityPool.deploy(
     'Price Stability Pool',
     'PSP',
     wido.address,
     usdt.address,
-    Math.floor(Date.now() / 1000 + duration.days(3)), // the pool stability period starts after 3 days
+    Math.floor(block.timestamp + duration.days(3)), // the pool stability period starts after 3 days
     duration.months(1), // the pool stability period
     ethers.utils.parseEther('0.0002'), // coupon gas price
     ethers.utils.parseEther('2'), // coupon stable coin price
