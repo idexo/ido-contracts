@@ -5,12 +5,10 @@ import "./Ownable.sol";
 
 contract Whitelist is Ownable {
   // wallet address => whitelisted status
-  mapping(address => bool) whitelist;
+  mapping(address => bool) public whitelist;
 
   event AddedWhitelist(address account);
   event RemovedWhitelist(address account);
-
-  constructor() { }
 
   modifier onlyWhitelist() {
     require(whitelist[msg.sender], "Whitelist: CALLER_NO_WHITELIST");

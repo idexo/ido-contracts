@@ -178,14 +178,6 @@ describe('PriceStabilityPool', async () => {
     });
   });
 
-  describe('WhiteList stress test', async () => {
-    it('adding 500 addresses to whitelist', async () => {
-      let wh = new Array(500).fill("0x00000000000000000000000000000000000");
-      for (let i = 0; i < wh.length; i++) wh[i] += (i+10000).toString()
-      await contract.addWhitelist(wh);
-    });
-  });
-
   describe('claim()', async () => {
     it('expect to claim premium', async () => {
       // mocks
