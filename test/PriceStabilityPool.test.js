@@ -179,7 +179,7 @@ describe('PriceStabilityPool', async () => {
   });
 
   describe('claim()', async () => {
-    it('expect to claim premuim', async () => {
+    it('expect to claim premium', async () => {
       // mocks
       await wido.mock.transfer.withArgs(alice.address, ethers.utils.parseEther('0.04')).returns(true);
 
