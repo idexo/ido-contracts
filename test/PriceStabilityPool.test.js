@@ -56,6 +56,12 @@ describe('PriceStabilityPool', async () => {
         await expect(contract.connect(carol).createCoupon(5))
           .to.be.revertedWith('Whitelist: CALLER_NO_WHITELIST');
       });
+      it('non whitelisted wallet call after remove', async () => {
+        await contract.removeWhitelist([bob.address]);
+        await expect(contract.connect(bob).createCoupon(5))
+          .to.be.revertedWith('Whitelist: CALLER_NO_WHITELIST');
+        await contract.addWhitelist([bob.address]);
+      });
       it('zero coupon amount', async () => {
         await expect(contract.connect(alice).createCoupon(0, {value: ethers.utils.parseEther('0.0001')}))
           .to.be.revertedWith('PriceStabilityPool: COUPON_AMOUNT_INVALID');
@@ -172,8 +178,16 @@ describe('PriceStabilityPool', async () => {
     });
   });
 
+  describe('WhiteList stress test', async () => {
+    it('adding 1000 addresses to whitelist', async () => {
+      let wh = new Array(1000).fill("0x00000000000000000000000000000000000");
+      for (let i = 0; i < wh.length; i++) wh[i] += (i+10000).toString()
+      await contract.addWhitelist(wh);
+    });
+  });
+
   describe('claim()', async () => {
-    it('expect to claim premuim', async () => {
+    it('expect to claim premium', async () => {
       // mocks
       await wido.mock.transfer.withArgs(alice.address, ethers.utils.parseEther('0.04')).returns(true);
 
