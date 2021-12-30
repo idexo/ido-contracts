@@ -204,7 +204,7 @@ contract StakePoolSimpleCombinedNew is IStakePoolNew, StakeTokenNew, AccessContr
         override
     {
         require(amount > 0, "StakePool#withdraw: UNDER_MINIMUM_WITHDRAW_AMOUNT");
-        require(stakes[stakeId].timestamplock < block.timestamp, "StakePool#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL")
+        require(stakes[stakeId].timestamplock < block.timestamp, "StakePool#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL");
         _withdraw(msg.sender, stakeId, amount);
     }
 
