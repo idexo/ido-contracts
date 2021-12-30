@@ -22,7 +22,8 @@ interface IStakePoolNew is IStakeTokenNew {
         returns (bool);
 
     function deposit(
-        uint256 amount
+        uint256 amount,
+        uint256 timestamplock
     )
         external;
 
