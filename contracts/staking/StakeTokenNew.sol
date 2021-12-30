@@ -23,6 +23,7 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
         uint256 amount;
         uint256 multiplier;
         uint256 depositedAt;
+        uint256 timestamplock;
     }
     // stake id => stake info
     mapping(uint256 => Stake) public override stakes;
@@ -145,10 +146,10 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
         public
         override
         view
-        returns (uint256, uint256, uint256)
+        returns (uint256, uint256, uint256, uint256)
     {
         require(_exists(stakeId), "StakeToken#getStakeInfo: STAKE_NOT_FOUND");
-        return (stakes[stakeId].amount, stakes[stakeId].multiplier, stakes[stakeId].depositedAt);
+        return (stakes[stakeId].amount, stakes[stakeId].multiplier, stakes[stakeId].depositedAt, stakes[stakeId].timestamplock);
     }
 
     /**
@@ -215,7 +216,8 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
     function _mint(
         address account,
         uint256 amount,
-        uint256 depositedAt
+        uint256 depositedAt,
+        uint256 timestamplock
     )
         internal
         virtual
@@ -229,6 +231,7 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
         newStake.amount = amount;
         newStake.multiplier = multiplier;
         newStake.depositedAt = depositedAt;
+        newStake.timestamplock = timestamplock;
         stakerIds[account].push(tokenIds);
 
         return tokenIds;

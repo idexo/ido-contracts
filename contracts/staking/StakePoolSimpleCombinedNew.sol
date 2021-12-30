@@ -55,7 +55,7 @@ contract StakePoolSimpleCombinedNew is IStakePoolNew, StakeTokenNew, AccessContr
     // tokenId => available reward amount that tokenId can claim.
     mapping(uint256 => uint256) public claimableRewards;
 
-    event Deposited(address indexed account, uint256 indexed stakeId, uint256 amount);
+    event Deposited(address indexed account, uint256 indexed stakeId, uint256 amount, uint256 timestamplock);
     event Withdrawn(address indexed account, uint256 indexed stakeId, uint256 amount);
     event ClaimableRewardDeposited(address indexed account, uint256 amount);
     event RewardDeposited(address indexed account, uint256 amount);
@@ -174,13 +174,14 @@ contract StakePoolSimpleCombinedNew is IStakePoolNew, StakeTokenNew, AccessContr
      * @param amount deposit amount.
      */
     function deposit(
-        uint256 amount
+        uint256 amount,
+        uint256 timestamplock
     )
         external
         override
     {
         require(amount >= minStakeAmount, "StakePool#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
-        _deposit(msg.sender, amount);
+        _deposit(msg.sender, amount, timestamplock);
     }
 
     /**
@@ -203,6 +204,7 @@ contract StakePoolSimpleCombinedNew is IStakePoolNew, StakeTokenNew, AccessContr
         override
     {
         require(amount > 0, "StakePool#withdraw: UNDER_MINIMUM_WITHDRAW_AMOUNT");
+        require(stakes[stakeId].timestamplock < block.timestamp, "StakePool#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL");
         _withdraw(msg.sender, stakeId, amount);
     }
 
@@ -213,15 +215,17 @@ contract StakePoolSimpleCombinedNew is IStakePoolNew, StakeTokenNew, AccessContr
      */
     function _deposit(
         address account,
-        uint256 amount
+        uint256 amount,
+        uint256 timestamplock
     )
         private
         nonReentrant
     {
-        uint256 stakeId = _mint(account, amount, block.timestamp);
+        uint256 depositedAt = block.timestamp;
+        uint256 stakeId = _mint(account, amount, depositedAt, timestamplock);
         require(depositToken.transferFrom(account, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
 
-        emit Deposited(account, stakeId, amount);
+        emit Deposited(account, stakeId, amount, timestamplock);
     }
 
     /**

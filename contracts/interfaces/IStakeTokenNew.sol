@@ -21,7 +21,7 @@ interface IStakeTokenNew is IERC721 {
         uint256 stakeId
     )
         external
-        returns (uint256, uint256, uint256);
+        returns (uint256, uint256, uint256, uint256);
 
     function getEligibleStakeAmount(
         uint256 fromDate
@@ -29,7 +29,7 @@ interface IStakeTokenNew is IERC721 {
         external
         returns (uint256);
         
-    function stakes(uint256 id) external view returns (uint256 amount, uint256 multiplier, uint256 depositedAt);
+    function stakes(uint256 id) external view returns (uint256 amount, uint256 multiplier, uint256 depositedAt, uint256 timestamplock);
 
     function stakerIds(address account, uint256 id) external view returns (uint256);
 }
