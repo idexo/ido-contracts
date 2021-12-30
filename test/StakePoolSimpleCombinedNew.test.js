@@ -110,4 +110,13 @@ contract('::StakePoolSimpleCombinedNew', async accounts => {
       });
   });
 
+  describe('withdraw max', async () => {
+    it('should withdraw', async () => {
+      expectEvent.notEmitted(
+        await stakePool.withdraw(1, web3.utils.toWei(new BN(2000)), {from: carol}),
+        'StakeAmountDecreased'
+      );
+    });
+  });
+
 });
