@@ -146,10 +146,10 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
         public
         override
         view
-        returns (uint256, uint256, uint256)
+        returns (uint256, uint256, uint256, uint256)
     {
         require(_exists(stakeId), "StakeToken#getStakeInfo: STAKE_NOT_FOUND");
-        return (stakes[stakeId].amount, stakes[stakeId].multiplier, stakes[stakeId].depositedAt);
+        return (stakes[stakeId].amount, stakes[stakeId].multiplier, stakes[stakeId].depositedAt, stakes[stakeId].timestamplock);
     }
 
     /**
