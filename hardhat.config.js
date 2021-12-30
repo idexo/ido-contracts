@@ -8,6 +8,7 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
+require("hardhat-contract-sizer");
 
 const fs = require('fs');
 const path = require('path');
@@ -81,6 +82,10 @@ module.exports = {
     outputFile: argv.ci ? 'gas-report.txt' : undefined,
     coinmarketcap: argv.coinmarketcap,
   },
+  contractSizer: {
+    runOnCompile: true,
+    disambiguatePaths: true,
+  }
 };
 
 if (argv.coverage) {
