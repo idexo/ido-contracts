@@ -14,7 +14,7 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
     // Last stake token id, start from 1
     uint256 public tokenIds;
     uint256 public constant multiplierDenominator = 100;
-  
+
 
     // Base NFT URI
     string public baseURI;
@@ -37,12 +37,12 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
         string memory symbol_,
         string memory baseURI_
     )
-        ERC721(name_, symbol_) { 
+        ERC721(name_, symbol_) {
         baseURI = baseURI_;
-        
+
     }
 
-   
+
 
      /**********************|
     |          URI         |
@@ -312,7 +312,7 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
     ) internal override {
 
         super._transfer(from, to, tokenId);
-        
+
         uint256[] storage stakeIds = stakerIds[from];
         for (uint256 i = 0; i < stakeIds.length; i++) {
             if (stakeIds[i] == tokenId) {
