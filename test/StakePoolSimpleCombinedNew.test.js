@@ -116,6 +116,9 @@ contract('::StakePoolSimpleCombinedNew', async accounts => {
         await stakePool.withdraw(1, web3.utils.toWei(new BN(2000)), {from: carol}),
         'StakeAmountDecreased'
       );
+      await stakePool.getStakeAmount(carol).then(res => {
+        expect(res.toString()).to.eq('0');
+      });
     });
   });
 
