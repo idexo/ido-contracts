@@ -113,11 +113,11 @@ contract('::StakePoolSimpleCombinedNew', async accounts => {
             expect(res.toString()).to.eq("1");
           })
           await stakePool.getStakeAmount(alice).then(res => {
-            console.log(res)
+            console.log(res.toString())
             expect(res.toString()).to.eq('0');
           });
           await stakePool.getStakeAmount(carol).then(res => {
-            console.log(res)
+            console.log(res.toString())
             expect(res.toString()).to.eq('2000000000000000000000');
           });
         });

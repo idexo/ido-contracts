@@ -291,4 +291,38 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
             emit StakeAmountDecreased(stakeId, amount);
         }
     }
+
+    /**
+     * @dev Transfers `tokenId` from `from` to `to`.
+     *  As opposed to {transferFrom}, this imposes no restrictions on msg.sender.
+     *
+     * Requirements:
+     *
+     * - `to` cannot be the zero address.
+     * - `tokenId` token must be owned by `from`.
+     *
+     * @param from address from
+     * @param to address to
+     * @param tokenId tokenId to transfer
+     */
+        function _transfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal override {
+
+        super._transfer(from, to, tokenId);
+        
+        uint256[] storage stakeIds = stakerIds[from];
+        for (uint256 i = 0; i < stakeIds.length; i++) {
+            if (stakeIds[i] == tokenId) {
+                if (i != stakeIds.length - 1) {
+                    stakeIds[i] = stakeIds[stakeIds.length - 1];
+                }
+                stakeIds.pop();
+                break;
+            }
+        }
+        stakerIds[to].push(tokenIds);
+    }
 }
