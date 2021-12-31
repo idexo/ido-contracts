@@ -46,10 +46,12 @@ contract('::StakePoolSimpleCombinedNew', async accounts => {
 
   describe('# Stake', async () => {
     before(async () => {
-      await ido.mint(alice, web3.utils.toWei(new BN(20000)));
-      await ido.approve(stakePool.address, web3.utils.toWei(new BN(20000)), {from: alice});
-      await erc20.mint(alice, web3.utils.toWei(new BN(20000)));
-      await erc20.approve(stakePool.address, web3.utils.toWei(new BN(20000)), {from: alice})
+      for (const user of [alice, bob, carol]) {
+        await ido.mint(user, web3.utils.toWei(new BN(20000)));
+        await ido.approve(stakePool.address, web3.utils.toWei(new BN(20000)), {from: user});
+        await erc20.mint(user, web3.utils.toWei(new BN(20000)));
+        await erc20.approve(stakePool.address, web3.utils.toWei(new BN(20000)), {from: user})
+      }
     });
 
     describe('deposit', async () => {
@@ -106,6 +108,18 @@ contract('::StakePoolSimpleCombinedNew', async accounts => {
           await stakePool.getStakeInfo(1).then(res => {
             expect(res[0].toString()).to.eq('2000000000000000000000');
           });
+          await stakePool.balanceOf(alice).then(res=>{
+            expect(res.toString()).to.eq('0')
+          })
+          await stakePool.balanceOf(carol).then(res=>{
+            expect(res.toString()).to.eq("1");
+          })
+          await stakePool.getStakeAmount(alice).then(res => {
+            expect(res.toString()).to.eq('0');
+          });
+          await stakePool.getStakeAmount(carol).then(res => {
+            expect(res.toString()).to.eq('2000000000000000000000');
+          });
         });
       });
   });
@@ -120,6 +134,24 @@ contract('::StakePoolSimpleCombinedNew', async accounts => {
         expect(res.toString()).to.eq('0');
       });
     });
+    it('multiple deposits', async () => {
+      for (let i = 0; i <= 5; i++) {
+        for (const user of [alice, bob, carol]) {
+          await stakePool.deposit(web3.utils.toWei(new BN(600)), 0, {from: user})
+        }
+      }
+      for (const user of [bob, alice, carol]) {
+        await stakePool.getStakeAmount(user).then(res=>{
+          expect(res.toString()).to.not.eq('0')
+        })
+        let res = await stakePool.getStakeTokenIds(user)
+        for (const id of res.toString().split(",")) {
+          await stakePool.withdraw(id, web3.utils.toWei(new BN(600)), {from: user})
+        }
+        await stakePool.getStakeAmount(user).then(res=>{
+          expect(res.toString()).to.eq('0')
+        })
+      }
+    });
   });
-
 });
