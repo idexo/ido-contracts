@@ -106,14 +106,20 @@ contract('::StakePoolSimpleCombinedNew', async accounts => {
           await stakePool.getStakeInfo(1).then(res => {
             expect(res[0].toString()).to.eq('2000000000000000000000');
           });
-          await stakePool.getStakeAmount(alice).then(res => {
-            console.log(res)
-            expect(res.toString()).to.eq('0');
-          });
-          await stakePool.getStakeAmount(carol).then(res => {
-            console.log(res)
-            expect(res.toString()).to.eq('2000000000000000000000');
-          });
+          await stakePool.balanceOf(alice).then(res=>{
+            expect(res.toString()).to.eq('0')
+          })
+          await stakePool.balanceOf(carol).then(res=>{
+            expect(res.toString()).to.eq("1");
+          })
+          // await stakePool.getStakeAmount(alice).then(res => {
+          //   console.log(res)
+          //   expect(res.toString()).to.eq('0');
+          // });
+          // await stakePool.getStakeAmount(carol).then(res => {
+          //   console.log(res)
+          //   expect(res.toString()).to.eq('2000000000000000000000');
+          // });
         });
       });
   });
