@@ -1,5 +1,6 @@
 const { expect } = require('chai');
 const { duration } = require('./helpers/time');
+const timeTraveler = require('ganache-time-traveler');
 const { BN, expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 const StakePool = artifacts.require('contracts/staking/StakePoolSimpleCombinedNew.sol:StakePoolSimpleCombinedNew');
 const ERC20 = artifacts.require('ERC20Mock');
@@ -169,10 +170,21 @@ contract('::StakePoolSimpleCombinedNew', async accounts => {
       let res = await stakePool.getStakeTokenIds(alice)
       for (const id of res.toString().split(",")) {
         await expectRevert(
-          stakePool.withdraw(id, web3.utils.toWei(new BN(3000)), {from: alice}),
+          stakePool.withdraw(id, web3.utils.toWei(new BN(1000)), {from: alice}),
           'StakePool#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL'
         );
       }
+    });
+    it('should allow withdraw', async () => {
+      timeTraveler.advanceTime(duration.months(1));
+      let res = await stakePool.getStakeTokenIds(alice)
+      for (const id of res.toString().split(",")) {
+        expectEvent(
+          await stakePool.withdraw(id, web3.utils.toWei(new BN(1000)), {from: alice}),
+          'StakeAmountDecreased'
+        );
+      }
+      timeTraveler.advanceTime(duration.months(-1));
     });
   });
 });
