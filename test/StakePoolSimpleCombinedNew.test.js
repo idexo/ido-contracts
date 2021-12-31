@@ -1,4 +1,5 @@
 const { expect } = require('chai');
+const { duration } = require('./helpers/time');
 const { BN, expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 const StakePool = artifacts.require('contracts/staking/StakePoolSimpleCombinedNew.sol:StakePoolSimpleCombinedNew');
 const ERC20 = artifacts.require('ERC20Mock');
@@ -151,6 +152,26 @@ contract('::StakePoolSimpleCombinedNew', async accounts => {
         await stakePool.getStakeAmount(user).then(res=>{
           expect(res.toString()).to.eq('0')
         })
+      }
+    });
+  });
+
+  describe('deposit with timestamplock', async () => {
+    it('should deposit', async () => {
+      const number = await ethers.provider.getBlockNumber();
+      const block = await ethers.provider.getBlock(number);
+      expectEvent(
+        await stakePool.deposit(web3.utils.toWei(new BN(3000)), block.timestamp + duration.days(3), {from: alice}),
+        'Deposited'
+      );
+    });
+    it('should not allow withdraw', async () => {
+      let res = await stakePool.getStakeTokenIds(alice)
+      for (const id of res.toString().split(",")) {
+        await expectRevert(
+          stakePool.withdraw(id, web3.utils.toWei(new BN(3000)), {from: alice}),
+          'StakePool#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL'
+        );
       }
     });
   });
