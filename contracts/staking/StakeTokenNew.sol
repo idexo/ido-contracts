@@ -119,6 +119,28 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
     }
 
     /**
+     * @dev Remove the given token from stakerIds.
+     *
+     * @param from address from
+     * @param tokenId tokenId to remove
+     */
+    function _popStake(
+        address from,
+        uint256 tokenId
+    ) internal {
+        uint256[] storage stakeIds = stakerIds[from];
+        for (uint256 i = 0; i < stakeIds.length; i++) {
+            if (stakeIds[i] == tokenId) {
+                if (i != stakeIds.length - 1) {
+                    stakeIds[i] = stakeIds[stakeIds.length - 1];
+                }
+                stakeIds.pop();
+                break;
+            }
+        }
+    }
+
+    /**
      * @dev Check if wallet address owns any stake tokens.
      * @param account address
      */
@@ -254,16 +276,7 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
         address stakeOwner = ownerOf(stakeId);
         super._burn(stakeId);
         delete stakes[stakeId];
-        uint256[] storage stakeIds = stakerIds[stakeOwner];
-        for (uint256 i = 0; i < stakeIds.length; i++) {
-            if (stakeIds[i] == stakeId) {
-                if (i != stakeIds.length - 1) {
-                    stakeIds[i] = stakeIds[stakeIds.length - 1];
-                }
-                stakeIds.pop();
-                break;
-            }
-        }
+        _popStake(stakeOwner, stakeId);
     }
 
     /**
@@ -305,24 +318,14 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
      * @param to address to
      * @param tokenId tokenId to transfer
      */
-        function _transfer(
+    function _transfer(
         address from,
         address to,
         uint256 tokenId
     ) internal override {
 
         super._transfer(from, to, tokenId);
-
-        uint256[] storage stakeIds = stakerIds[from];
-        for (uint256 i = 0; i < stakeIds.length; i++) {
-            if (stakeIds[i] == tokenId) {
-                if (i != stakeIds.length - 1) {
-                    stakeIds[i] = stakeIds[stakeIds.length - 1];
-                }
-                stakeIds.pop();
-                break;
-            }
-        }
+        _popStake(from, tokenId);
         stakerIds[to].push(tokenIds);
     }
 }
