@@ -106,12 +106,22 @@ contract('::WIDO', async accounts => {
           'WIDO: INVALID_ADDRESS'
         );
       });
+      it('non owner call renounceOwnership', async () => {
+        await expectRevert(
+          token.renounceOwnership({from: carol}),
+          "WIDO: CALLER_NO_OWNER"
+        );
+      });
       it('non new owner call acceptOwnership', async () => {
         await token.transferOwnership(alice, {from: bob});
         await expectRevert(
           token.acceptOwnership({from: carol}),
           'WIDO: CALLER_NO_NEW_OWNER'
         );
+        expectEvent(
+          await token.renounceOwnership({from: bob}),
+          'OwnershipTransferred'
+        )
       })
     });
   });
