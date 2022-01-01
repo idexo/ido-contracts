@@ -48,6 +48,25 @@ contract('WIDOPausable', async accounts => {
       });
     });
   });
+  
+  describe('#Blacklist', async () => {
+    it('should add to blacklist', async () => {
+      expectEvent(
+        await contract.addBlacklist([relayer]),
+        'AddedBlacklist'
+      );
+      await expectRevert(
+        contract.mint(bob, web3.utils.toWei(new BN(100)), {from: relayer}),
+        'WIDOPausable: CALLER_BLACKLISTED'
+      );
+    });
+    it('should remove from blacklist', async () => {
+      expectEvent(
+        await contract.removeBlacklist([relayer]),
+        'RemovedBlacklist'
+      );
+    });
+  });
 
   describe('#Ownership', async () => {
     it('should transfer ownership', async () => {
