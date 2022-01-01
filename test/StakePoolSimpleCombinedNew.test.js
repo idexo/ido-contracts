@@ -8,11 +8,12 @@ const ERC20 = artifacts.require('ERC20Mock');
 contract('::StakePoolSimpleCombinedNew', async accounts => {
   let stakePool, ido, erc20;
   const [alice, bob, carol] = accounts;
+  const DOMAIN = "https://idexo.com/";
 
   before(async () => {
     ido = await ERC20.new('Idexo Community', 'IDO', {from: alice});
     erc20 = await ERC20.new('USD Tether', 'USDT', {from: alice});
-    stakePool = await StakePool.new('Idexo Stake Token', 'IDS', "https://idexo.com/", ido.address, erc20.address, {from: alice});
+    stakePool = await StakePool.new('Idexo Stake Token', 'IDS', DOMAIN, ido.address, erc20.address, {from: alice});
   });
 
   describe('# Role', async () => {
@@ -70,6 +71,12 @@ contract('::StakePoolSimpleCombinedNew', async accounts => {
         );
         await stakePool.getStakeInfo(1).then(res => {
           expect(res[0].toString()).to.eq('3000000000000000000000');
+        });
+      });
+      it('should change tokenURI', async () => {
+        await stakePool.setTokenURI(1, "test", {from: alice}),
+        await stakePool.tokenURI(1).then(res => {
+          expect(res.toString()).to.eq(DOMAIN + "test");
         });
       });
       it('should deposit reward', async () => {
