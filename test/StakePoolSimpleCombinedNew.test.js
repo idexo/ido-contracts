@@ -58,6 +58,12 @@ contract('::StakePoolSimpleCombinedNew', async accounts => {
 
     describe('deposit', async () => {
       it('should deposit', async () => {
+        await stakePool.getEligibleStakeAmount(0, {from: alice}).then(res => {
+          expect(res.toString()).to.eq('0');
+        });
+        await stakePool.isHolder(alice).then(res => {
+            expect(res.toString()).to.eq('false');
+          });
         expectEvent(
           await stakePool.deposit(web3.utils.toWei(new BN(3000)), 0, {from: alice}),
           'Deposited'
