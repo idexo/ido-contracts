@@ -25,6 +25,46 @@ function testToken(contractName, contractPath) {
       });
     });
 
+    describe("#Mint", async () => {
+      it("should mint", async () => {
+        expectEvent(
+          await token.mint(bob, 1, { from: bob }),
+          'Transfer'
+        )
+      });
+      describe("reverts if", async () => {
+        it("mint by non relayer", async () => {
+          await expectRevert(
+            token.mint(bob, 1, { from: darren }),
+            "WIDO: CALLER_NO_RELAYER"
+          );
+        });
+      });
+    });
+
+    describe("#Burn", async () => {
+      it("should mint", async () => {
+        expectEvent(
+          await token.burn(bob, 1, { from: bob }),
+          'Transfer'
+        )
+      });
+      describe("reverts if", async () => {
+        it("mint by non relayer", async () => {
+          await expectRevert(
+            token.burn(bob, 1, { from: darren }),
+            "WIDO: CALLER_NO_RELAYER"
+          );
+        });
+      });
+    });
+
+    describe("#Chainid", async () => {
+        it("should get chainid", async () => {
+          expect(await token.getChainId()).to.exist;
+        });
+      });
+
     describe("#Ownership", async () => {
       it("should transfer ownership", async () => {
         await token.transferOwnership(bob);
