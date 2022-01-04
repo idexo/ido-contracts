@@ -177,4 +177,45 @@ contract('RelayManagerETH', async accounts => {
       })
     });
   });
+
+  describe('#Signatures', async () => {
+    describe('reverts if', async () => {
+      it('no signatures on setAdminFee', async () => {
+        await expectRevert(
+          relayManager.setAdminFee(1, [], {from: bob}),
+          'RelayManager2Secure: INVALID_SIGNATURE'
+        );
+      });
+      it('no signatures on setThreshold', async () => {
+         await expectRevert(
+          relayManager.setThreshold(2, [], {from: bob}),
+          'RelayManager2Secure: INVALID_SIGNATURE'
+        );
+      });
+      it('no signatures on addSigner', async () => {
+        await expectRevert(
+         relayManager.addSigner(alice, [], {from: bob}),
+         'RelayManager2Secure: INVALID_SIGNATURE'
+       );
+      });
+      it('no signatures on removeSigner', async () => {
+        await expectRevert(
+         relayManager.removeSigner(alice, [], {from: bob}),
+         'RelayManager2Secure: INVALID_SIGNATURE'
+       );
+      });
+      it('no signatures on setBridgeWallet', async () => {
+        await expectRevert(
+         relayManager.setBridgeWallet(alice, [], {from: bob}),
+         'RelayManager2Secure: INVALID_SIGNATURE'
+       );
+      });
+      it('no signatures on send', async () => {
+        await expectRevert(
+         relayManager.send(alice, bob, web3.utils.toWei(new BN(100)), 0, [], {from: bob}),
+         'RelayManager2Secure: INVALID_SIGNATURE'
+       );
+      });
+    });
+  });
 });
