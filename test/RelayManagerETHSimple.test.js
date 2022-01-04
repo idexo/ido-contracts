@@ -119,6 +119,26 @@ contract('RelayManagerETH', async accounts => {
         expect(res.toString()).to.eq(receiveAmount.toString());
       });
     });
+    it('withdraw admin fee', async () => {
+      expectEvent(
+        await relayManager.withdrawAdminFee(bob, adminFee),
+        'AdminFeeWithdraw'
+      );
+    });
+    it('withdraw gas fee', async () => {
+      expectEvent(
+        await relayManager.withdrawGasFee(bob, gasFee),
+        'GasFeeWithdraw'
+      );
+    });
+    it('setMinTransferAmount', async () => {
+        await relayManager.setBaseGas(111);
+        expect((await relayManager.baseGas()).toString()).to.eq("111");
+      });
+    it('setMinTransferAmount', async () => {
+      await relayManager.setMinTransferAmount(112);
+      expect((await relayManager.minTransferAmount()).toString()).to.eq("112");
+    });
   });
 
   describe('#Ownership', async () => {
@@ -132,19 +152,19 @@ contract('RelayManagerETH', async accounts => {
       )
     });
     describe('reverts if', async () => {
-        it('non-owner call setMinTransferAmount', async () => {
-            await expectRevert(
-              relayManager.setMinTransferAmount(1, {from: carol}),
-              'RelayManagerETH: CALLER_NO_OWNER'
-            );
-          });
-        it('non-owner call setAdminFee', async () => {
-           await expectRevert(
-            relayManager.setAdminFee(1, {from: carol}),
-            'RelayManagerETH: CALLER_NO_OWNER'
-          );
-        });
-        it('non-owner call transferOwnership', async () => {
+      it('non-owner call setMinTransferAmount', async () => {
+        await expectRevert(
+          relayManager.setMinTransferAmount(1, {from: carol}),
+          'RelayManagerETH: CALLER_NO_OWNER'
+        );
+      });
+      it('non-owner call setAdminFee', async () => {
+        await expectRevert(
+          relayManager.setAdminFee(1, {from: carol}),
+          'RelayManagerETH: CALLER_NO_OWNER'
+        );
+      });
+      it('non-owner call transferOwnership', async () => {
         await expectRevert(
           relayManager.transferOwnership(bob, {from: carol}),
           'RelayManagerETH: CALLER_NO_OWNER'
