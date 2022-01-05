@@ -103,11 +103,6 @@ contract('RelayManagerETH', async accounts => {
       const { v, r, s } = sign(digest, ownerPrivateKey);
       const permitOptions = { nonce: nonce.toNumber(), deadline, v, r, s };
 
-
-      // const pvtKey = carol.getPrivateKey()
-      console.log(carol)
-      // console.log(pvtKey)
-
       // Approve it
       expectEvent(
         await relayManager.permitAndDeposit(bob, 100, polygonChainId, permitOptions, { from: carol }),
