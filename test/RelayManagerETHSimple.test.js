@@ -23,7 +23,11 @@ contract('RelayManagerETH', async accounts => {
   const [alice, bob, carol, bridge] = accounts;
   const idoName = 'Idexo Token';
   const idoSymbol = 'IDO';
-  const ownerPrivateKey = Buffer.from('08c83289b1b8cce629a1e58b65c25b1c8062d5c9ec6375dc8265ad13ba25c630', 'hex');
+  // const ownerPrivateKey = Buffer.from('08c83289b1b8cce629a1e58b65c25b1c8062d5c9ec6375dc8265ad13ba25c630', 'hex');
+  const ownerPrivateKey = Buffer.from(
+    "7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6",
+    "hex"
+  );
 
   before(async () => {
     ido = await ERC20PermitMock.new(idoName, idoSymbol);
@@ -98,11 +102,12 @@ contract('RelayManagerETH', async accounts => {
       // we do not want, so we're manually signing here
       const { v, r, s } = sign(digest, ownerPrivateKey);
       const permitOptions = { nonce: nonce.toNumber(), deadline, v, r, s };
-      /*/ Approve it
+
+      // Approve it
       expectEvent(
-        await relayManager.permitAndDeposit(bob, sendAmount, polygonChainId, permitOptions, { from: carol }),
+        await relayManager.permitAndDeposit(bob, 100, polygonChainId, permitOptions, { from: carol }),
         'Deposited'
-      );*/
+      );
     });
     it('send', async () => {
       // Accept cross-chain transfer from Polygon (carol => bob)
