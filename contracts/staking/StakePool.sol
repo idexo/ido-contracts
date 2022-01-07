@@ -293,7 +293,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
         uint256 toDate
     )
         public
-        
+
         view
         returns (uint256)
     {
@@ -321,7 +321,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
         uint256 amount
     )
         external
-        
+
         nonReentrant
     {
         require(isHolder(msg.sender), "StakePool#claimReward: CALLER_NO_TOKEN_OWNER");
@@ -338,7 +338,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
      */
     function distribute()
         external
-       
+
         onlyOperator
     {
         uint256 lastDistributeDate;

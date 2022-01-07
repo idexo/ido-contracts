@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 contract RelayManagerETH is AccessControl, ReentrancyGuard {
   using SafeERC20 for IERC20;
   using ECDSA for bytes32;
-  
+
   // The contract owner address
   address public owner;
   // Proposed contract new owner address
@@ -40,8 +40,8 @@ contract RelayManagerETH is AccessControl, ReentrancyGuard {
 
   // transfer from address => nonce => processed status
   mapping(address => mapping(uint256 => bool)) public processedNonces;
- 
-  
+
+
   // Events
   event Deposited(address indexed from, address indexed receiver, uint256 toChainId, uint256 amount, uint256 nonce);
   event Sent(address indexed receiver, uint256 indexed amount, uint256 indexed transferredAmount, uint256 nonce);
@@ -314,7 +314,7 @@ contract RelayManagerETH is AccessControl, ReentrancyGuard {
   |          Fee         |
   |_____________________*/
 
-  
+
 
   function _send(
     address from,
@@ -332,8 +332,8 @@ contract RelayManagerETH is AccessControl, ReentrancyGuard {
     require(!processedNonces[from][nonce], 'RelayManager2Secure: TRANSFER_NONCE_ALREADY_PROCESSED');
     // Mark the nonce processed state true to avoid double sending
     processedNonces[from][nonce] = true;
-    
-    
+
+
     // Calculate real amount to transfer considering adminFee and gasFee
     adminFeeAccumulated += adminFee;
     uint256 amountToTransfer = amount - adminFee;

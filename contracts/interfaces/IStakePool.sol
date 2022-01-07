@@ -38,5 +38,5 @@ interface IStakePool is IStakeToken {
     )
         external;
 
-   
+
 }

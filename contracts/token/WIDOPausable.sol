@@ -9,7 +9,7 @@ contract WIDOPausable is ERC20Permit, Blacklist {
   address public relayer;
 
   event RelayerAddressChanged(address indexed relayer);
-  
+
   constructor() ERC20("Wrapped Idexo Token Pausable", "WIDOP") ERC20Permit("Wrapped Idexo Token Pausable") { }
 
   /**************************|
@@ -25,7 +25,7 @@ contract WIDOPausable is ERC20Permit, Blacklist {
     relayer = newRelayer;
 
     emit RelayerAddressChanged(newRelayer);
-  }  
+  }
 
   /************************|
   |          Token         |

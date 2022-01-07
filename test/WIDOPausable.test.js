@@ -48,7 +48,7 @@ contract('WIDOPausable', async accounts => {
       });
     });
   });
-  
+
   describe('#Blacklist', async () => {
     it('should add to blacklist', async () => {
       expectEvent(

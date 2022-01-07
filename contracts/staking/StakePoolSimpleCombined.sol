@@ -44,13 +44,13 @@ contract StakePoolSimpleCombined is IStakePool, StakeToken, AccessControl, Reent
         uint256 depositedAt;
     }
 
-    
+
     // Reward deposit history
     ClaimableRewardDeposit[] public claimableRewardDeposits;
 
     // Reward deposit history
     RewardDeposit[] public rewardDeposits;
-   
+
 
     // tokenId => available reward amount that tokenId can claim.
     mapping(uint256 => uint256) public claimableRewards;
@@ -322,7 +322,7 @@ contract StakePoolSimpleCombined is IStakePool, StakeToken, AccessControl, Reent
     {
         for (uint256 i = 0; i < tokenIds.length; i++) {
             claimableRewards[tokenIds[i]] += amounts[i];
-        }        
+        }
     }
 
 
@@ -349,7 +349,7 @@ contract StakePoolSimpleCombined is IStakePool, StakeToken, AccessControl, Reent
         emit RewardClaimed(msg.sender, amount);
     }
 
-    
+
     /**
      * @dev Sweep funds
      * Accessible by operators
@@ -388,6 +388,6 @@ contract StakePoolSimpleCombined is IStakePool, StakeToken, AccessControl, Reent
         emit RewardDeposited(account, amount);
     }
 
-   
-   
+
+
 }
