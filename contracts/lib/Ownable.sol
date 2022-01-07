@@ -5,7 +5,7 @@ contract Ownable {
   // Contract owner address
   address public owner;
   // Proposed new contract owner address
-  address public newOwner; 
+  address public newOwner;
 
   event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 

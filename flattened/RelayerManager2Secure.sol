@@ -966,7 +966,7 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
   // Wrapped IDO token address
   IWIDO public wIDO;
 
-  
+
   uint256 public adminFee; // bps
   uint256 public adminFeeAccumulated;
   uint256 public minTransferAmount;
@@ -974,7 +974,7 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
   // Transfer nonce
   mapping(address => uint256) public nonces;
   mapping(address => mapping(uint => bool)) public processedNonces;
-  
+
   // ERC20Permit
   struct PermitRequest {
     uint256 nonce;
@@ -990,7 +990,7 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
   event BridgeWalletChanged(address indexed bridgeWallet);
   event EthReceived(address indexed sender, uint256 amount);
   event AdminFeeWithdraw(address indexed receiver, uint256 amount);
-  
+
 
   constructor(
     IWIDO _wIDO,
@@ -1008,7 +1008,7 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
     wIDO = _wIDO;
     owner = sender;
     adminFee = _adminFee;
-    
+
 
     _setupRole(DEFAULT_ADMIN_ROLE, sender);
     _setupRole(OPERATOR_ROLE, sender);
@@ -1079,12 +1079,12 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
           verify(keccak256(abi.encodePacked(_signer)), _signatures),
           "Minter: invalid signature"
       );
-      
+
       signers[_signer] = false;
   }
 
 
-  
+
 
   /**
     * @dev Set minimum transfer amount
@@ -1229,7 +1229,7 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
     emit AdminFeeWithdraw(receiver, amount);
   }
 
- 
+
 
   function _send(
     address from,
@@ -1238,7 +1238,7 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
     uint256 nonce,
     bytes[] calldata _signatures
   ) internal {
-    
+
     require(receiver != address(0), "RelayManager2: RECEIVER_ZERO_ADDRESS");
     require(amount > minTransferAmount, "RelayManager2: SEND_AMOUNT_INVALID");
     require(amount > adminFee, "RelayManager2: AMOUNT LESS THAN ADMIN FEE");
@@ -1251,13 +1251,13 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
         ),
       "RelayerManager2: INVALID_SIGNATURE"
       );
-    
+
     require(!processedNonces[from][nonce], "RelayManager2Secure: TRANSFER_NONCE_ALREADY_PROCESSED");
-   
+
     // Mark the nonce processed state true to avoid double sending
     processedNonces[from][nonce] = true;
 
-   
+
     uint256 amountToTransfer = amount - adminFee;
     adminFeeAccumulated += adminFee;
     // Mint tokens to receiver
@@ -1276,7 +1276,7 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
     bytes32 r;
     bytes32 s;
     uint8 v;
-  
+
     // Check the signature length
     if (sig.length != 65) {
       return (address(0));
@@ -1293,7 +1293,7 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
     // Version of signature should be 27 or 28, but 0 and 1 are also possible versions
     if (v < 27) {
       v += 27;
-    }  
+    }
 
         // If the version is correct return the signer address
     if (v != 27 && v != 28) {
@@ -1304,7 +1304,7 @@ contract RelayManager2Secure is AccessControl, ReentrancyGuard {
     }
   }
 
- 
+
   function isSigner(address _candidate) public view returns (bool) {
       return signers[_candidate];
   }
