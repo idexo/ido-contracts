@@ -326,6 +326,6 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
 
         super._transfer(from, to, tokenId);
         _popStake(from, tokenId);
-        stakerIds[to].push(tokenIds);
+        stakerIds[to].push(tokenId);
     }
 }
