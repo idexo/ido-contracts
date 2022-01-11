@@ -7,7 +7,7 @@ const ERC20 = artifacts.require('ERC20Mock');
 
 contract('::StakePoolSimpleCombinedNew', async accounts => {
   let stakePool, ido, erc20;
-  const [alice, bob, carol] = accounts;
+  const [alice, bob, carol, darren] = accounts;
   const DOMAIN = "https://idexo.com/";
 
   before(async () => {
@@ -49,7 +49,7 @@ contract('::StakePoolSimpleCombinedNew', async accounts => {
 
   describe('# Stake', async () => {
     before(async () => {
-      for (const user of [alice, bob, carol]) {
+      for (const user of [alice, bob, carol, darren]) {
         await ido.mint(user, web3.utils.toWei(new BN(20000)));
         await ido.approve(stakePool.address, web3.utils.toWei(new BN(20000)), {from: user});
         await erc20.mint(user, web3.utils.toWei(new BN(20000)));
@@ -116,6 +116,10 @@ contract('::StakePoolSimpleCombinedNew', async accounts => {
 
     describe('transfer', async () => {
         it('should transfer', async () => {
+          await stakePool.deposit(web3.utils.toWei(new BN(600)), 0, {from: darren})
+          await stakePool.tokenIds().then(res => {
+            expect(res.toString()).to.eq('2');
+          });
           expectEvent(
             await stakePool.transferFrom(alice, carol, 1, {from: alice}),
             'Transfer'
@@ -134,6 +138,9 @@ contract('::StakePoolSimpleCombinedNew', async accounts => {
           });
           await stakePool.getStakeAmount(carol).then(res => {
             expect(res.toString()).to.eq('2000000000000000000000');
+          });
+          await stakePool.getStakeTokenIds(carol).then(res => {
+            expect(res.toString()).to.eq('1');
           });
         });
       });
