@@ -76,22 +76,14 @@ contract('RelayManagerETH', async accounts => {
         expect(res.toString()).to.eq('100000000000000000000');
       });
     });
-    /*it('send', async () => {
+    it('send', async () => {
       // Accept cross-chain transfer from Polygon (carol => bob)
 
-      expectEvent(
-        await relayManager.send(bob, sendAmount, dummyDepositHash, 1, {from: bob}),
-        'Sent'
+      await expectRevert(
+        relayManager.send(alice, bob, sendAmount, 1, [dummyDepositHash], {from: bob}),
+        'ECDSA: invalid signature length'
       );
-      adminFee = await relayManager.adminFeeAccumulated();
-      expect(adminFee.toString()).to.eq('300000000000000000');
-      gasFee = await relayManager.gasFeeAccumulated();
-      console.log('Gas fee:', gasFee.toString());
-      receiveAmount = sendAmount.sub(adminFee).sub(gasFee);
-      await ido.balanceOf(bob).then(res => {
-        expect(res.toString()).to.eq(receiveAmount.toString());
-      });
-    });*/
+    });
   });
 
   describe('#Ownership', async () => {
