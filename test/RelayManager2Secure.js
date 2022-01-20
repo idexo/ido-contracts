@@ -135,6 +135,35 @@ function testRelayManager(contractName) {
         });
       });
     });
+
+    describe('#Signatures', async () => {
+      describe('reverts if', async () => {
+        it('no signatures on setAdminFee', async () => {
+          await expect(relayer.setAdminFee(1, []))
+            .to.be.revertedWith(contractName + ': INVALID_SIGNATURE');
+        });
+        it('no signatures on setThreshold', async () => {
+          await expect(relayer.setThreshold(2, []))
+            .to.be.revertedWith(contractName + ': INVALID_SIGNATURE');
+        });
+        it('no signatures on addSigner', async () => {
+          await expect(relayer.addSigner(alice.address, []))
+            .to.be.revertedWith(contractName + ': INVALID_SIGNATURE');
+        });
+        it('no signatures on removeSigner', async () => {
+          await expect(relayer.removeSigner(alice.address, []))
+            .to.be.revertedWith(contractName + ': INVALID_SIGNATURE');
+        });
+        it('no signatures on setBridgeWallet', async () => {
+          await expect(relayer.setBridgeWallet(alice.address, []))
+            .to.be.revertedWith(contractName + ': INVALID_SIGNATURE');
+        });
+        it('no signatures on send', async () => {
+          await expect(relayer.send(alice.address, bob.address, ethers.utils.parseEther('100'), 0, []))
+            .to.be.revertedWith(contractName + ': INVALID_SIGNATURE');
+        });
+      });
+    });
   });
 }
 
