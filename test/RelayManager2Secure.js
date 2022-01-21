@@ -75,6 +75,17 @@ function testRelayManager(contractName) {
         sig1 = ethCrypto.sign(signer1Key, ethSign(msgHash));
         await relayer.setAdminFee(ethers.utils.parseEther('5'), [sig1]);
       });
+      it('expect to set threshold', async () => {
+        msgHash = ethers.utils.solidityKeccak256(
+          ['bytes'],
+          [ethers.utils.solidityPack(
+            ['uint8'],
+            [1]
+          )]
+        );
+        sig1 = ethCrypto.sign(signer1Key, ethSign(msgHash));
+        await relayer.setThreshold(1, [sig1]);
+      });
       describe('reverts if', async () => {
         it('non-operator call setters', async () => {
           await expect(relayer.connect(alice).setAdminFee(0, [sig1]))
