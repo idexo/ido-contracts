@@ -64,6 +64,17 @@ function testRelayManager(contractName) {
         await relayer.removeSigner(signer2, [sig1]);
         expect(await relayer.signerLength()).to.eq(1);
       });
+      it('expect to set adminFee', async () => {
+        msgHash = ethers.utils.solidityKeccak256(
+          ['bytes'],
+          [ethers.utils.solidityPack(
+            ['uint256'],
+            [ethers.utils.parseEther('5')]
+          )]
+        );
+        sig1 = ethCrypto.sign(signer1Key, ethSign(msgHash));
+        await relayer.setAdminFee(ethers.utils.parseEther('5'), [sig1]);
+      });
       describe('reverts if', async () => {
         it('non-operator call setters', async () => {
           await expect(relayer.connect(alice).setAdminFee(0, [sig1]))
