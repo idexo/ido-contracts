@@ -1,6 +1,8 @@
 // Initiate `ownerPrivateKey` with the third account private key on test evm
 
 const { expect } = require('chai');
+const { ethers } = require('hardhat');
+const ethCrypto = require('eth-crypto');
 const {
   BN,
   constants,
@@ -17,6 +19,19 @@ const {
 const RelayManagerETH = artifacts.require('RelayManagerETH');
 const ERC20PermitMock = artifacts.require('ERC20PermitMock');
 
+const signer1 = '0xe6Dba9e3f988902d5b407615c19e89D756396447';
+const signer1Key = '0x34cee9ead792f332d133b1bfc7a915438e41bc42cec0ef3f4f79b74877a16012';
+const signer2 = '0x6Fda6B0E6Adf2664D9b30199A54B77b050874656';
+const signer2Key = '0x16f8c6cc563f28f8b213b85a0f7149243794e3b0f87519833b08f6838892121c';
+
+const ethSign = msgHash => ethers.utils.solidityKeccak256(
+  ['bytes'],
+  [ethers.utils.solidityPack(
+      ['string', 'bytes'],
+      ['\x19Ethereum Signed Message:\n32', msgHash]
+  )]
+);
+
 contract('RelayManagerETH', async accounts => {
   let relayManager;
   let ido;
@@ -27,7 +42,7 @@ contract('RelayManagerETH', async accounts => {
 
   before(async () => {
     ido = await ERC20PermitMock.new(idoName, idoSymbol);
-    relayManager = await RelayManagerETH.new(ido.address, new BN(30), bridge, new BN(2), [alice, carol]);
+    relayManager = await RelayManagerETH.new(ido.address, new BN(30), bridge, new BN(1), [signer1]);
 
     ido.mint(alice, web3.utils.toWei(new BN(1000)));
     ido.mint(carol, web3.utils.toWei(new BN(1000)));
@@ -84,6 +99,64 @@ contract('RelayManagerETH', async accounts => {
         'ECDSA: invalid signature length'
       );
     });
+    it('isSigner', async () => {
+      await relayManager.isSigner(bob).then(res => {
+        expect(res.toString()).to.eq('false');
+      });
+    });
+  });
+
+  describe('Setters', async () => {
+    it('expect to add signer', async () => {
+      msgHash = ethers.utils.solidityKeccak256(
+        ['bytes'],
+        [ethers.utils.solidityPack(
+          ['address'],
+          [signer2]
+        )]
+      );
+      sig1 = ethCrypto.sign(signer1Key, ethSign(msgHash));
+      await relayManager.addSigner(signer2, [sig1]);
+      await relayManager.signerLength().then(res => {
+        expect(res.toString()).to.eq('2');
+      });
+    });
+    it('expect to remove signer', async () => {
+      msgHash = ethers.utils.solidityKeccak256(
+        ['bytes'],
+        [ethers.utils.solidityPack(
+          ['address'],
+          [signer2]
+        )]
+      );
+      sig1 = ethCrypto.sign(signer1Key, ethSign(msgHash));
+      await relayManager.removeSigner(signer2, [sig1]);
+      await relayManager.signerLength().then(res => {
+        expect(res.toString()).to.eq('1');
+      });
+    });
+    it('expect to set adminFee', async () => {
+      msgHash = ethers.utils.solidityKeccak256(
+        ['bytes'],
+        [ethers.utils.solidityPack(
+          ['uint256'],
+          [ethers.utils.parseEther('5')]
+        )]
+      );
+      sig1 = ethCrypto.sign(signer1Key, ethSign(msgHash));
+      await relayManager.setAdminFee(ethers.utils.parseEther('5'), [sig1]);
+    });
+    it('expect to set threshold', async () => {
+      msgHash = ethers.utils.solidityKeccak256(
+        ['bytes'],
+        [ethers.utils.solidityPack(
+          ['uint8'],
+          [1]
+        )]
+      );
+      sig1 = ethCrypto.sign(signer1Key, ethSign(msgHash));
+      await relayManager.setThreshold(1, [sig1]);
+    });
   });
 
   describe('#Ownership', async () => {
@@ -91,10 +164,6 @@ contract('RelayManagerETH', async accounts => {
       await relayManager.transferOwnership(bob);
       await relayManager.acceptOwnership({from: bob});
       expect(await relayManager.owner()).to.eq(bob);
-      /*expectEvent(
-        await relayManager.setAdminFee(1,{from: bob}),
-        'AdminFeeChanged'
-      )*/
     });
     describe('reverts if', async () => {
         it('non-owner call setMinTransferAmount', async () => {
