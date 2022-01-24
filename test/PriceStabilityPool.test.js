@@ -13,7 +13,7 @@ const TWELVE_TICKET_HASH = ethers.utils.id('Twelve month access');
 const UNLIMITED_TICKET_HASH = ethers.utils.id('Unlimited access');
 
 async function setup() {
-  const [owner, alice, bob, carol] = await ethers.getSigners();
+  const [owner, alice, bob, carol, darren, elena] = await ethers.getSigners();
   const wido = await deployMockContract(owner, IWIDO.abi);
   const usdt = await deployMockContract(owner, IWIDO.abi);
   const PriceStabilityPool = await ethers.getContractFactory('PriceStabilityPool');
@@ -30,16 +30,16 @@ async function setup() {
     ethers.utils.parseEther('2'), // coupon stable coin price
     1000 // entrance fee in BP
   );
-  return {wido, usdt, contract, owner, alice, bob, carol};
+  return {wido, usdt, contract, owner, alice, bob, carol, darren, elena};
 }
 
 describe('PriceStabilityPool', async () => {
   let wido, usdt, contract;
-  let owner, alice, bob, carol;
+  let owner, alice, bob, carol, darren, elena;
 
   describe('createCoupon()', async () => {
     it('expect to create coupon', async () => {
-      ({wido, usdt, contract, owner, alice, bob, carol} = await setup());
+      ({wido, usdt, contract, owner, alice, bob, carol, darren, elena} = await setup());
       // whitelist
       await contract.addWhitelist([alice.address, bob.address]);
 
@@ -50,6 +50,11 @@ describe('PriceStabilityPool', async () => {
       expect(await contract.ownerOf(1)).to.eq(alice.address);
       expect(await contract.couponBalances(alice.address)).to.eq(5);
       expect(await contract.totalCoupon()).to.eq(20);
+    });
+    it('supportsInterface', async () => {
+      await contract.supportsInterface(`0x00000000`).then(res => {
+        expect(res).to.eq(false);
+      });
     });
     describe('reverts if', async () => {
       it('non whitelisted wallet call', async () => {
@@ -90,7 +95,7 @@ describe('PriceStabilityPool', async () => {
         .to.emit(contract, 'TicketPriceSet')
         .withArgs(ONE_TIME_TICKET_HASH, ethers.utils.parseEther('1'));
     });
-    it('purchaseTicket()', async () => {
+    it('purchaseTicket(ONE_MONTH_TICKET_HASH)', async () => {
       // mocks
       await wido.mock.transferFrom.withArgs(alice.address, contract.address, ethers.utils.parseEther('2.2')).returns(true);
 
@@ -196,6 +201,23 @@ describe('PriceStabilityPool', async () => {
       it('claim amount is greater than available amount', async () => {
         await expect(contract.connect(alice).claim(ethers.utils.parseEther('0.02')))
           .to.be.revertedWith('PriceStabilityPool: CLAIM_AMOUNT_INVALID');
+      });
+    });
+  });
+
+  describe('purchaseTicket', async () => {
+    it('purchaseTicket(THREE_MONTH_TICKET_HASH)', async () => {
+      await wido.mock.transferFrom.withArgs(darren.address, contract.address, ethers.utils.parseEther('3.3')).returns(true);
+      await contract.connect(darren).purchaseTicket(THREE_MONTH_TICKET_HASH);
+      await contract.tickets(darren.address).then(res => {
+        expect(res['duration']).to.eq(8035200);
+      });
+    });
+    it('purchaseTicket(SIX_MONTH_TICKET_HASH)', async () => {
+      await wido.mock.transferFrom.withArgs(elena.address, contract.address, ethers.utils.parseEther('4.4')).returns(true);
+      await contract.connect(elena).purchaseTicket(SIX_MONTH_TICKET_HASH);
+      await contract.tickets(elena.address).then(res => {
+        expect(res['duration']).to.eq(16070400);
       });
     });
   });
