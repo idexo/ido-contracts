@@ -61,7 +61,7 @@
     "glob": "^7.2.0",
     "graphlib": "^2.1.8",
     "hardhat": "^2.6.8",
-    "hardhat-contract-sizer": "^2.3.0",
+    "hardhat-contract-sizer": "^2.4.0",
     "hardhat-gas-reporter": "^1.0.4",
     "keccak256": "^1.0.2",
     "lodash.startcase": "^4.4.0",

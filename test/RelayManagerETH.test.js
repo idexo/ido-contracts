@@ -157,6 +157,20 @@ contract('RelayManagerETH', async accounts => {
       sig1 = ethCrypto.sign(signer1Key, ethSign(msgHash));
       await relayManager.setThreshold(1, [sig1]);
     });
+    it('expect to set bridge wallet', async () => {
+      msgHash = ethers.utils.solidityKeccak256(
+        ['bytes'],
+        [ethers.utils.solidityPack(
+          ['address'],
+          [bridge]
+        )]
+      );
+      sig1 = ethCrypto.sign(signer1Key, ethSign(msgHash));
+      await relayManager.setBridgeWallet(bridge, [sig1]);
+    });
+    it('expect to set min transfer amount', async () => {
+      await relayManager.setMinTransferAmount(0);
+    });
   });
 
   describe('#Ownership', async () => {
