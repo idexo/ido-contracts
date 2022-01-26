@@ -2,7 +2,7 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
-import "../interfaces/IKRED.sol";
+import "../interfaces/ICRED.sol";
 
 contract CRED is ICRED, ERC20Permit {
     // Contract owner address
