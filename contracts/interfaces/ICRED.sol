@@ -4,7 +4,7 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-interface IKRED is IERC20 {
+interface ICRED is IERC20 {
     function setRelayer(address newRelayer) external;
 
     function renounceOwnership() external;
