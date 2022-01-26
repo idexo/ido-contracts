@@ -4,7 +4,7 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "../interfaces/IKRED.sol";
 
-contract KRED is IKRED, ERC20Permit {
+contract CRED is ICRED, ERC20Permit {
     // Contract owner address
     address public owner;
     // Proposed new contract owner address
@@ -16,7 +16,7 @@ contract KRED is IKRED, ERC20Permit {
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event RelayerAddressChanged(address indexed relayer);
 
-    constructor() ERC20("Idexo Community KRED", "KRED") ERC20Permit("Idexo Community KRED") {
+    constructor() ERC20("Idexonaut Cred", "CRED") ERC20Permit("Idexonaut Cred") {
         owner = _msgSender();
         emit OwnershipTransferred(address(0), _msgSender());
     }
