@@ -164,6 +164,12 @@ contract('IDOSale', async accounts => {
           expect(res.length).to.eq(4);
         });
       });
+      it('permit and deposit', async () => {
+        await expectRevert(
+          saleContract.permitAndDepositTokens(new BN(0), { nonce: 0, deadline: 0, v: 0, r: dummyHash, s: dummyHash }),
+          'IDOSale: DEPOSIT_AMOUNT_INVALID'
+        );
+      });
     });
     describe('reverts if (after sale start)', async () => {
       it('zero amount in purchase', async () => {
