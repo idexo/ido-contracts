@@ -221,4 +221,59 @@ describe('PriceStabilityPool', async () => {
       });
     });
   });
+
+  describe('#Role', async () => {
+    it ('should add operator', async () => {
+      await contract.addOperator(bob.address);
+      expect(await contract.checkOperator(bob.address)).to.eq(true);
+    });
+    it('should remove operator', async () => {
+      await contract.removeOperator(bob.address);
+      expect(await contract.checkOperator(bob.address)).to.eq(false);
+    });
+    describe('reverts if', async () => {
+      it('add operator by non-operator', async () => {
+        await expect(contract.connect(bob).addOperator(bob.address))
+          .to.be.revertedWith('Ownable: CALLER_NO_OWNER');
+      });
+      it('remove operator by non-operator', async () => {
+        await contract.addOperator(bob.address);
+        await expect(contract.connect(bob).removeOperator(bob.address))
+          .to.be.revertedWith('Ownable: CALLER_NO_OWNER');
+      });
+    });
+  });
+
+  describe('#Whitelist', async () => {
+    it('addWhitelist, removeWhitelist', async () => {
+      await contract.addWhitelist([alice.address, bob.address, carol.address, darren.address]);
+      expect(await contract.whitelist(alice.address)).to.eq(true);
+      expect(await contract.whitelist(darren.address)).to.eq(true);
+      await contract.removeWhitelist([darren.address]);
+      expect(await contract.whitelist(alice.address)).to.eq(true);
+      expect(await contract.whitelist(darren.address)).to.eq(false);
+    });
+    describe('reverts if', async () => {
+      it('non-operator call addWhitelist/removeWhitelist', async () => {
+        await expect(contract.connect(carol).addWhitelist([alice.address, bob.address]))
+          .to.be.revertedWith('Ownable: CALLER_NO_OWNER');
+        await expect(contract.connect(carol).removeWhitelist([alice.address, bob.address]))
+          .to.be.revertedWith('Ownable: CALLER_NO_OWNER');
+      });
+    });
+  });
+
+  describe('#Ownership', async () => {
+    it('should transfer ownership', async () => {
+      await contract.transferOwnership(bob.address);
+      await contract.connect(bob).acceptOwnership();
+      expect(await contract.owner()).to.eq(bob.address);
+    });
+    describe('reverts if', async () => {
+      it('non owner call renounceOwnership', async () => {
+        await expect(contract.renounceOwnership())
+          .to.be.revertedWith('Ownable: CALLER_NO_OWNER');
+      });
+    });
+  });
 });
