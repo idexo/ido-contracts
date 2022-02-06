@@ -10,45 +10,41 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuard {
-	using SafeMath for uint256; 
-	
-	bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+    using SafeMath for uint256;
 
-	//Last stake token id, start from 1
-	uint256 public tokenIds;
+    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
-	//NFT Base URI
-	string public baseURI;
+    //Last stake token id, start from 1
+    uint256 public tokenIds;
 
-	//Historical CRED earned all-time for a token id
-	mapping(uint256 => uint256) public credEarned;
+    //NFT Base URI
+    string public baseURI;
 
-	//Community Rank assigned to a token id
-	mapping(uint256 => string) public communityRank;
+    //Historical CRED earned all-time for a token id
+    mapping(uint256 => uint256) public credEarned;
 
-	//Idexonaut wallet => nft id array
-	mapping(address => uint256[]) public communityIds;
+    //Community Rank assigned to a token id
+    mapping(uint256 => string) public communityRank;
 
-	event NFTCreated(uint256 indexed nftId, address indexed account);
-	event CREDAdded(uint256 indexed nftId, uint256 credAddedAmount);
-	event RankUpdated(uint256 indexed nftId, string newRank);
+    //Idexonaut wallet => nft id array
+    mapping(address => uint256[]) public communityIds;
 
-	constructor(
-		string memory communityNFTname,
-		string memory communityNFTsymbol,
-		string memory communityNFTBaseURI
+    event NFTCreated(uint256 indexed nftId, address indexed account);
+    event CREDAdded(uint256 indexed nftId, uint256 credAddedAmount);
+    event RankUpdated(uint256 indexed nftId, string newRank);
 
-	)
-		ERC721(communityNFTname, communityNFTsymbol) {
+    constructor(
+        string memory communityNFTname,
+        string memory communityNFTsymbol,
+        string memory communityNFTBaseURI
+    )
+    ERC721(communityNFTname, communityNFTsymbol) {
+        baseURI = communityNFTBaseURI;
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(OPERATOR_ROLE, msg.sender);
+    }
 
-			baseURI = communityNFTBaseURI;
-			_setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        	_setupRole(OPERATOR_ROLE, msg.sender);
-
-		}
-
-
-	 /**
+    /**
      * @dev Override supportInterface.
      */
     function supportsInterface(
@@ -63,7 +59,7 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
         return super.supportsInterface(interfaceId);
     }
 
-	 /***********************|
+    /***********************|
     |          Role         |
     |______________________*/
 
@@ -91,7 +87,6 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
         address account
     )
         public
-        
         onlyAdmin
     {
         // Check if `account` already has operator role
@@ -107,7 +102,6 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
         address account
     )
         public
-        
         onlyAdmin
     {
         // Check if `account` has operator role
@@ -123,14 +117,13 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
         address account
     )
         public
-        
         view
         returns (bool)
     {
         return hasRole(OPERATOR_ROLE, account);
     }
 
-	 /**********************|
+    /**********************|
     |          URI         |
     |_____________________*/
 
@@ -183,10 +176,9 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
         onlyOperator
         returns (uint256)
     {
-    	// Check if `account` already has a token id
+        // Check if `account` already has a token id
         require(!isHolder(recipient), "CommunityNFT#mintNFT: ACCOUNT_ALREADY_HAS_NFT");
 
-        
         uint256 newTokenId = tokenIds++;
         _mint(recipient, newTokenId);
 
@@ -207,7 +199,6 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
         return balanceOf(account) > 0;
     }
 
-
     /**
      * @dev Get token id array owned by wallet address.
      * @param account address
@@ -222,8 +213,7 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
         return communityIds[account];
     }
 
-
-	/**
+    /**
      * @dev Updated historical credEarned info for `nftId`.
      * Requirements:
      *
@@ -231,16 +221,16 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      * @param nftId uint256
      */
     function updateNFTCredEarned(
-    	uint256 nftId,
-    	uint256 newCredEarned
+        uint256 nftId,
+        uint256 newCredEarned
     )
-    	public onlyOperator
+        public onlyOperator
     {
-    	credEarned[nftId] = credEarned[nftId] + newCredEarned;
+        credEarned[nftId] = credEarned[nftId] + newCredEarned;
 
     }
 
-      /**
+    /**
      * @dev Remove the given token from communityIds.
      *
      * @param from address from
@@ -270,12 +260,12 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      * @param nftId uint256
      */
     function updateNFTRank(
-    	uint256 nftId,
-    	string memory newRank
+        uint256 nftId,
+        string memory newRank
     )
-    	public onlyOperator
+        public onlyOperator
     {
-    	communityRank[nftId] = newRank;
+        communityRank[nftId] = newRank;
 
     }
 
@@ -285,7 +275,6 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      *
      * - `account` must not be zero address, check ERC721 {_mint}
      * @param account address of recipient.
-    
      */
     function _mint(
         address account,
@@ -294,16 +283,9 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
         internal
         virtual
         override
-       
     {
-        
-        
-        
         super._mint(account, tokenId);
-
         communityIds[account].push(tokenId);
-
-        
     }
 
     /**
@@ -324,13 +306,12 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
         address to,
         uint256 tokenId
     ) internal override {
-
         super._transfer(from, to, tokenId);
         _popNFT(from, tokenId);
         communityIds[to].push(tokenId);
     }
 
-     /**
+    /**
      * @dev Burn token. Not reachable.
      */
     function _burn(
@@ -340,14 +321,6 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
         override(ERC721, ERC721URIStorage)
     {
         require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
-        
         super._burn(stakeId);
-        
     }
-
-
-
-
-
-
 }
