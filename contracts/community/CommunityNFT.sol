@@ -31,8 +31,8 @@ contract CommunityNFT is
     //Community Rank assigned to a token id
     mapping(uint256 => string) public communityRank;
 
-    //Idexonaut wallet => nft id array
-    mapping(address => uint256[]) public communityIds;
+    //Idexonaut wallet => nft id 
+    mapping(address => uint256) public communityIds;
 
     event NFTCreated(uint256 indexed nftId, address indexed account);
     event CREDAdded(uint256 indexed nftId, uint256 credAddedAmount);
@@ -197,12 +197,10 @@ contract CommunityNFT is
      * @dev Get token id array owned by wallet address.
      * @param account address
      */
-    function getTokenId(address account)
-        public
-        view
-        returns (uint256[] memory)
-    {
-        return communityIds[account];
+    function getTokenId(address account) public view returns (uint256) {
+        require(account != address(0), "ERC721: token query for account(0");
+        uint256 tokenId = communityIds[account];
+        return tokenId;
     }
 
     /**
@@ -220,24 +218,24 @@ contract CommunityNFT is
         emit CREDAdded(nftId, newCredEarned);
     }
 
-    /**
-     * @dev Remove the given token from communityIds.
-     *
-     * @param from address from
-     * @param tokenId tokenId to remove
-     */
-    function _popNFT(address from, uint256 tokenId) internal {
-        uint256[] storage commIds = communityIds[from];
-        for (uint256 i = 0; i < commIds.length; i++) {
-            if (commIds[i] == tokenId) {
-                if (i != commIds.length - 1) {
-                    commIds[i] = commIds[commIds.length - 1];
-                }
-                commIds.pop();
-                break;
-            }
-        }
-    }
+    // /**
+    //  * @dev Remove the given token from communityIds.
+    //  *
+    //  * @param from address from
+    //  * @param tokenId tokenId to remove
+    //  */
+    // function _popNFT(address from, uint256 tokenId) internal {
+    //     uint256[] storage commIds = communityIds[from];
+    //     for (uint256 i = 0; i < commIds.length; i++) {
+    //         if (commIds[i] == tokenId) {
+    //             if (i != commIds.length - 1) {
+    //                 commIds[i] = commIds[commIds.length - 1];
+    //             }
+    //             commIds.pop();
+    //             break;
+    //         }
+    //     }
+    // }
 
     /**
      * @dev Updated historical credEarned info for `nftId`.
@@ -258,11 +256,10 @@ contract CommunityNFT is
      * @dev Burn a token.
      * @param tokenId uint256
      */
-    function burnNFT(uint256 tokenId) public onlyOperator returns (uint256) {
+    function burnNFT(uint256 tokenId) public onlyOperator {
+        address owner = ERC721.ownerOf(tokenId);
         _burn(tokenId);
-
-        
-        return tokenId;
+        delete communityIds[owner];
     }
 
     /**
@@ -274,7 +271,7 @@ contract CommunityNFT is
      */
     function _mint(address account, uint256 tokenId) internal virtual override {
         super._mint(account, tokenId);
-        communityIds[account].push(tokenId);
+        communityIds[account] = tokenId;
         emit NFTCreated(tokenId, account);
     }
 
@@ -303,8 +300,8 @@ contract CommunityNFT is
         );
 
         super._transfer(from, to, tokenId);
-        _popNFT(from, tokenId);
-        communityIds[to].push(tokenId);
+        delete communityIds[from];
+        communityIds[to] = tokenId;
     }
 
     /**
