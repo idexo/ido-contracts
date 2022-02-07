@@ -9,7 +9,12 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuard {
+contract CommunityNFT is
+    ERC721,
+    ERC721URIStorage,
+    AccessControl,
+    ReentrancyGuard
+{
     using SafeMath for uint256;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
@@ -37,8 +42,7 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
         string memory communityNFTname,
         string memory communityNFTsymbol,
         string memory communityNFTBaseURI
-    )
-    ERC721(communityNFTname, communityNFTsymbol) {
+    ) ERC721(communityNFTname, communityNFTsymbol) {
         baseURI = communityNFTBaseURI;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(OPERATOR_ROLE, msg.sender);
@@ -47,9 +51,7 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
     /**
      * @dev Override supportInterface.
      */
-    function supportsInterface(
-        bytes4 interfaceId
-    )
+    function supportsInterface(bytes4 interfaceId)
         public
         view
         virtual
@@ -67,7 +69,10 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      * @dev Restricted to members of the admin role.
      */
     modifier onlyAdmin() {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "CommunityNFT#onlyAdmin: CALLER_NO_ADMIN_ROLE");
+        require(
+            hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
+            "CommunityNFT#onlyAdmin: CALLER_NO_ADMIN_ROLE"
+        );
         _;
     }
 
@@ -75,7 +80,10 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      * @dev Restricted to members of the operator role.
      */
     modifier onlyOperator() {
-        require(hasRole(OPERATOR_ROLE, msg.sender), "CommunityNFT#onlyOperator: CALLER_NO_OPERATOR_ROLE");
+        require(
+            hasRole(OPERATOR_ROLE, msg.sender),
+            "CommunityNFT#onlyOperator: CALLER_NO_OPERATOR_ROLE"
+        );
         _;
     }
 
@@ -83,14 +91,12 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      * @dev Add an account to the operator role.
      * @param account address of recipient.
      */
-    function addOperator(
-        address account
-    )
-        public
-        onlyAdmin
-    {
+    function addOperator(address account) public onlyAdmin {
         // Check if `account` already has operator role
-        require(!hasRole(OPERATOR_ROLE, account), "CommunityNFT#addOperator: ALREADY_OPERATOR_ROLE");
+        require(
+            !hasRole(OPERATOR_ROLE, account),
+            "CommunityNFT#addOperator: ALREADY_OPERATOR_ROLE"
+        );
         grantRole(OPERATOR_ROLE, account);
     }
 
@@ -98,14 +104,12 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      * @dev Remove an account from the operator role.
      * @param account address.
      */
-    function removeOperator(
-        address account
-    )
-        public
-        onlyAdmin
-    {
+    function removeOperator(address account) public onlyAdmin {
         // Check if `account` has operator role
-        require(hasRole(OPERATOR_ROLE, account), "CommunityNFT#removeOperator: NO_OPERATOR_ROLE");
+        require(
+            hasRole(OPERATOR_ROLE, account),
+            "CommunityNFT#removeOperator: NO_OPERATOR_ROLE"
+        );
         revokeRole(OPERATOR_ROLE, account);
     }
 
@@ -113,13 +117,7 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      * @dev Check if an account is operator.
      * @param account address of operator being checked.
      */
-    function checkOperator(
-        address account
-    )
-        public
-        view
-        returns (bool)
-    {
+    function checkOperator(address account) public view returns (bool) {
         return hasRole(OPERATOR_ROLE, account);
     }
 
@@ -131,7 +129,12 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      * @dev Return token URI
      * Override {ERC721URIStorage:tokenURI}
      */
-    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (string memory)
+    {
         return ERC721URIStorage.tokenURI(tokenId);
     }
 
@@ -141,10 +144,10 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      *
      * - `tokenId` must exist, see {ERC721URIStorage:_setTokenURI}
      */
-    function setTokenURI(
-        uint256 tokenId,
-        string memory _tokenURI
-    ) public onlyOperator {
+    function setTokenURI(uint256 tokenId, string memory _tokenURI)
+        public
+        onlyOperator
+    {
         super._setTokenURI(tokenId, _tokenURI);
     }
 
@@ -160,7 +163,7 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      * @dev Return base URI
      * Override {ERC721:_baseURI}
      */
-    function _baseURI() internal view override returns(string memory) {
+    function _baseURI() internal view override returns (string memory) {
         return baseURI;
     }
 
@@ -169,15 +172,12 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      * @param recipient address
      * check that recipient does not already have one, if they do then mint fails
      */
-    function mintNFT(
-        address recipient
-    )
-        public
-        onlyOperator
-        returns (uint256)
-    {
+    function mintNFT(address recipient) public onlyOperator returns (uint256) {
         // Check if `account` already has a token id
-        require(!isHolder(recipient), "CommunityNFT#mintNFT: ACCOUNT_ALREADY_HAS_NFT");
+        require(
+            !isHolder(recipient),
+            "CommunityNFT#mintNFT: ACCOUNT_ALREADY_HAS_NFT"
+        );
 
         tokenIds++;
         _mint(recipient, tokenIds);
@@ -189,13 +189,7 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      * @dev Check if wallet address owns any stake tokens.
      * @param account address
      */
-    function isHolder(
-        address account
-    )
-        public
-        view
-        returns (bool)
-    {
+    function isHolder(address account) public view returns (bool) {
         return balanceOf(account) > 0;
     }
 
@@ -203,9 +197,7 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      * @dev Get token id array owned by wallet address.
      * @param account address
      */
-    function getTokenId(
-        address account
-    )
+    function getTokenId(address account)
         public
         view
         returns (uint256[] memory)
@@ -220,11 +212,9 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      * - `nftId` must exist in the community nft collection
      * @param nftId uint256
      */
-    function updateNFTCredEarned(
-        uint256 nftId,
-        uint256 newCredEarned
-    )
-        public onlyOperator
+    function updateNFTCredEarned(uint256 nftId, uint256 newCredEarned)
+        public
+        onlyOperator
     {
         credEarned[nftId] = credEarned[nftId] + newCredEarned;
         emit CREDAdded(nftId, newCredEarned);
@@ -236,10 +226,7 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      * @param from address from
      * @param tokenId tokenId to remove
      */
-    function _popNFT(
-        address from,
-        uint256 tokenId
-    ) internal {
+    function _popNFT(address from, uint256 tokenId) internal {
         uint256[] storage commIds = communityIds[from];
         for (uint256 i = 0; i < commIds.length; i++) {
             if (commIds[i] == tokenId) {
@@ -259,14 +246,22 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      * - `nftId` must exist in the community nft collection
      * @param nftId uint256
      */
-    function updateNFTRank(
-        uint256 nftId,
-        string memory newRank
-    )
-        public onlyOperator
+    function updateNFTRank(uint256 nftId, string memory newRank)
+        public
+        onlyOperator
     {
         communityRank[nftId] = newRank;
         emit RankUpdated(nftId, newRank);
+    }
+
+    /**
+     * @dev Burn a token.
+     * @param tokenId uint256
+     */
+    function burnNFT(uint256 tokenId) public onlyOperator returns (uint256) {
+        _burn(tokenId);
+
+        return tokenId;
     }
 
     /**
@@ -276,14 +271,7 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
      * - `account` must not be zero address, check ERC721 {_mint}
      * @param account address of recipient.
      */
-    function _mint(
-        address account,
-        uint256 tokenId
-    )
-        internal
-        virtual
-        override
-    {
+    function _mint(address account, uint256 tokenId) internal virtual override {
         super._mint(account, tokenId);
         communityIds[account].push(tokenId);
         emit NFTCreated(tokenId, account);
@@ -307,6 +295,12 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
         address to,
         uint256 tokenId
     ) internal override {
+        // Check if `account` already has a token id
+        require(
+            !isHolder(to),
+            "CommunityNFT#_transfer: ACCOUNT_ALREADY_HAS_NFT"
+        );
+
         super._transfer(from, to, tokenId);
         _popNFT(from, tokenId);
         communityIds[to].push(tokenId);
@@ -315,13 +309,11 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
     /**
      * @dev Burn token. Not reachable.
      */
-    function _burn(
-        uint256 stakeId
-    )
+    function _burn(uint256 tokenId)
         internal
         override(ERC721, ERC721URIStorage)
     {
-        require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
-        super._burn(stakeId);
+        require(_exists(tokenId), "CommunityNFT#burnNFT: TOKEN_NOT_FOUND");
+        super._burn(tokenId);
     }
 }

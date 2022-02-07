@@ -56,40 +56,6 @@ contract("CommunityNFT", async (accounts) => {
       const tokenId = await nft.getTokenId(alice);
       expect(tokenId.toString()).to.eq("1");
     });
-    it("should transfer NFT", async () => {
-      await nft.mintNFT(carol, { from: bob });
-      await nft.mintNFT(darren, { from: bob });
-      const ids = await nft.tokenIds();
-      expect(ids.toString()).to.eq("3");
-      const balance = await nft.balanceOf(carol);
-      expect(balance.toString()).to.eq("1");
-      let tokenId = await nft.getTokenId(carol);
-      expect(tokenId.toString()).to.eq("2");
-      await nft.setApprovalForAll(bob, true, { from: carol });
-      expectEvent(
-        await nft.transferFrom(carol, alice, 2, { from: bob }),
-        "Transfer"
-      );
-      tokenId = await nft.getTokenId(carol);
-      expect(tokenId.length).to.eq(0);
-      tokenId = await nft.getTokenId(alice);
-      expect(tokenId.length).to.eq(2);
-    });
-    it("should transfer middle NFT", async () => {
-      let tokenId = await nft.getTokenId(alice);
-      expect(tokenId.length).to.eq(2);
-      await nft.setApprovalForAll(bob, true, { from: alice });
-      expectEvent(
-        await nft.transferFrom(alice, carol, 1, { from: bob }),
-        "Transfer"
-      );
-      tokenId = await nft.getTokenId(alice);
-      expect(tokenId.length).to.eq(1);
-      expect(tokenId.toString()).to.eq("2");
-      tokenId = await nft.getTokenId(carol);
-      expect(tokenId.length).to.eq(1);
-      expect(tokenId.toString()).to.eq("1");
-    });
     describe("reverts if", async () => {
       it("caller no operator role", async () => {
         await expectRevert(
@@ -105,6 +71,59 @@ contract("CommunityNFT", async (accounts) => {
       });
     });
   });
+
+  describe("#Transfer", async () => {
+    it("should transfer NFT", async () => {
+      await nft.mintNFT(carol, { from: bob });
+      // await nft.mintNFT(darren, { from: bob });
+      const ids = await nft.tokenIds();
+      expect(ids.toString()).to.eq("2");
+      const balance = await nft.balanceOf(carol);
+      expect(balance.toString()).to.eq("1");
+      let tokenId = await nft.getTokenId(carol);
+      expect(tokenId.toString()).to.eq("2");
+      await nft.setApprovalForAll(bob, true, { from: carol });
+      expectEvent(
+        await nft.transferFrom(carol, darren, 2, { from: bob }),
+        "Transfer"
+      );
+      tokenId = await nft.getTokenId(carol);
+      expect(tokenId.length).to.eq(0);
+      tokenId = await nft.getTokenId(darren);
+      expect(tokenId.length).to.eq(1);
+    });
+    it("should transfer middle NFT", async () => {
+      let tokenId = await nft.getTokenId(alice);
+      expect(tokenId.length).to.eq(1);
+      await nft.setApprovalForAll(bob, true, { from: alice });
+      expectEvent(
+        await nft.transferFrom(alice, carol, 1, { from: bob }),
+        "Transfer"
+      );
+      tokenId = await nft.getTokenId(alice);
+      expect(tokenId.length).to.eq(0);
+      // expect(tokenId.toString()).to.eq("2");
+      tokenId = await nft.getTokenId(carol);
+      expect(tokenId.length).to.eq(1);
+      expect(tokenId.toString()).to.eq("1");
+    });
+    describe("reverts if", async () => {
+      it("caller no operator role", async () => {
+        await expectRevert(
+          nft.mintNFT(alice, { from: alice }),
+          "CALLER_NO_OPERATOR_ROLE"
+        );
+      });
+      it("account already has nft", async () => {
+        await expectRevert(
+          // 
+          nft.mintNFT(carol, { from: bob }),
+          "ACCOUNT_ALREADY_HAS_NFT"
+        );
+      });
+    });
+  });
+
   describe("#URI", async () => {
     it("should set base token URI", async () => {
       // only admin can set BaseURI
