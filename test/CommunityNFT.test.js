@@ -8,12 +8,16 @@ contract("CommunityNFT", async (accounts) => {
   const [alice, bob, carol] = accounts;
 
   before(async () => {
-    nft = await CommunityNFT.new( "TEST", "T", "https://idexo.io/" );
+    nft = await CommunityNFT.new("TEST", "T", "https://idexo.io/");
   });
 
   describe("#Role", async () => {
     it("should add operator", async () => {
       await nft.addOperator(bob);
+      expect(await nft.checkOperator(bob)).to.eq(true);
+    });
+    it("should check operator", async () => {
+      await nft.checkOperator(bob);
       expect(await nft.checkOperator(bob)).to.eq(true);
     });
     it("should remove operator", async () => {
@@ -36,4 +40,40 @@ contract("CommunityNFT", async (accounts) => {
       });
     });
   });
+
+  describe("#Mint", async () => {
+    it("should mint NFT", async () => {
+      await nft.mintNFT(alice, { from: bob });
+      const balance = await nft.balanceOf(alice);
+      expect(await balance.toString()).to.eq("1");
+    });
+    describe("reverts if", async () => {
+      it("caller no operator role", async () => {
+        await expectRevert(
+          nft.mintNFT(alice, { from: carol }),
+          "CALLER_NO_OPERATOR_ROLE"
+        );
+      });
+      it("account already has nft", async () => {
+        await expectRevert(
+          nft.mintNFT(alice, { from: bob }),
+          "ACCOUNT_ALREADY_HAS_NFT"
+        );
+      });
+      // it("remove operator by non-admin", async () => {
+      //   await nft.addOperator(bob);
+      //   await expectRevert(
+      //     nft.removeOperator(bob, { from: bob }),
+      //     "CALLER_NO_ADMIN_ROLE"
+      //   );
+      // });
+    });
+  });
+  // describe("#URI", async () => {
+  //   it("should set token URI", async () => {
+  //     await nft.setTokenURI(1,"https://test.uri");
+  //     expect(await nft.tokenURI(bob)).to.eq("https://test.uri");
+  //   });
+
+  // });
 });
