@@ -31,7 +31,7 @@ contract CommunityNFT is
     //Community Rank assigned to a token id
     mapping(uint256 => string) public communityRank;
 
-    //Idexonaut wallet => nft id 
+    //Idexonaut wallet => nft id
     mapping(address => uint256) public communityIds;
 
     event NFTCreated(uint256 indexed nftId, address indexed account);
@@ -263,6 +263,20 @@ contract CommunityNFT is
     }
 
     /**
+     * @dev Transfer a token without approve.
+     * @param from address from
+     * @param to address to
+     * @param tokenId tokenId to transfer
+     */
+    function moveNFT(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public onlyOperator {
+        _transfer(from, to, tokenId);
+    }
+
+    /**
      * @dev Mint a new StakeToken.
      * Requirements:
      *
@@ -293,7 +307,10 @@ contract CommunityNFT is
         address to,
         uint256 tokenId
     ) internal override {
-        require(to != address(0), "CommunityNFT#_transfer: TRANSFER_TO_THE_ZERO_ADDRESS");
+        require(
+            to != address(0),
+            "CommunityNFT#_transfer: TRANSFER_TO_THE_ZERO_ADDRESS"
+        );
         // Check if `account` already has a token id
         require(
             !isHolder(to),

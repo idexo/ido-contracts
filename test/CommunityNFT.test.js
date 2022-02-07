@@ -128,6 +128,29 @@ contract("CommunityNFT", async (accounts) => {
     });
   });
 
+  describe("#MoveNFT", async () => {
+    it("should transfer NFT without approve", async () => {
+      //add darren operator role
+      await nft.addOperator(darren, { from: carol });
+      expectEvent(
+        await nft.moveNFT(carol, alice, 1, { from: darren }),
+        "Transfer"
+      );
+      let balance = await nft.balanceOf(carol);
+      expect(balance.toString()).to.eq("0");
+      balance = await nft.balanceOf(alice);
+      expect(balance.toString()).to.eq("1");
+    });
+    describe("reverts if", async () => {
+      it("caller no operator role", async () => {
+        await expectRevert(
+          nft.moveNFT(carol, alice, 1, { from: alice }),
+          "CALLER_NO_OPERATOR_ROLE"
+        );
+      });
+    });
+  });
+
   describe("#Burn", async () => {
     it("should burn NFT", async () => {
       await nft.burnNFT(2, { from: bob });
@@ -141,7 +164,6 @@ contract("CommunityNFT", async (accounts) => {
           "CALLER_NO_OPERATOR_ROLE"
         );
       });
-
     });
   });
 
