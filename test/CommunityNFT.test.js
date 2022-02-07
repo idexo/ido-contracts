@@ -56,13 +56,17 @@ contract("CommunityNFT", async (accounts) => {
         expect(await ids.toString()).to.eq("3");
         const balance = await nft.balanceOf(carol);
         expect(await balance.toString()).to.eq("1");
-        const tokenId = await nft.getTokenId(carol);
+        let tokenId = await nft.getTokenId(carol);
         expect(await tokenId.toString()).to.eq("2");
         await nft.setApprovalForAll(bob, true, {from: carol});
         expectEvent(
           await nft.transferFrom(carol, alice, 2, {from: bob}),
           'Transfer'
         );
+        tokenId = await nft.getTokenId(carol);
+        expect(tokenId.length).to.eq(0);
+        tokenId = await nft.getTokenId(alice);
+        expect(tokenId.length).to.eq(2);
       });
     describe("reverts if", async () => {
       it("caller no operator role", async () => {
@@ -86,20 +90,8 @@ contract("CommunityNFT", async (accounts) => {
       expect(await nft.baseURI()).to.eq("https://idexo.com/");
     });
     it("should set token URI", async () => {
-      const tokenId = await nft.getTokenId(alice);
-      await nft.setTokenURI(tokenId.toString(),"NewTokenURI", {from:bob});
-      expect(await nft.tokenURI(tokenId.toString())).to.eq("https://idexo.com/NewTokenURI");
+      await nft.setTokenURI(1,"NewTokenURI", {from: bob});
+      expect(await nft.tokenURI(1)).to.eq("https://idexo.com/NewTokenURI");
     });
-
-     describe("reverts if", async () => {
-       it("caller no admin role", async () => {
-         await expectRevert(
-           nft.setBaseURI("https://idexo.com/", { from: bob }),
-           "CALLER_NO_ADMIN_ROLE"
-         );
-       });
-
-     });
-
   });
 });
