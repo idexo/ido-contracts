@@ -5,7 +5,7 @@ const { expectEvent, expectRevert } = require("@openzeppelin/test-helpers");
 
 contract("CommunityNFT", async (accounts) => {
   let nft;
-  const [alice, bob, carol] = accounts;
+  const [alice, bob, carol, darren] = accounts;
 
   before(async () => {
     nft = await CommunityNFT.new("TEST", "T", "https://idexo.io/");
@@ -51,10 +51,18 @@ contract("CommunityNFT", async (accounts) => {
     });
     it("should transfer NFT", async () => {
         await nft.mintNFT(carol, { from: bob });
+        await nft.mintNFT(darren, { from: bob });
+        const ids = await nft.tokenIds();
+        expect(await ids.toString()).to.eq("3");
         const balance = await nft.balanceOf(carol);
         expect(await balance.toString()).to.eq("1");
         const tokenId = await nft.getTokenId(carol);
         expect(await tokenId.toString()).to.eq("2");
+        await nft.setApprovalForAll(bob, true, {from: carol});
+        expectEvent(
+          await nft.transferFrom(carol, alice, 2, {from: bob}),
+          'Transfer'
+        );
       });
     describe("reverts if", async () => {
       it("caller no operator role", async () => {
