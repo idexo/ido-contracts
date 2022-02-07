@@ -8,12 +8,12 @@ contract("CommunityNFT", async (accounts) => {
   const [alice, bob, carol] = accounts;
 
   before(async () => {
-    nft = await CommunityNFT.new("TEST", "T", "https://idexo.io/");
+    nft = await CommunityNFT.new("TEST", "T", "https://idexo.io/", {from: carol});
   });
 
   describe("#Role", async () => {
     it("should add operator", async () => {
-      await nft.addOperator(bob);
+      await nft.addOperator(bob, {from: carol});
       expect(await nft.checkOperator(bob)).to.eq(true);
     });
     it("should check operator", async () => {
@@ -21,7 +21,7 @@ contract("CommunityNFT", async (accounts) => {
       expect(await nft.checkOperator(bob)).to.eq(true);
     });
     it("should remove operator", async () => {
-      await nft.removeOperator(bob);
+      await nft.removeOperator(bob, {from: carol});
       expect(await nft.checkOperator(bob)).to.eq(false);
     });
     describe("reverts if", async () => {
@@ -32,7 +32,7 @@ contract("CommunityNFT", async (accounts) => {
         );
       });
       it("remove operator by non-admin", async () => {
-        await nft.addOperator(bob);
+        await nft.addOperator(bob, {from:carol});
         await expectRevert(
           nft.removeOperator(bob, { from: bob }),
           "CALLER_NO_ADMIN_ROLE"
@@ -59,7 +59,7 @@ contract("CommunityNFT", async (accounts) => {
     describe("reverts if", async () => {
       it("caller no operator role", async () => {
         await expectRevert(
-          nft.mintNFT(alice, { from: carol }),
+          nft.mintNFT(alice, { from: alice }),
           "CALLER_NO_OPERATOR_ROLE"
         );
       });
@@ -72,11 +72,26 @@ contract("CommunityNFT", async (accounts) => {
     });
   });
   describe("#URI", async () => {
+    it("should set base token URI", async () => {
+      // only admin can set BaseURI
+      await nft.setBaseURI("https://idexo.com/", {from: carol});
+      expect(await nft.baseURI()).to.eq("https://idexo.com/");
+    });
     it("should set token URI", async () => {
       const tokenId = await nft.getTokenId(alice);
-      await nft.setTokenURI(tokenId.toString(),"NewTokenURI");
-      expect(await nft.tokenURI(tokenId.toString())).to.eq("https://idexo.io/NewTokenURI");
+      await nft.setTokenURI(tokenId.toString(),"NewTokenURI", {from:bob});
+      expect(await nft.tokenURI(tokenId.toString())).to.eq("https://idexo.com/NewTokenURI");
     });
+
+     describe("reverts if", async () => {
+       it("caller no admin role", async () => {
+         await expectRevert(
+           nft.setBaseURI("https://idexo.com/", { from: bob }),
+           "CALLER_NO_ADMIN_ROLE"
+         );
+       });
+
+     });
 
   });
 });
