@@ -54,9 +54,6 @@ contract("CommunityNFT", async (accounts) => {
       const balance = await nft.balanceOf(alice);
       expect(balance.toString()).to.eq("1");
       const tokenId = await nft.getTokenId(alice);
-      const tokenId2 = await nft.getTokenId(darren);
-      console.log("Alice tokenId:", tokenId.toString())
-      console.log("Darren tokenId:", tokenId2.toString())
       expect(tokenId.toString()).to.eq("1");
     });
     describe("reverts if", async () => {
@@ -109,6 +106,18 @@ contract("CommunityNFT", async (accounts) => {
       expect(tokenId.toString()).to.eq("1");
     });
     describe("reverts if", async () => {
+      it("account to = 0x", async () => {
+        await nft.setApprovalForAll(bob, true, { from: darren });
+        await expectRevert(
+          nft.transferFrom(
+            darren,
+            "0x0000000000000000000000000000000000000000",
+            2,
+            { from: bob }
+          ),
+          "TRANSFER_TO_THE_ZERO_ADDRESS"
+        );
+      });
       it("account already has nft", async () => {
         await nft.setApprovalForAll(bob, true, { from: darren });
         await expectRevert(

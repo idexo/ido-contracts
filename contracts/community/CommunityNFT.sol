@@ -293,12 +293,12 @@ contract CommunityNFT is
         address to,
         uint256 tokenId
     ) internal override {
+        require(to != address(0), "CommunityNFT#_transfer: TRANSFER_TO_THE_ZERO_ADDRESS");
         // Check if `account` already has a token id
         require(
             !isHolder(to),
             "CommunityNFT#_transfer: ACCOUNT_ALREADY_HAS_NFT"
         );
-
         super._transfer(from, to, tokenId);
         delete communityIds[from];
         communityIds[to] = tokenId;
