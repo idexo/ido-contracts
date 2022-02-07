@@ -227,7 +227,7 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
         public onlyOperator
     {
         credEarned[nftId] = credEarned[nftId] + newCredEarned;
-
+        emit CREDAdded(nftId, newCredEarned);
     }
 
     /**
@@ -266,7 +266,7 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
         public onlyOperator
     {
         communityRank[nftId] = newRank;
-
+        emit RankUpdated(nftId, newRank);
     }
 
     /**
@@ -286,6 +286,7 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
     {
         super._mint(account, tokenId);
         communityIds[account].push(tokenId);
+        emit NFTCreated(tokenId, account);
     }
 
     /**

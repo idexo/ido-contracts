@@ -26,8 +26,8 @@ contract("CommunityNFT", async (accounts) => {
       await nft.removeOperator(bob, { from: carol });
       expect(await nft.checkOperator(bob)).to.eq(false);
     });
-    it('supportsInterface', async () => {
-      await nft.supportsInterface(`0x00000000`).then(res => {
+    it("supportsInterface", async () => {
+      await nft.supportsInterface(`0x00000000`).then((res) => {
         expect(res).to.eq(false);
       });
     });
@@ -50,7 +50,7 @@ contract("CommunityNFT", async (accounts) => {
 
   describe("#Mint", async () => {
     it("should mint NFT", async () => {
-      await nft.mintNFT(alice, { from: bob });
+      expectEvent(await nft.mintNFT(alice, { from: bob }), "NFTCreated");
       const balance = await nft.balanceOf(alice);
       expect(balance.toString()).to.eq("1");
       const tokenId = await nft.getTokenId(alice);
@@ -126,9 +126,12 @@ contract("CommunityNFT", async (accounts) => {
   });
   describe("#Earned CRED", async () => {
     it("should update CRED earned", async () => {
-      await nft.updateNFTCredEarned(1, web3.utils.toWei(new BN(20000)), {
-        from: bob,
-      });
+      expectEvent(
+        await nft.updateNFTCredEarned(1, web3.utils.toWei(new BN(20000)), {
+          from: bob,
+        }),
+        "CREDAdded"
+      );
       const checkCred = await nft.credEarned(1);
       expect(web3.utils.fromWei(checkCred.toString(), "ether")).to.eq("20000");
     });
@@ -145,9 +148,12 @@ contract("CommunityNFT", async (accounts) => {
   });
   describe("#Community Rank", async () => {
     it("should update NFT rank", async () => {
-      await nft.updateNFTRank(1, "Early Idexonaut", {
-        from: bob,
-      });
+      expectEvent(
+        await nft.updateNFTRank(1, "Early Idexonaut", {
+          from: bob,
+        }),
+        "RankUpdated"
+      );
       const checkRank = await nft.communityRank(1);
       expect(checkRank).to.eq("Early Idexonaut");
     });
