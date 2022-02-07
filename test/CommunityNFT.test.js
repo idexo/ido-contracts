@@ -46,7 +46,16 @@ contract("CommunityNFT", async (accounts) => {
       await nft.mintNFT(alice, { from: bob });
       const balance = await nft.balanceOf(alice);
       expect(await balance.toString()).to.eq("1");
+      const tokenId = await nft.getTokenId(alice);
+      expect(await tokenId.toString()).to.eq("1");
     });
+    it("should transfer NFT", async () => {
+        await nft.mintNFT(carol, { from: bob });
+        const balance = await nft.balanceOf(carol);
+        expect(await balance.toString()).to.eq("1");
+        const tokenId = await nft.getTokenId(carol);
+        expect(await tokenId.toString()).to.eq("2");
+      });
     describe("reverts if", async () => {
       it("caller no operator role", async () => {
         await expectRevert(
