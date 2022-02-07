@@ -71,19 +71,12 @@ contract("CommunityNFT", async (accounts) => {
       });
     });
   });
-  // describe("#URI", async () => {
-  //   it("should set token URI", async () => {
-  //     await nft.mintNFT(carol, { from: bob });
-  //     await nft.mintNFT(bob, { from: bob });
-  //     const tokenIdAlice = await nft.getTokenId(alice);
-  //     const tokenIdCarol = await nft.getTokenId(carol);
-  //     const tokenIdBob = await nft.getTokenId(bob);
-  //     console.log("Alice: ", tokenIdAlice.toString());
-  //     console.log("Carol: ", tokenIdCarol.toString());
-  //     console.log("Bob: ", tokenIdBob.toString());
-  //     // await nft.setTokenURI(1,"TokenURI");
-  //     // expect(await nft.tokenURI(1)).to.eq("https://idexo.io/TokenURI");
-  //   });
+  describe("#URI", async () => {
+    it("should set token URI", async () => {
+      const tokenId = await nft.getTokenId(alice);
+      await nft.setTokenURI(tokenId.toString(),"NewTokenURI");
+      expect(await nft.tokenURI(tokenId.toString())).to.eq("https://idexo.io/NewTokenURI");
+    });
 
-  // });
+  });
 });
