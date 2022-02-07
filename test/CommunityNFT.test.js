@@ -118,29 +118,27 @@ contract("CommunityNFT", async (accounts) => {
     });
   });
 
-  // describe("#Burn", async () => {
-  //   it("should burn NFT", async () => {
-  //     await nft.burnNFT(2, { from: bob });
-  //     const balance = await nft.balanceOf(darren);
-  //     expect(balance.toString()).to.eq("0");
-  //     const tokenId = await nft.getTokenId(alice);
-  //     expect(tokenId.toString()).to.eq("1");
-  //   });
-  //   describe("reverts if", async () => {
-  //     it("caller no operator role", async () => {
-  //       await expectRevert(
-  //         nft.mintNFT(alice, { from: alice }),
-  //         "CALLER_NO_OPERATOR_ROLE"
-  //       );
-  //     });
-  //     it("account already has nft", async () => {
-  //       await expectRevert(
-  //         nft.mintNFT(alice, { from: bob }),
-  //         "ACCOUNT_ALREADY_HAS_NFT"
-  //       );
-  //     });
-  //   });
-  // });
+  describe("#Burn", async () => {
+    it("should burn NFT", async () => {
+      await nft.burnNFT(2, { from: bob });
+      const balance = await nft.balanceOf(darren);
+      expect(balance.toString()).to.eq("0");
+    });
+    // describe("reverts if", async () => {
+    //   it("caller no operator role", async () => {
+    //     await expectRevert(
+    //       nft.mintNFT(alice, { from: alice }),
+    //       "CALLER_NO_OPERATOR_ROLE"
+    //     );
+    //   });
+    //   it("account already has nft", async () => {
+    //     await expectRevert(
+    //       nft.mintNFT(alice, { from: bob }),
+    //       "ACCOUNT_ALREADY_HAS_NFT"
+    //     );
+    //   });
+    // });
+  });
 
   describe("#URI", async () => {
     it("should set base token URI", async () => {
