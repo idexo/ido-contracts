@@ -179,10 +179,10 @@ contract CommunityNFT is ERC721, ERC721URIStorage, AccessControl, ReentrancyGuar
         // Check if `account` already has a token id
         require(!isHolder(recipient), "CommunityNFT#mintNFT: ACCOUNT_ALREADY_HAS_NFT");
 
-        uint256 newTokenId = tokenIds++;
-        _mint(recipient, newTokenId);
+        tokenIds++;
+        _mint(recipient, tokenIds);
 
-        return newTokenId;
+        return tokenIds;
     }
 
     /**
