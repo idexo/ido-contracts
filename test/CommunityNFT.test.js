@@ -93,5 +93,14 @@ contract("CommunityNFT", async (accounts) => {
       await nft.setTokenURI(1,"NewTokenURI", {from: bob});
       expect(await nft.tokenURI(1)).to.eq("https://idexo.com/NewTokenURI");
     });
+     describe("reverts if", async () => {
+       it("caller no admin role", async () => {
+         await expectRevert(
+           nft.setBaseURI("https://idexo.com/", { from: bob }),
+           "CALLER_NO_ADMIN_ROLE"
+         );
+       });
+
+     });
   });
 });
