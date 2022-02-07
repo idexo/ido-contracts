@@ -1,19 +1,21 @@
 const CommunityNFT = artifacts.require("CommunityNFT");
 
 const { expect } = require("chai");
-const { expectEvent, expectRevert } = require("@openzeppelin/test-helpers");
+const { BN, expectEvent, expectRevert } = require("@openzeppelin/test-helpers");
 
 contract("CommunityNFT", async (accounts) => {
   let nft;
   const [alice, bob, carol, darren] = accounts;
 
   before(async () => {
-    nft = await CommunityNFT.new("TEST", "T", "https://idexo.io/", {from: carol});
+    nft = await CommunityNFT.new("TEST", "T", "https://idexo.io/", {
+      from: carol,
+    });
   });
 
   describe("#Role", async () => {
     it("should add operator", async () => {
-      await nft.addOperator(bob, {from: carol});
+      await nft.addOperator(bob, { from: carol });
       expect(await nft.checkOperator(bob)).to.eq(true);
     });
     it("should check operator", async () => {
@@ -21,7 +23,7 @@ contract("CommunityNFT", async (accounts) => {
       expect(await nft.checkOperator(bob)).to.eq(true);
     });
     it("should remove operator", async () => {
-      await nft.removeOperator(bob, {from: carol});
+      await nft.removeOperator(bob, { from: carol });
       expect(await nft.checkOperator(bob)).to.eq(false);
     });
     describe("reverts if", async () => {
@@ -32,7 +34,7 @@ contract("CommunityNFT", async (accounts) => {
         );
       });
       it("remove operator by non-admin", async () => {
-        await nft.addOperator(bob, {from:carol});
+        await nft.addOperator(bob, { from: carol });
         await expectRevert(
           nft.removeOperator(bob, { from: bob }),
           "CALLER_NO_ADMIN_ROLE"
@@ -58,10 +60,10 @@ contract("CommunityNFT", async (accounts) => {
       expect(await balance.toString()).to.eq("1");
       let tokenId = await nft.getTokenId(carol);
       expect(await tokenId.toString()).to.eq("2");
-      await nft.setApprovalForAll(bob, true, {from: carol});
+      await nft.setApprovalForAll(bob, true, { from: carol });
       expectEvent(
-        await nft.transferFrom(carol, alice, 2, {from: bob}),
-        'Transfer'
+        await nft.transferFrom(carol, alice, 2, { from: bob }),
+        "Transfer"
       );
       tokenId = await nft.getTokenId(carol);
       expect(tokenId.length).to.eq(0);
@@ -86,21 +88,58 @@ contract("CommunityNFT", async (accounts) => {
   describe("#URI", async () => {
     it("should set base token URI", async () => {
       // only admin can set BaseURI
-      await nft.setBaseURI("https://idexo.com/", {from: carol});
+      await nft.setBaseURI("https://idexo.com/", { from: carol });
       expect(await nft.baseURI()).to.eq("https://idexo.com/");
     });
     it("should set token URI", async () => {
-      await nft.setTokenURI(1,"NewTokenURI", {from: bob});
+      await nft.setTokenURI(1, "NewTokenURI", { from: bob });
       expect(await nft.tokenURI(1)).to.eq("https://idexo.com/NewTokenURI");
     });
-     describe("reverts if", async () => {
-       it("caller no admin role", async () => {
-         await expectRevert(
-           nft.setBaseURI("https://idexo.com/", { from: bob }),
-           "CALLER_NO_ADMIN_ROLE"
-         );
-       });
-
-     });
+    describe("reverts if", async () => {
+      it("caller no admin role", async () => {
+        await expectRevert(
+          nft.setBaseURI("https://idexo.com/", { from: bob }),
+          "CALLER_NO_ADMIN_ROLE"
+        );
+      });
+    });
+  });
+  describe("#Earned CRED", async () => {
+    it("should update CRED earned", async () => {
+      await nft.updateNFTCredEarned(1, web3.utils.toWei(new BN(20000)), {
+        from: bob,
+      });
+      const checkCred = await nft.credEarned(1);
+      expect(web3.utils.fromWei(checkCred.toString(), "ether")).to.eq("20000");
+    });
+    describe("reverts if", async () => {
+      it("caller no operator role", async () => {
+        await expectRevert(
+          nft.updateNFTCredEarned(1, web3.utils.toWei(new BN(20000)), {
+            from: alice,
+          }),
+          "CALLER_NO_OPERATOR_ROLE"
+        );
+      });
+    });
+  });
+  describe("#Community Rank", async () => {
+    it("should update NFT rank", async () => {
+      await nft.updateNFTRank(1, "Early Idexonaut", {
+        from: bob,
+      });
+      const checkRank = await nft.communityRank(1);
+      expect(checkRank).to.eq("Early Idexonaut");
+    });
+    describe("reverts if", async () => {
+      it("caller no operator role", async () => {
+        await expectRevert(
+          nft.updateNFTRank(1, "Early Idexonaut", {
+            from: alice,
+          }),
+          "CALLER_NO_OPERATOR_ROLE"
+        );
+      });
+    });
   });
 });
