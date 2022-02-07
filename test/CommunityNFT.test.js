@@ -26,6 +26,11 @@ contract("CommunityNFT", async (accounts) => {
       await nft.removeOperator(bob, { from: carol });
       expect(await nft.checkOperator(bob)).to.eq(false);
     });
+    it('supportsInterface', async () => {
+      await nft.supportsInterface(`0x00000000`).then(res => {
+        expect(res).to.eq(false);
+      });
+    });
     describe("reverts if", async () => {
       it("add operator by non-admin", async () => {
         await expectRevert(
@@ -47,19 +52,19 @@ contract("CommunityNFT", async (accounts) => {
     it("should mint NFT", async () => {
       await nft.mintNFT(alice, { from: bob });
       const balance = await nft.balanceOf(alice);
-      expect(await balance.toString()).to.eq("1");
+      expect(balance.toString()).to.eq("1");
       const tokenId = await nft.getTokenId(alice);
-      expect(await tokenId.toString()).to.eq("1");
+      expect(tokenId.toString()).to.eq("1");
     });
     it("should transfer NFT", async () => {
       await nft.mintNFT(carol, { from: bob });
       await nft.mintNFT(darren, { from: bob });
       const ids = await nft.tokenIds();
-      expect(await ids.toString()).to.eq("3");
+      expect(ids.toString()).to.eq("3");
       const balance = await nft.balanceOf(carol);
-      expect(await balance.toString()).to.eq("1");
+      expect(balance.toString()).to.eq("1");
       let tokenId = await nft.getTokenId(carol);
-      expect(await tokenId.toString()).to.eq("2");
+      expect(tokenId.toString()).to.eq("2");
       await nft.setApprovalForAll(bob, true, { from: carol });
       expectEvent(
         await nft.transferFrom(carol, alice, 2, { from: bob }),
@@ -69,6 +74,21 @@ contract("CommunityNFT", async (accounts) => {
       expect(tokenId.length).to.eq(0);
       tokenId = await nft.getTokenId(alice);
       expect(tokenId.length).to.eq(2);
+    });
+    it("should transfer middle NFT", async () => {
+      let tokenId = await nft.getTokenId(alice);
+      expect(tokenId.length).to.eq(2);
+      await nft.setApprovalForAll(bob, true, { from: alice });
+      expectEvent(
+        await nft.transferFrom(alice, carol, 1, { from: bob }),
+        "Transfer"
+      );
+      tokenId = await nft.getTokenId(alice);
+      expect(tokenId.length).to.eq(1);
+      expect(tokenId.toString()).to.eq("2");
+      tokenId = await nft.getTokenId(carol);
+      expect(tokenId.length).to.eq(1);
+      expect(tokenId.toString()).to.eq("1");
     });
     describe("reverts if", async () => {
       it("caller no operator role", async () => {
