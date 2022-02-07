@@ -261,6 +261,7 @@ contract CommunityNFT is
     function burnNFT(uint256 tokenId) public onlyOperator returns (uint256) {
         _burn(tokenId);
 
+        
         return tokenId;
     }
 
