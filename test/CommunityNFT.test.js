@@ -60,19 +60,20 @@ contract("CommunityNFT", async (accounts) => {
           "ACCOUNT_ALREADY_HAS_NFT"
         );
       });
-      // it("remove operator by non-admin", async () => {
-      //   await nft.addOperator(bob);
-      //   await expectRevert(
-      //     nft.removeOperator(bob, { from: bob }),
-      //     "CALLER_NO_ADMIN_ROLE"
-      //   );
-      // });
     });
   });
   // describe("#URI", async () => {
   //   it("should set token URI", async () => {
-  //     await nft.setTokenURI(1,"https://test.uri");
-  //     expect(await nft.tokenURI(bob)).to.eq("https://test.uri");
+  //     await nft.mintNFT(carol, { from: bob });
+  //     await nft.mintNFT(bob, { from: bob });
+  //     const tokenIdAlice = await nft.getTokenId(alice);
+  //     const tokenIdCarol = await nft.getTokenId(carol);
+  //     const tokenIdBob = await nft.getTokenId(bob);
+  //     console.log("Alice: ", tokenIdAlice.toString());
+  //     console.log("Carol: ", tokenIdCarol.toString());
+  //     console.log("Bob: ", tokenIdBob.toString());
+  //     // await nft.setTokenURI(1,"TokenURI");
+  //     // expect(await nft.tokenURI(1)).to.eq("https://idexo.io/TokenURI");
   //   });
 
   // });
