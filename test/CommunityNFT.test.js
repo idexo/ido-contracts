@@ -91,7 +91,7 @@ contract("CommunityNFT", async (accounts) => {
       tokenId = await nft.getTokenId(darren);
       expect(tokenId.toString()).to.eq("2");
     });
-    it("should transfer middle NFT", async () => {
+    it("should transfer first NFT", async () => {
       let tokenId = await nft.getTokenId(alice);
       expect(tokenId.toString()).to.eq("1");
       await nft.setApprovalForAll(bob, true, { from: alice });
@@ -101,7 +101,6 @@ contract("CommunityNFT", async (accounts) => {
       );
       tokenId = await nft.getTokenId(alice);
       expect(tokenId.toString()).to.eq("0");
-      // expect(tokenId.toString()).to.eq("2");
       tokenId = await nft.getTokenId(carol);
       expect(tokenId.toString()).to.eq("1");
     });
