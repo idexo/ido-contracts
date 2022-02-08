@@ -151,22 +151,6 @@ contract("CommunityNFT", async (accounts) => {
     });
   });
 
-  describe("#Burn", async () => {
-    it("should burn NFT", async () => {
-      await nft.burnNFT(2, { from: bob });
-      const balance = await nft.balanceOf(darren);
-      expect(balance.toString()).to.eq("0");
-    });
-    describe("reverts if", async () => {
-      it("caller no operator role", async () => {
-        await expectRevert(
-          nft.burnNFT(1, { from: alice }),
-          "CALLER_NO_OPERATOR_ROLE"
-        );
-      });
-    });
-  });
-
   describe("#URI", async () => {
     it("should set base token URI", async () => {
       // only admin can set BaseURI
