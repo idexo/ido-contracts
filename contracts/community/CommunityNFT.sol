@@ -124,19 +124,6 @@ contract CommunityNFT is
     |_____________________*/
 
     /**
-     * @dev Return token URI
-     * Override {ERC721URIStorage:tokenURI}
-     */
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (string memory)
-    {
-        return ERC721URIStorage.tokenURI(tokenId);
-    }
-
-    /**
      * @dev Set token URI
      * Only `operator` can call
      *
