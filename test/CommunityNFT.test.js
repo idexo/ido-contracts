@@ -155,7 +155,7 @@ contract("CommunityNFT", async (accounts) => {
 
   describe("#URI", async () => {
     it("should set base token URI", async () => {
-      // only admin can set BaseURI
+      // only owner can set BaseURI
       await nft.setBaseURI("https://idexo.com/", { from: carol });
       expect(await nft.baseURI()).to.eq("https://idexo.com/");
     });
@@ -164,10 +164,10 @@ contract("CommunityNFT", async (accounts) => {
       expect(await nft.tokenURI(1)).to.eq("https://idexo.com/NewTokenURI");
     });
     describe("reverts if", async () => {
-      it("caller no admin role", async () => {
+      it("caller no owner", async () => {
         await expectRevert(
           nft.setBaseURI("https://idexo.com/", { from: bob }),
-          "CALLER_NO_ADMIN_ROLE"
+          "CALLER_NO_OWNER"
         );
       });
     });
