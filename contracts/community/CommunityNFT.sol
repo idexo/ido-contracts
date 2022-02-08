@@ -241,25 +241,6 @@ contract CommunityNFT is
         emit RankUpdated(nftId, newRank);
     }
 
-    // /**
-    //  * @dev Remove the given token from communityIds.
-    //  *
-    //  * @param from address from
-    //  * @param tokenId tokenId to remove
-    //  */
-    // function _popNFT(address from, uint256 tokenId) internal {
-    //     uint256[] storage commIds = communityIds[from];
-    //     for (uint256 i = 0; i < commIds.length; i++) {
-    //         if (commIds[i] == tokenId) {
-    //             if (i != commIds.length - 1) {
-    //                 commIds[i] = commIds[commIds.length - 1];
-    //             }
-    //             commIds.pop();
-    //             break;
-    //         }
-    //     }
-    // }
-
     /**********************|
     |          BURN        |
     |_____________________*/
