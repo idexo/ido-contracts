@@ -8,9 +8,7 @@ contract("CommunityNFT", async (accounts) => {
   const [alice, bob, carol, darren] = accounts;
 
   before(async () => {
-    nft = await CommunityNFT.new("TEST", "T", "https://idexo.io/", {
-      from: carol,
-    });
+    nft = await CommunityNFT.new("TEST", "T", "https://idexo.io/", { from: carol });
   });
 
   describe("#Role", async () => {
@@ -53,7 +51,7 @@ contract("CommunityNFT", async (accounts) => {
 
   describe("#Mint", async () => {
     it("should mint NFT", async () => {
-      expectEvent(await nft.mintNFT(alice, { from: bob }), "NFTCreated");
+      expectEvent(await nft.mintNFT(alice, "111", { from: bob }), "NFTCreated");
       const balance = await nft.balanceOf(alice);
       expect(balance.toString()).to.eq("1");
       const tokenId = await nft.getTokenId(alice);
@@ -62,13 +60,13 @@ contract("CommunityNFT", async (accounts) => {
     describe("reverts if", async () => {
       it("caller no operator role", async () => {
         await expectRevert(
-          nft.mintNFT(alice, { from: alice }),
+          nft.mintNFT(alice, "222", { from: alice }),
           "CALLER_NO_OPERATOR_ROLE"
         );
       });
       it("account already has nft", async () => {
         await expectRevert(
-          nft.mintNFT(alice, { from: bob }),
+          nft.mintNFT(alice, "333", { from: bob }),
           "ACCOUNT_ALREADY_HAS_NFT"
         );
       });
@@ -77,7 +75,7 @@ contract("CommunityNFT", async (accounts) => {
 
   describe("#Transfer", async () => {
     it("should transfer NFT", async () => {
-      await nft.mintNFT(carol, { from: bob });
+      await nft.mintNFT(carol, "444", { from: bob });
       const ids = await nft.tokenIds();
       expect(ids.toString()).to.eq("2");
       const balance = await nft.balanceOf(carol);
@@ -160,6 +158,7 @@ contract("CommunityNFT", async (accounts) => {
       expect(await nft.baseURI()).to.eq("https://idexo.com/");
     });
     it("should set token URI", async () => {
+      expect(await nft.tokenURI(1)).to.eq("https://idexo.com/111");
       await nft.setTokenURI(1, "NewTokenURI", { from: bob });
       expect(await nft.tokenURI(1)).to.eq("https://idexo.com/NewTokenURI");
     });

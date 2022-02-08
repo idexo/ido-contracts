@@ -80,13 +80,13 @@ contract CommunityNFT is ERC721URIStorage, Operatorable, ReentrancyGuard {
      * @param recipient address
      * check that recipient does not already have one, if they do then mint fails
      */
-    function mintNFT(address recipient) public onlyOperator returns (uint256) {
+    function mintNFT(address recipient, string memory _tokenURI) public onlyOperator returns (uint256) {
         // Check if `account` already has a token id
         require(!isHolder(recipient), "CommunityNFT#mintNFT: ACCOUNT_ALREADY_HAS_NFT");
 
         tokenIds++;
         _mint(recipient, tokenIds);
-
+        super._setTokenURI(tokenIds, _tokenURI);
         return tokenIds;
     }
 
