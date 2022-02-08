@@ -30,7 +30,11 @@ contract CommunityNFT is ERC721URIStorage, Operatorable, ReentrancyGuard {
     event CREDAdded(uint256 indexed nftId, uint256 credAddedAmount);
     event RankUpdated(uint256 indexed nftId, string newRank);
 
-    constructor(string memory communityNFTname, string memory communityNFTsymbol, string memory communityNFTBaseURI ) ERC721(communityNFTname, communityNFTsymbol) {
+    constructor(
+        string memory communityNFTname,
+        string memory communityNFTsymbol,
+        string memory communityNFTBaseURI
+    ) ERC721(communityNFTname, communityNFTsymbol) {
         baseURI = communityNFTBaseURI;
     }
 
@@ -119,10 +123,7 @@ contract CommunityNFT is ERC721URIStorage, Operatorable, ReentrancyGuard {
      * - `nftId` must exist in the community nft collection
      * @param nftId uint256
      */
-    function updateNFTCredEarned(uint256 nftId, uint256 newCredEarned)
-        public
-        onlyOperator
-    {
+    function updateNFTCredEarned(uint256 nftId, uint256 newCredEarned) public onlyOperator {
         credEarned[nftId] = credEarned[nftId] + newCredEarned;
         emit CREDAdded(nftId, newCredEarned);
     }
@@ -149,7 +150,11 @@ contract CommunityNFT is ERC721URIStorage, Operatorable, ReentrancyGuard {
      * @param to address to
      * @param tokenId tokenId to transfer
      */
-    function moveNFT(address from, address to, uint256 tokenId ) public onlyOperator {
+    function moveNFT(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public onlyOperator {
         _transfer(from, to, tokenId);
     }
 
@@ -179,7 +184,11 @@ contract CommunityNFT is ERC721URIStorage, Operatorable, ReentrancyGuard {
      * @param to address to
      * @param tokenId tokenId to transfer
      */
-    function _transfer(address from, address to, uint256 tokenId ) internal override {
+    function _transfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal override {
         require(to != address(0), "CommunityNFT#_transfer: TRANSFER_TO_THE_ZERO_ADDRESS");
         // Check if `account` already has a token id
         require(!isHolder(to), "CommunityNFT#_transfer: ACCOUNT_ALREADY_HAS_NFT");
