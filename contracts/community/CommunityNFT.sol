@@ -8,11 +8,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../lib/Operatorable.sol";
 
-contract CommunityNFT is
-    ERC721URIStorage,
-    Operatorable,
-    ReentrancyGuard
-{
+contract CommunityNFT is ERC721URIStorage, Operatorable, ReentrancyGuard {
     using SafeMath for uint256;
 
     //Last stake token id, start from 1
@@ -34,24 +30,14 @@ contract CommunityNFT is
     event CREDAdded(uint256 indexed nftId, uint256 credAddedAmount);
     event RankUpdated(uint256 indexed nftId, string newRank);
 
-    constructor(
-        string memory communityNFTname,
-        string memory communityNFTsymbol,
-        string memory communityNFTBaseURI
-    ) ERC721(communityNFTname, communityNFTsymbol) {
+    constructor(string memory communityNFTname, string memory communityNFTsymbol, string memory communityNFTBaseURI ) ERC721(communityNFTname, communityNFTsymbol) {
         baseURI = communityNFTBaseURI;
     }
 
     /**
      * @dev Override supportInterface.
      */
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(AccessControl, ERC721)
-        returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) public view virtual override(AccessControl, ERC721) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
@@ -65,10 +51,7 @@ contract CommunityNFT is
      *
      * - `tokenId` must exist, see {ERC721URIStorage:_setTokenURI}
      */
-    function setTokenURI(uint256 tokenId, string memory _tokenURI)
-        public
-        onlyOperator
-    {
+    function setTokenURI(uint256 tokenId, string memory _tokenURI) public onlyOperator {
         super._setTokenURI(tokenId, _tokenURI);
     }
 
@@ -99,10 +82,7 @@ contract CommunityNFT is
      */
     function mintNFT(address recipient) public onlyOperator returns (uint256) {
         // Check if `account` already has a token id
-        require(
-            !isHolder(recipient),
-            "CommunityNFT#mintNFT: ACCOUNT_ALREADY_HAS_NFT"
-        );
+        require(!isHolder(recipient), "CommunityNFT#mintNFT: ACCOUNT_ALREADY_HAS_NFT");
 
         tokenIds++;
         _mint(recipient, tokenIds);
@@ -154,10 +134,7 @@ contract CommunityNFT is
      * - `nftId` must exist in the community nft collection
      * @param nftId uint256
      */
-    function updateNFTRank(uint256 nftId, string memory newRank)
-        public
-        onlyOperator
-    {
+    function updateNFTRank(uint256 nftId, string memory newRank) public onlyOperator {
         communityRank[nftId] = newRank;
         emit RankUpdated(nftId, newRank);
     }
@@ -172,11 +149,7 @@ contract CommunityNFT is
      * @param to address to
      * @param tokenId tokenId to transfer
      */
-    function moveNFT(
-        address from,
-        address to,
-        uint256 tokenId
-    ) public onlyOperator {
+    function moveNFT(address from, address to, uint256 tokenId ) public onlyOperator {
         _transfer(from, to, tokenId);
     }
 
@@ -206,20 +179,10 @@ contract CommunityNFT is
      * @param to address to
      * @param tokenId tokenId to transfer
      */
-    function _transfer(
-        address from,
-        address to,
-        uint256 tokenId
-    ) internal override {
-        require(
-            to != address(0),
-            "CommunityNFT#_transfer: TRANSFER_TO_THE_ZERO_ADDRESS"
-        );
+    function _transfer(address from, address to, uint256 tokenId ) internal override {
+        require(to != address(0), "CommunityNFT#_transfer: TRANSFER_TO_THE_ZERO_ADDRESS");
         // Check if `account` already has a token id
-        require(
-            !isHolder(to),
-            "CommunityNFT#_transfer: ACCOUNT_ALREADY_HAS_NFT"
-        );
+        require(!isHolder(to), "CommunityNFT#_transfer: ACCOUNT_ALREADY_HAS_NFT");
         super._transfer(from, to, tokenId);
         delete communityIds[from];
         communityIds[to] = tokenId;
