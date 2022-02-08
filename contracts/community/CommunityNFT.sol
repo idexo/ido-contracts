@@ -55,21 +55,6 @@ contract CommunityNFT is
         return super.supportsInterface(interfaceId);
     }
 
-    /***********************|
-    |          Role         |
-    |______________________*/
-
-    /**
-     * @dev Restricted to members of the admin role.
-     */
-    modifier onlyAdmin() {
-        require(
-            hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
-            "CommunityNFT#onlyAdmin: CALLER_NO_ADMIN_ROLE"
-        );
-        _;
-    }
-
     /**********************|
     |          URI         |
     |_____________________*/
@@ -91,7 +76,7 @@ contract CommunityNFT is
      * @dev Set `baseURI`
      * Only `operator` can call
      */
-    function setBaseURI(string memory baseURI_) public onlyAdmin {
+    function setBaseURI(string memory baseURI_) public onlyOwner {
         baseURI = baseURI_;
     }
 
