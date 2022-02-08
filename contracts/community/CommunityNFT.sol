@@ -167,6 +167,10 @@ contract CommunityNFT is
         return baseURI;
     }
 
+    /**********************|
+    |          MINT        |
+    |_____________________*/
+
     /**
      * @dev Mint a new token.
      * @param recipient address
@@ -203,6 +207,10 @@ contract CommunityNFT is
         return tokenId;
     }
 
+    /**********************|
+    |       UPDATES        |
+    |_____________________*/
+
     /**
      * @dev Updated historical credEarned info for `nftId`.
      * Requirements:
@@ -216,6 +224,21 @@ contract CommunityNFT is
     {
         credEarned[nftId] = credEarned[nftId] + newCredEarned;
         emit CREDAdded(nftId, newCredEarned);
+    }
+
+    /**
+     * @dev Updated historical credEarned info for `nftId`.
+     * Requirements:
+     *
+     * - `nftId` must exist in the community nft collection
+     * @param nftId uint256
+     */
+    function updateNFTRank(uint256 nftId, string memory newRank)
+        public
+        onlyOperator
+    {
+        communityRank[nftId] = newRank;
+        emit RankUpdated(nftId, newRank);
     }
 
     // /**
@@ -237,20 +260,9 @@ contract CommunityNFT is
     //     }
     // }
 
-    /**
-     * @dev Updated historical credEarned info for `nftId`.
-     * Requirements:
-     *
-     * - `nftId` must exist in the community nft collection
-     * @param nftId uint256
-     */
-    function updateNFTRank(uint256 nftId, string memory newRank)
-        public
-        onlyOperator
-    {
-        communityRank[nftId] = newRank;
-        emit RankUpdated(nftId, newRank);
-    }
+    /**********************|
+    |          BURN        |
+    |_____________________*/
 
     /**
      * @dev Burn a token.
@@ -261,6 +273,10 @@ contract CommunityNFT is
         _burn(tokenId);
         delete communityIds[owner];
     }
+
+    /**********************|
+    |          MOVE        |
+    |_____________________*/
 
     /**
      * @dev Transfer a token without approve.
