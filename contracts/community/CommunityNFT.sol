@@ -301,15 +301,4 @@ contract CommunityNFT is
         delete communityIds[from];
         communityIds[to] = tokenId;
     }
-
-    /**
-     * @dev Burn token. Not reachable.
-     */
-    function _burn(uint256 tokenId)
-        internal
-        override(ERC721, ERC721URIStorage)
-    {
-        require(_exists(tokenId), "CommunityNFT#burnNFT: TOKEN_NOT_FOUND");
-        super._burn(tokenId);
-    }
 }
