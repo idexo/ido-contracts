@@ -14,6 +14,9 @@ contract("CommunityNFT", async (accounts) => {
   });
 
   describe("#Role", async () => {
+    it("default operator", async () => {
+      expect(await nft.checkOperator(carol)).to.eq(true);
+    });
     it("should add operator", async () => {
       await nft.addOperator(bob, { from: carol });
       expect(await nft.checkOperator(bob)).to.eq(true);
@@ -35,14 +38,14 @@ contract("CommunityNFT", async (accounts) => {
       it("add operator by non-admin", async () => {
         await expectRevert(
           nft.addOperator(bob, { from: bob }),
-          "CALLER_NO_ADMIN_ROLE"
+          "Ownable: CALLER_NO_OWNER"
         );
       });
       it("remove operator by non-admin", async () => {
         await nft.addOperator(bob, { from: carol });
         await expectRevert(
           nft.removeOperator(bob, { from: bob }),
-          "CALLER_NO_ADMIN_ROLE"
+          "Ownable: CALLER_NO_OWNER"
         );
       });
     });

@@ -3,19 +3,17 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "../lib/Operatorable.sol";
 
 contract CommunityNFT is
     ERC721URIStorage,
-    AccessControl,
+    Operatorable,
     ReentrancyGuard
 {
     using SafeMath for uint256;
-
-    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     //Last stake token id, start from 1
     uint256 public tokenIds;
@@ -42,8 +40,6 @@ contract CommunityNFT is
         string memory communityNFTBaseURI
     ) ERC721(communityNFTname, communityNFTsymbol) {
         baseURI = communityNFTBaseURI;
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(OPERATOR_ROLE, msg.sender);
     }
 
     /**
@@ -72,51 +68,6 @@ contract CommunityNFT is
             "CommunityNFT#onlyAdmin: CALLER_NO_ADMIN_ROLE"
         );
         _;
-    }
-
-    /**
-     * @dev Restricted to members of the operator role.
-     */
-    modifier onlyOperator() {
-        require(
-            hasRole(OPERATOR_ROLE, msg.sender),
-            "CommunityNFT#onlyOperator: CALLER_NO_OPERATOR_ROLE"
-        );
-        _;
-    }
-
-    /**
-     * @dev Add an account to the operator role.
-     * @param account address of recipient.
-     */
-    function addOperator(address account) public onlyAdmin {
-        // Check if `account` already has operator role
-        require(
-            !hasRole(OPERATOR_ROLE, account),
-            "CommunityNFT#addOperator: ALREADY_OPERATOR_ROLE"
-        );
-        grantRole(OPERATOR_ROLE, account);
-    }
-
-    /**
-     * @dev Remove an account from the operator role.
-     * @param account address.
-     */
-    function removeOperator(address account) public onlyAdmin {
-        // Check if `account` has operator role
-        require(
-            hasRole(OPERATOR_ROLE, account),
-            "CommunityNFT#removeOperator: NO_OPERATOR_ROLE"
-        );
-        revokeRole(OPERATOR_ROLE, account);
-    }
-
-    /**
-     * @dev Check if an account is operator.
-     * @param account address of operator being checked.
-     */
-    function checkOperator(address account) public view returns (bool) {
-        return hasRole(OPERATOR_ROLE, account);
     }
 
     /**********************|
