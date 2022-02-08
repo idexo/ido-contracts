@@ -1,7 +1,7 @@
 const CommunityNFT = artifacts.require("CommunityNFT");
 
 const { expect } = require("chai");
-const { BN, expectEvent, expectRevert } = require("@openzeppelin/test-helpers");
+const { BN, constants, expectEvent, expectRevert } = require("@openzeppelin/test-helpers");
 
 contract("CommunityNFT", async (accounts) => {
   let nft;
@@ -60,22 +60,30 @@ contract("CommunityNFT", async (accounts) => {
     describe("reverts if", async () => {
       it("caller no operator role", async () => {
         await expectRevert(
-          nft.mintNFT(alice, "222", { from: alice }),
+          nft.mintNFT(alice, "122", { from: alice }),
           "CALLER_NO_OPERATOR_ROLE"
         );
       });
       it("account already has nft", async () => {
         await expectRevert(
-          nft.mintNFT(alice, "333", { from: bob }),
+          nft.mintNFT(alice, "133", { from: bob }),
           "ACCOUNT_ALREADY_HAS_NFT"
         );
+      });
+      it("mint to the zero address", async () => {
+        expect((await nft.tokenIds()).toString()).to.eq("1");
+        await expectRevert(
+          nft.mintNFT(constants.ZERO_ADDRESS, "144", { from: bob }),
+          "ERC721: balance query for the zero address"
+        );
+        expect((await nft.tokenIds()).toString()).to.eq("1");
       });
     });
   });
 
   describe("#Transfer", async () => {
     it("should transfer NFT", async () => {
-      await nft.mintNFT(carol, "444", { from: bob });
+      await nft.mintNFT(carol, "222", { from: bob });
       const ids = await nft.tokenIds();
       expect(ids.toString()).to.eq("2");
       const balance = await nft.balanceOf(carol);
@@ -109,12 +117,7 @@ contract("CommunityNFT", async (accounts) => {
       it("account to = 0x", async () => {
         await nft.setApprovalForAll(bob, true, { from: darren });
         await expectRevert(
-          nft.transferFrom(
-            darren,
-            "0x0000000000000000000000000000000000000000",
-            2,
-            { from: bob }
-          ),
+          nft.transferFrom(darren, constants.ZERO_ADDRESS, 2, { from: bob }),
           "TRANSFER_TO_THE_ZERO_ADDRESS"
         );
       });
