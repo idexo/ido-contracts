@@ -8,7 +8,7 @@ contract("CommunityNFT", async (accounts) => {
     const [alice, bob, carol, darren] = accounts
 
     before(async () => {
-        nft = await CommunityNFT.new("TEST", "T", "https://idexo.io/", { from: carol })
+        nft = await CommunityNFT.new("TEST", "T", "", { from: carol })
     })
 
     describe("#Role", async () => {
@@ -45,7 +45,7 @@ contract("CommunityNFT", async (accounts) => {
 
     describe("#Mint", async () => {
         it("should mint NFT", async () => {
-            expectEvent(await nft.mintNFT(alice, "111", { from: bob }), "NFTCreated")
+            expectEvent(await nft.mintNFT(alice, "https://idexo.com/111", { from: bob }), "NFTCreated")
             const balance = await nft.balanceOf(alice)
             expect(balance.toString()).to.eq("1")
             const tokenId = await nft.getTokenId(alice)
@@ -53,10 +53,10 @@ contract("CommunityNFT", async (accounts) => {
         })
         describe("reverts if", async () => {
             it("caller no operator role", async () => {
-                await expectRevert(nft.mintNFT(alice, "122", { from: alice }), "CALLER_NO_OPERATOR_ROLE")
+                await expectRevert(nft.mintNFT(alice, "https://idexo.com/122", { from: alice }), "CALLER_NO_OPERATOR_ROLE")
             })
             it("account already has nft", async () => {
-                await expectRevert(nft.mintNFT(alice, "133", { from: bob }), "ACCOUNT_ALREADY_HAS_NFT")
+                await expectRevert(nft.mintNFT(alice, "https://idexo.com/133", { from: bob }), "ACCOUNT_ALREADY_HAS_NFT")
             })
             it("mint to the zero address", async () => {
                 expect((await nft.tokenIds()).toString()).to.eq("1")
@@ -122,15 +122,15 @@ contract("CommunityNFT", async (accounts) => {
     })
 
     describe("#URI", async () => {
-        it("should set base token URI", async () => {
-            // only owner can set BaseURI
-            await nft.setBaseURI("https://idexo.com/", { from: carol })
-            expect(await nft.baseURI()).to.eq("https://idexo.com/")
-        })
         it("should set token URI", async () => {
             expect(await nft.tokenURI(1)).to.eq("https://idexo.com/111")
-            await nft.setTokenURI(1, "NewTokenURI", { from: bob })
+            await nft.setTokenURI(1, "https://idexo.com/NewTokenURI", { from: bob })
             expect(await nft.tokenURI(1)).to.eq("https://idexo.com/NewTokenURI")
+        })
+        it("should set base token URI", async () => {
+            // Just for testing, we will not use baseURI
+            await nft.setBaseURI("https://newBaseURI.com/", { from: carol })
+            expect(await nft.baseURI()).to.eq("https://newBaseURI.com/")
         })
         describe("reverts if", async () => {
             it("caller no owner", async () => {
