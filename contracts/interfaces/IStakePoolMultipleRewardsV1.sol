@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.4;
 
-import "./IStakeTokenNew.sol";
+import "./IStakeTokenMultipleRewardsV1.sol";
 
-interface IStakePoolMultipleRewards is IStakeTokenNew {
+interface IStakePoolMultipleRewardsV1 is IStakeTokenMultipleRewardsV1 {
     function addOperator(
         address account
     )

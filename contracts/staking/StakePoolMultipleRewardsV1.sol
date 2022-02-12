@@ -5,10 +5,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./StakeTokenNew.sol";
-import "../interfaces/IStakePoolMultipleRewards.sol";
+import "./StakeTokenMultipleRewardsV1.sol";
+import "../interfaces/IStakePoolMultipleRewardsV1.sol";
 
-contract StakePoolMultipleRewards is IStakePoolMultipleRewards, StakeTokenNew, AccessControl, ReentrancyGuard {
+contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMultipleRewardsV1, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
@@ -56,7 +56,7 @@ contract StakePoolMultipleRewards is IStakePoolMultipleRewards, StakeTokenNew, A
         IERC20 depositToken_,
         IERC20 rewardToken_,
         address rewardTokenAddress_
-    ) StakeTokenNew(stakeTokenName_, stakeTokenSymbol_, stakeTokenBASEUri_) {
+    ) StakeTokenMultipleRewardsV1(stakeTokenName_, stakeTokenSymbol_, stakeTokenBASEUri_) {
         depositToken = depositToken_;
         rewardTokens[rewardTokenAddress_] = rewardToken_;
         deployedAt = block.timestamp;
