@@ -16,10 +16,10 @@ contract StakePoolMultipleRewards is IStakePoolMultipleRewards, StakeTokenNew, A
     // Minimum stake amount
     uint256 public constant minStakeAmount = 500 * 1e18;
 
-    uint256 public constant sClaimShareDenominator = 1e18;
-
     // Address of deposit token.
     IERC20 public depositToken;
+    // Mapping of reward tokens.
+    mapping(address => IERC20) public rewardTokens;
     // Timestamp when stake pool was deployed to mainnet.
     uint256 public deployedAt;
 
@@ -36,18 +36,8 @@ contract StakePoolMultipleRewards is IStakePoolMultipleRewards, StakeTokenNew, A
         uint256 depositedAt;
     }
 
-    struct tokenRewards {
-        uint256 tokenId;
-        uint256 claimable;
-    }
-
-    mapping(address => IERC20) public rewardTokens;
-
     // Reward deposit history
     mapping(address => RewardDeposit[]) public rewardDeposits;
-
-    // Reward deposit history
-    ClaimableRewardDeposit[] public claimableRewardDeposits;
 
     // tokenId => available reward amount that tokenId can claim.
     mapping(address => mapping(uint256 => uint256)) public claimableRewards;
@@ -164,46 +154,6 @@ contract StakePoolMultipleRewards is IStakePoolMultipleRewards, StakeTokenNew, A
         _withdraw(msg.sender, stakeId, amount);
     }
 
-    /**
-     * @dev Deposit stake to the pool.
-     * @param account address of recipient.
-     * @param amount deposit amount.
-     */
-    function _deposit(
-        address account,
-        uint256 amount,
-        uint256 timestamplock
-    ) private nonReentrant {
-        uint256 depositedAt = block.timestamp;
-        uint256 stakeId = _mint(account, amount, depositedAt, timestamplock);
-        require(depositToken.transferFrom(account, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
-
-        emit Deposited(account, stakeId, amount, timestamplock);
-    }
-
-    /**
-     * @dev If amount is less than amount of the stake, cut off amount.
-     * If amount is equal to amount of the stake, burn the stake.
-     *
-     * Requirements:
-     *
-     * - `account` must be owner of `stakeId`
-     * @param account address whose stake is being withdrawn.
-     * @param stakeId id of stake that is being withdrawn.
-     * @param withdrawAmount withdraw amount.
-     */
-    function _withdraw(
-        address account,
-        uint256 stakeId,
-        uint256 withdrawAmount
-    ) private nonReentrant {
-        require(ownerOf(stakeId) == account, "StakePool#_withdraw: NO_STAKE_OWNER");
-        _decreaseStakeAmount(stakeId, withdrawAmount);
-        require(depositToken.transfer(account, withdrawAmount), "StakePool#_withdraw: TRANSFER_FAILED");
-
-        emit Withdrawn(account, stakeId, withdrawAmount);
-    }
-
     /*************************|
     |          Reward         |
     |________________________*/
@@ -306,6 +256,63 @@ contract StakePoolMultipleRewards is IStakePoolMultipleRewards, StakeTokenNew, A
         emit Swept(msg.sender, token_, to, amount);
     }
 
+    /*************************|
+    |     Reward Tokens       |
+    |________________________*/
+
+    /**
+     * @dev Add reward token.
+     * @param rewardToken_ address reward token.
+     * @param rewardTokenAddress_ address reward token.
+     */
+    function addRewardToken(IERC20 rewardToken_, address rewardTokenAddress_) public onlyOperator {
+        _addRewardToken(rewardToken_, rewardTokenAddress_);
+    }
+
+    /*************************|
+    |   Private Functions     |
+    |________________________*/
+
+    /**
+     * @dev Deposit stake to the pool.
+     * @param account address of recipient.
+     * @param amount deposit amount.
+     */
+    function _deposit(
+        address account,
+        uint256 amount,
+        uint256 timestamplock
+    ) private nonReentrant {
+        uint256 depositedAt = block.timestamp;
+        uint256 stakeId = _mint(account, amount, depositedAt, timestamplock);
+        require(depositToken.transferFrom(account, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
+
+        emit Deposited(account, stakeId, amount, timestamplock);
+    }
+
+    /**
+     * @dev If amount is less than amount of the stake, cut off amount.
+     * If amount is equal to amount of the stake, burn the stake.
+     *
+     * Requirements:
+     *
+     * - `account` must be owner of `stakeId`
+     * @param account address whose stake is being withdrawn.
+     * @param stakeId id of stake that is being withdrawn.
+     * @param withdrawAmount withdraw amount.
+     */
+    function _withdraw(
+        address account,
+        uint256 stakeId,
+        uint256 withdrawAmount
+    ) private nonReentrant {
+        require(ownerOf(stakeId) == account, "StakePool#_withdraw: NO_STAKE_OWNER");
+        _decreaseStakeAmount(stakeId, withdrawAmount);
+        require(depositToken.transfer(account, withdrawAmount), "StakePool#_withdraw: TRANSFER_FAILED");
+
+        emit Withdrawn(account, stakeId, withdrawAmount);
+    }
+
     /**
      * @dev Deposit reward to the pool.
      * @param account address who deposits to the pool.
@@ -322,11 +329,7 @@ contract StakePoolMultipleRewards is IStakePoolMultipleRewards, StakeTokenNew, A
         emit RewardDeposited(account, amount);
     }
 
-    function addRewardToken(IERC20 rewardToken_, address rewardTokenAddress_) public onlyOperator {
-        _addRewardToken(rewardToken_, rewardTokenAddress_);
-    }
-
-    function _addRewardToken(IERC20 rewardToken_, address rewardTokenAddress_) internal {
+    function _addRewardToken(IERC20 rewardToken_, address rewardTokenAddress_) private {
         rewardTokens[rewardTokenAddress_] = rewardToken_;
     }
 }
