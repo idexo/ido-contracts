@@ -6,25 +6,25 @@ const StakePool = artifacts.require("contracts/staking/StakePoolMultipleRewardsV
 const ERC20 = artifacts.require("ERC20Mock")
 
 contract("::StakePoolMultipleRewards", async (accounts) => {
-    let stakePool, ido, erc20
-    const [alice, bob, carol, darren] = accounts
+    let stakePool, ido, usdt, usdc
+    const [owner, alice, bob, carol, darren] = accounts
     const DOMAIN = "https://idexo.com/"
 
     before(async () => {
-        ido = await ERC20.new("Idexo Community", "IDO", { from: alice })
-        usdt = await ERC20.new("USD Tether", "USDT", { from: alice })
-        usdc = await ERC20.new("USDC Coin", "USDC", { from: alice })
-        stakePool = await StakePool.new("Idexo Stake Token", "IDS", DOMAIN, ido.address, usdt.address, usdt.address, { from: alice })
+        ido = await ERC20.new("Idexo Community", "IDO", { from: owner })
+        usdt = await ERC20.new("USD Tether", "USDT", { from: owner })
+        usdc = await ERC20.new("USDC Coin", "USDC", { from: owner })
+        stakePool = await StakePool.new("Idexo Stake Token", "IDS", DOMAIN, ido.address, usdt.address, usdt.address, { from: owner })
     })
 
     describe("# Role", async () => {
         it("should add operator", async () => {
-            await stakePool.addOperator(bob, { from: alice })
-            expect(await stakePool.checkOperator(bob)).to.eq(true)
+            await stakePool.addOperator(alice, { from: owner })
+            expect(await stakePool.checkOperator(alice)).to.eq(true)
         })
         it("should remove operator", async () => {
-            await stakePool.removeOperator(bob, { from: alice })
-            expect(await stakePool.checkOperator(bob)).to.eq(false)
+            await stakePool.removeOperator(alice, { from: owner })
+            expect(await stakePool.checkOperator(alice)).to.eq(false)
         })
         it("supportsInterface", async () => {
             await stakePool.supportsInterface("0x00").then((res) => {
@@ -32,39 +32,40 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
             })
         })
         describe("reverts if", async () => {
-            it("add operator by non-operator", async () => {
-                await expectRevert(stakePool.addOperator(bob, { from: bob }), "StakePool#onlyAdmin: CALLER_NO_ADMIN_ROLE")
+            it("add operator by NO-ADMIN", async () => {
+                await expectRevert(stakePool.addOperator(bob, { from: alice }), "StakePool#onlyAdmin: CALLER_NO_ADMIN_ROLE")
             })
-            it("remove operator by non-operator", async () => {
-                await stakePool.addOperator(bob, { from: alice })
-                await expectRevert(stakePool.removeOperator(bob, { from: bob }), "StakePool#onlyAdmin: CALLER_NO_ADMIN_ROLE")
+            it("remove operator by NO-ADMIN", async () => {
+                await stakePool.addOperator(bob, { from: owner })
+                await expectRevert(stakePool.removeOperator(bob, { from: alice }), "StakePool#onlyAdmin: CALLER_NO_ADMIN_ROLE")
             })
         })
     })
 
-    describe("Reward Tokens", async () => {
+    describe("# Reward Tokens", async () => {
         it("should add token reward", async () => {
-            await stakePool.addRewardToken(usdc.address, usdc.address, { from: alice })
-
-            console.log(await stakePool.rewardTokens(usdt.address))
-            console.log(await stakePool.rewardTokens(usdc.address))
+            await stakePool.addRewardToken(usdc.address, usdc.address, { from: bob })
+        })
+        describe("reverts if", async () => {
+            it("add reward token by NO-OPERATOR", async () => {
+                await expectRevert(
+                    stakePool.addRewardToken(usdc.address, usdc.address, { from: alice }),
+                    "StakePool#onlyOperator: CALLER_NO_OPERATOR_ROLE"
+                )
+            })
         })
     })
 
-    describe("# Stake", async () => {
+    describe("# Staking", async () => {
         before(async () => {
             for (const user of [alice, bob, carol, darren]) {
                 await ido.mint(user, web3.utils.toWei(new BN(20000)))
                 await ido.approve(stakePool.address, web3.utils.toWei(new BN(20000)), { from: user })
-                await usdt.mint(user, web3.utils.toWei(new BN(20000)))
-                await usdt.approve(stakePool.address, web3.utils.toWei(new BN(20000)), { from: user })
-                await usdc.mint(user, web3.utils.toWei(new BN(20000)))
-                await usdc.approve(stakePool.address, web3.utils.toWei(new BN(20000)), { from: user })
             }
         })
 
-        describe("deposit", async () => {
-            it("should deposit", async () => {
+        describe("staking", async () => {
+            it("should stake", async () => {
                 await stakePool.getEligibleStakeAmount(0, { from: alice }).then((res) => {
                     expect(res.toString()).to.eq("0")
                 })
@@ -77,35 +78,16 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
                 })
             })
             it("should change tokenURI", async () => {
-                await stakePool.setTokenURI(1, "test", { from: alice }),
+                await stakePool.setTokenURI(1, "test", { from: owner }),
                     await stakePool.tokenURI(1).then((res) => {
                         expect(res.toString()).to.eq(DOMAIN + "test")
                     })
             })
-            it("should deposit USDT reward", async () => {
-                expectEvent(await stakePool.depositReward(usdt.address, web3.utils.toWei(new BN(3000)), { from: alice }), "RewardDeposited")
-                await stakePool.getRewardDeposit(usdt.address, 0).then((res) => {
-                    expect(res[1].toString()).to.eq("3000000000000000000000")
-                })
-            })
-            it("should deposit USDC reward", async () => {
-                expectEvent(await stakePool.depositReward(usdc.address, web3.utils.toWei(new BN(3000)), { from: alice }), "RewardDeposited")
-                await stakePool.getRewardDeposit(usdc.address, 0).then((res) => {
-                    expect(res[1].toString()).to.eq("3000000000000000000000")
-                })
-            })
-            it("should add claimable reward", async () => {
-                await stakePool.addClaimableReward(usdt.address, 1, web3.utils.toWei(new BN(3000)), { from: alice })
-                await stakePool.getClaimableReward(usdt.address, 1).then((res) => {
-                    expect(res.toString()).to.eq("3000000000000000000000")
-                })
-            })
-            it("should allow claim reward", async () => {
-                expectEvent(await stakePool.claimReward(usdt.address, 1, web3.utils.toWei(new BN(3000)), { from: alice }), "RewardClaimed")
-            })
         })
+    })
 
-        describe("withdraw", async () => {
+    describe("# Withdraw", async () => {
+        describe("withdraws", async () => {
             it("should withdraw", async () => {
                 expectEvent(await stakePool.withdraw(1, web3.utils.toWei(new BN(1000)), { from: alice }), "StakeAmountDecreased")
                 await stakePool.getStakeInfo(1).then((res) => {
@@ -113,11 +95,57 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
                 })
             })
         })
+    })
 
-        describe("transfer", async () => {
+    describe("# Rewards", async () => {
+        before(async () => {
+            for (const user of [owner, alice, bob]) {
+                await usdt.mint(user, web3.utils.toWei(new BN(50000)), { from: owner })
+                await usdt.approve(stakePool.address, web3.utils.toWei(new BN(50000)), { from: user })
+                await usdc.mint(user, web3.utils.toWei(new BN(50000)), { from: owner })
+                await usdc.approve(stakePool.address, web3.utils.toWei(new BN(50000)), { from: user })
+            }
+        })
+        describe("deposit and add claimable rewards", async () => {
+            it("should deposit USDT reward", async () => {
+                expectEvent(await stakePool.depositReward(usdt.address, web3.utils.toWei(new BN(50000)), { from: owner }), "RewardDeposited")
+                await stakePool.getRewardDeposit(usdt.address, 0).then((res) => {
+                    expect(res[1].toString()).to.eq("50000000000000000000000")
+                })
+            })
+            it("should deposit USDC reward", async () => {
+                expectEvent(await stakePool.depositReward(usdc.address, web3.utils.toWei(new BN(20000)), { from: bob }), "RewardDeposited")
+                await stakePool.getRewardDeposit(usdc.address, 0).then((res) => {
+                    expect(res[1].toString()).to.eq("20000000000000000000000")
+                })
+            })
+            it("should add claimable USDT reward", async () => {
+                await stakePool.addClaimableReward(usdt.address, 1, web3.utils.toWei(new BN(50000)), { from: owner })
+                await stakePool.getClaimableReward(usdt.address, 1).then((res) => {
+                    expect(res.toString()).to.eq("50000000000000000000000")
+                })
+            })
+            it("should add claimable USDC reward", async () => {
+                await stakePool.addClaimableReward(usdc.address, 1, web3.utils.toWei(new BN(20000)), { from: owner })
+                await stakePool.getClaimableReward(usdc.address, 1).then((res) => {
+                    expect(res.toString()).to.eq("20000000000000000000000")
+                })
+            })
+        })
+        describe("claim rewards", async () => {
+            it("should allow claim reward", async () => {
+                expectEvent(await stakePool.claimReward(usdt.address, 1, web3.utils.toWei(new BN(3000)), { from: alice }), "RewardClaimed")
+            })
+        })
+
+        describe("transfer", async () => {})
+    })
+
+    describe("# Transfer", async () => {
+        describe("transfers", async () => {
             it("should transfer", async () => {
                 await stakePool.deposit(web3.utils.toWei(new BN(600)), 0, { from: darren })
-                await stakePool.tokenIds().then((res) => {
+                await stakePool.currentSupply().then((res) => {
                     expect(res.toString()).to.eq("2")
                 })
                 expectEvent(await stakePool.transferFrom(alice, carol, 1, { from: alice }), "Transfer")

@@ -11,7 +11,10 @@ import "../interfaces/IStakeTokenMultipleRewardsV1.sol";
 contract StakeTokenMultipleRewardsV1 is IStakeTokenMultipleRewardsV1, ERC721, ERC721URIStorage, Ownable {
     using SafeMath for uint256;
     // Last stake token id, start from 1
-    uint256 public tokenIds;
+    uint256 private tokenIds;
+    // current supply
+    uint256 private _currentSupply;
+
     uint256 public constant multiplierDenominator = 100;
 
     // Base NFT URI
@@ -141,6 +144,10 @@ contract StakeTokenMultipleRewardsV1 is IStakeTokenMultipleRewardsV1, ERC721, ER
         return totalSAmount;
     }
 
+    function currentSupply() public view returns (uint256) {
+        return _currentSupply;
+    }
+
     /*************************|
     |   Private Functions     |
     |________________________*/
@@ -207,6 +214,7 @@ contract StakeTokenMultipleRewardsV1 is IStakeTokenMultipleRewardsV1, ERC721, ER
     ) internal virtual returns (uint256) {
         require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
         tokenIds++;
+        _currentSupply++;
         uint256 multiplier = _getMultiplier();
         super._mint(account, tokenIds);
         Stake storage newStake = stakes[tokenIds];
@@ -231,6 +239,7 @@ contract StakeTokenMultipleRewardsV1 is IStakeTokenMultipleRewardsV1, ERC721, ER
         address stakeOwner = ownerOf(stakeId);
         super._burn(stakeId);
         delete stakes[stakeId];
+        _currentSupply--;
         _popStake(stakeOwner, stakeId);
     }
 

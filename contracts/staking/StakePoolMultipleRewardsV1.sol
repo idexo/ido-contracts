@@ -98,7 +98,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
      */
     function addOperator(address account) public override onlyAdmin {
         // Check if `account` already has operator role
-        require(!hasRole(OPERATOR_ROLE, account), "StakePool#addOperator: ALREADY_OERATOR_ROLE");
+        require(!hasRole(OPERATOR_ROLE, account), "StakePool#addOperator: ALREADY_OPERATOR_ROLE");
         grantRole(OPERATOR_ROLE, account);
     }
 
@@ -108,7 +108,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
      */
     function removeOperator(address account) public override onlyAdmin {
         // Check if `account` has operator role
-        require(hasRole(OPERATOR_ROLE, account), "StakePool#removeOperator: NO_OPERATOR_ROLE");
+        require(hasRole(OPERATOR_ROLE, account), "StakePool#removeOperator: CALLER_NO_OPERATOR_ROLE");
         revokeRole(OPERATOR_ROLE, account);
     }
 
