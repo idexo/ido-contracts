@@ -163,6 +163,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
      *
      * - `amount` must not be zero
      * @param amount deposit amount.
+     * @param rewardTokenAddress reward token address
      */
     function depositReward(address rewardTokenAddress, uint256 amount) external override onlyOperator {
         require(amount > 0, "StakePool#depositReward: ZERO_AMOUNT");
@@ -171,6 +172,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
 
     /**
      * @dev Return reward deposit info by id.
+     * @param rewardTokenAddress reward token address
      */
     function getRewardDeposit(address rewardTokenAddress, uint256 id)
         external
@@ -190,6 +192,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
 
     /**
      * @dev Return reward deposit info by id.
+     * @param rewardTokenAddress reward token address
      */
     function getClaimableReward(address rewardTokenAddress, uint256 tokenId) external view returns (uint256) {
         return (claimableRewards[rewardTokenAddress][tokenId]);
@@ -197,6 +200,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
 
     /**
      * @dev add to claimable reward for a given token id
+     * @param rewardTokenAddress reward token address
      */
     function addClaimableReward(
         address rewardTokenAddress,
@@ -226,6 +230,8 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
      *
      * - stake token owner must call
      * - `amount` must be less than claimable reward
+     * @param rewardTokenAddress reward token address
+     * @param tokenId tokenId
      * @param amount claim amount
      */
     function claimReward(
@@ -260,8 +266,8 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
     |________________________*/
 
     /**
-     * @dev Add reward token.
-     * @param rewardToken_ address reward token.
+     * @dev Add new reward token.
+     * @param rewardToken_ reward token address.
      */
     function addRewardToken(address rewardToken_) public onlyOperator {
         _addRewardToken(rewardToken_);
@@ -327,6 +333,10 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
         emit RewardDeposited(account, amount);
     }
 
+    /**
+     * @dev Add new reward token.
+     * @param rewardToken_ reward token address.
+     */
     function _addRewardToken(address rewardToken_) private {
         rewardTokens[rewardToken_] = IERC20(rewardToken_);
     }
