@@ -270,6 +270,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
      * @param rewardToken_ reward token address.
      */
     function addRewardToken(address rewardToken_) public onlyOperator {
+        require(rewardToken_ != address(0), "StakePool#_deposit: ZERO_ADDRESS");
         _addRewardToken(rewardToken_);
     }
 
