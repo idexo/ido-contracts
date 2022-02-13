@@ -32,12 +32,12 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
             })
         })
         describe("reverts if", async () => {
-            it("add operator by NO-ADMIN", async () => {
-                await expectRevert(stakePool.addOperator(bob, { from: alice }), "StakePool#onlyAdmin: CALLER_NO_ADMIN_ROLE")
+            it("add operator by NO-OWNER", async () => {
+                await expectRevert(stakePool.addOperator(bob, { from: alice }), "Ownable: CALLER_NO_OWNER")
             })
-            it("remove operator by NO-ADMIN", async () => {
+            it("remove operator by NO-OWNER", async () => {
                 await stakePool.addOperator(bob, { from: owner })
-                await expectRevert(stakePool.removeOperator(bob, { from: alice }), "StakePool#onlyAdmin: CALLER_NO_ADMIN_ROLE")
+                await expectRevert(stakePool.removeOperator(bob, { from: alice }), "Ownable: CALLER_NO_OWNER")
             })
         })
     })
@@ -48,7 +48,7 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
         })
         describe("reverts if", async () => {
             it("add reward token by NO-OPERATOR", async () => {
-                await expectRevert(stakePool.addRewardToken(usdc.address, { from: alice }), "StakePool#onlyOperator: CALLER_NO_OPERATOR_ROLE")
+                await expectRevert(stakePool.addRewardToken(usdc.address, { from: alice }), "Operatorable: CALLER_NO_OPERATOR_ROLE")
             })
         })
     })
@@ -104,7 +104,7 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
       })
         describe("reverts if", async () => {
             it("change tokenURI by NO-OPERATOR", async () => {
-                await expectRevert(stakePool.setTokenURI(1, "test", { from: alice }), "Ownable: caller is not the owner")
+                await expectRevert(stakePool.setTokenURI(1, "test", { from: alice }), "Ownable: CALLER_NO_OWNER")
             })
         })
     })
