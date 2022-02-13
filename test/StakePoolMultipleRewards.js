@@ -62,6 +62,17 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
         })
 
         describe("staking", async () => {
+            it("check getMultiplier", async () => {
+                await stakePool.getMultiplier(1).then((res) => {
+                    expect(res.toString()).to.eq("120")
+                })
+                await stakePool.getMultiplier(301).then((res) => {
+                    expect(res.toString()).to.eq("110")
+                })
+                await stakePool.getMultiplier(4001).then((res) => {
+                    expect(res.toString()).to.eq("100")
+                })
+            })
             it("should stake 1", async () => {
                 await stakePool.getEligibleStakeAmount(0, { from: alice }).then((res) => {
                     expect(res.toString()).to.eq("0")
