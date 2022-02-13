@@ -3,15 +3,12 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./StakeTokenMultipleRewardsV1.sol";
 import "../interfaces/IStakePoolMultipleRewardsV1.sol";
 
-contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMultipleRewardsV1, AccessControl, ReentrancyGuard {
+contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMultipleRewardsV1, ReentrancyGuard {
     using SafeERC20 for IERC20;
-
-    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     // Minimum stake amount
     uint256 public constant minStakeAmount = 500 * 1e18;
@@ -59,64 +56,6 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
         depositToken = depositToken_;
         rewardTokens[rewardToken_] = IERC20(rewardToken_);
         deployedAt = block.timestamp;
-
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(OPERATOR_ROLE, msg.sender);
-    }
-
-    /**
-     * @dev Override supportInterface.
-     */
-    function supportsInterface(bytes4 interfaceId) public view virtual override(IERC165, AccessControl) returns (bool) {
-        return super.supportsInterface(interfaceId);
-    }
-
-    /***********************|
-    |          Role         |
-    |______________________*/
-
-    /**
-     * @dev Restricted to members of the admin role.
-     */
-    modifier onlyAdmin() {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "StakePool#onlyAdmin: CALLER_NO_ADMIN_ROLE");
-        _;
-    }
-
-    /**
-     * @dev Restricted to members of the operator role.
-     */
-    modifier onlyOperator() {
-        require(hasRole(OPERATOR_ROLE, msg.sender), "StakePool#onlyOperator: CALLER_NO_OPERATOR_ROLE");
-        _;
-    }
-
-    /**
-     * @dev Add an account to the operator role.
-     * @param account address of recipient.
-     */
-    function addOperator(address account) public override onlyAdmin {
-        // Check if `account` already has operator role
-        require(!hasRole(OPERATOR_ROLE, account), "StakePool#addOperator: ALREADY_OPERATOR_ROLE");
-        grantRole(OPERATOR_ROLE, account);
-    }
-
-    /**
-     * @dev Remove an account from the operator role.
-     * @param account address.
-     */
-    function removeOperator(address account) public override onlyAdmin {
-        // Check if `account` has operator role
-        require(hasRole(OPERATOR_ROLE, account), "StakePool#removeOperator: CALLER_NO_OPERATOR_ROLE");
-        revokeRole(OPERATOR_ROLE, account);
-    }
-
-    /**
-     * @dev Check if an account is operator.
-     * @param account address of operator being checked.
-     */
-    function checkOperator(address account) public view override returns (bool) {
-        return hasRole(OPERATOR_ROLE, account);
     }
 
     /************************|
