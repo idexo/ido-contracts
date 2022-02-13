@@ -54,11 +54,10 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
         string memory stakeTokenSymbol_,
         string memory stakeTokenBASEUri_,
         IERC20 depositToken_,
-        IERC20 rewardToken_,
-        address rewardTokenAddress_
+        address rewardToken_
     ) StakeTokenMultipleRewardsV1(stakeTokenName_, stakeTokenSymbol_, stakeTokenBASEUri_) {
         depositToken = depositToken_;
-        rewardTokens[rewardTokenAddress_] = rewardToken_;
+        rewardTokens[rewardToken_] = IERC20(rewardToken_);
         deployedAt = block.timestamp;
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -263,10 +262,9 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
     /**
      * @dev Add reward token.
      * @param rewardToken_ address reward token.
-     * @param rewardTokenAddress_ address reward token.
      */
-    function addRewardToken(IERC20 rewardToken_, address rewardTokenAddress_) public onlyOperator {
-        _addRewardToken(rewardToken_, rewardTokenAddress_);
+    function addRewardToken(address rewardToken_) public onlyOperator {
+        _addRewardToken(rewardToken_);
     }
 
     /*************************|
@@ -329,7 +327,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
         emit RewardDeposited(account, amount);
     }
 
-    function _addRewardToken(IERC20 rewardToken_, address rewardTokenAddress_) private {
-        rewardTokens[rewardTokenAddress_] = rewardToken_;
+    function _addRewardToken(address rewardToken_) private {
+        rewardTokens[rewardToken_] = IERC20(rewardToken_);
     }
 }
