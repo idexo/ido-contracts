@@ -48,10 +48,7 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
         })
         describe("reverts if", async () => {
             it("add reward token by NO-OPERATOR", async () => {
-                await expectRevert(
-                    stakePool.addRewardToken(usdc.address, { from: alice }),
-                    "StakePool#onlyOperator: CALLER_NO_OPERATOR_ROLE"
-                )
+                await expectRevert(stakePool.addRewardToken(usdc.address, { from: alice }), "StakePool#onlyOperator: CALLER_NO_OPERATOR_ROLE")
             })
         })
     })
@@ -123,9 +120,9 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
                 })
             })
             it("should deposit USDC reward", async () => {
-                expectEvent(await stakePool.depositReward(usdc.address, web3.utils.toWei(new BN(20000)), { from: bob }), "RewardDeposited")
+                expectEvent(await stakePool.depositReward(usdc.address, web3.utils.toWei(new BN(22500)), { from: bob }), "RewardDeposited")
                 await stakePool.getRewardDeposit(usdc.address, 0).then((res) => {
-                    expect(res[1].toString()).to.eq("20000000000000000000000")
+                    expect(res[1].toString()).to.eq("22500000000000000000000")
                 })
             })
         })
@@ -189,10 +186,10 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
                     expect(res.toString()).to.eq("0")
                 })
             })
-            it("should allow claim partial USDC reward to 2", async () => {
-                expectEvent(await stakePool.claimReward(usdc.address, 2, web3.utils.toWei(new BN(5000)), { from: carol }), "RewardClaimed")
+            it("should allow claim full USDC reward to 2", async () => {
+                expectEvent(await stakePool.claimReward(usdc.address, 2, web3.utils.toWei(new BN(7500)), { from: carol }), "RewardClaimed")
                 await stakePool.getClaimableReward(usdc.address, 2).then((res) => {
-                    expect(res.toString()).to.eq("2500000000000000000000")
+                    expect(res.toString()).to.eq("0")
                 })
             })
         })
@@ -335,6 +332,90 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
             await stakePool.sweep(usdc.address, darren, web3.utils.toWei(new BN(2500)), { from: bob })
             balance = await usdc.balanceOf(stakePool.address)
             console.log(balance.toString())
+        })
+    })
+
+    describe("# Stake, Deposit Rewards, add Rewards, Withdraw and Claim Rewards", async () => {
+        it("stake", async () => {
+            await stakePool.getEligibleStakeAmount(0, { from: darren }).then((res) => {
+                expect(res.toString()).to.eq("0")
+            })
+            await stakePool.isHolder(darren).then((res) => {
+                expect(res.toString()).to.eq("false")
+            })
+            expectEvent(await stakePool.deposit(web3.utils.toWei(new BN(3000)), 0, { from: darren }), "Deposited")
+
+            let res = await stakePool.getStakeTokenIds(darren)
+            console.log(res.toString())
+
+            await stakePool.getStakeInfo(23).then((res) => {
+                expect(res[0].toString()).to.eq("3000000000000000000000")
+            })
+        })
+
+        it("should deposit USDT reward", async () => {
+            expectEvent(await stakePool.depositReward(usdt.address, web3.utils.toWei(new BN(10000)), { from: owner }), "RewardDeposited")
+            await stakePool.getRewardDeposit(usdt.address, 1).then((res) => {
+                expect(res[1].toString()).to.eq("10000000000000000000000")
+            })
+        })
+
+        it("should deposit USDC reward", async () => {
+            expectEvent(await stakePool.depositReward(usdc.address, web3.utils.toWei(new BN(10000)), { from: bob }), "RewardDeposited")
+            await stakePool.getRewardDeposit(usdc.address, 1).then((res) => {
+                expect(res[1].toString()).to.eq("10000000000000000000000")
+            })
+        })
+
+        it("should add claimable USDT reward", async () => {
+            await stakePool.addClaimableReward(usdt.address, 23, web3.utils.toWei(new BN(10000)), { from: owner })
+            await stakePool.getClaimableReward(usdt.address, 23).then((res) => {
+                expect(res.toString()).to.eq("10000000000000000000000")
+            })
+        })
+
+        it("should add claimable USDC reward", async () => {
+            await stakePool.addClaimableReward(usdc.address, 23, web3.utils.toWei(new BN(10000)), { from: owner })
+            await stakePool.getClaimableReward(usdc.address, 23).then((res) => {
+                expect(res.toString()).to.eq("10000000000000000000000")
+            })
+        })
+
+        it("should not allow withdraw with pending rewards", async () => {
+            let res = await stakePool.getStakeTokenIds(darren)
+            for (const id of res.toString().split(",")) {
+                await expectRevert(stakePool.withdraw(id, web3.utils.toWei(new BN(3000)), { from: darren }), "StakePool#withdraw: CLAIM_REWARDS")
+            }
+        })
+
+        it("claim USDT reward", async () => {
+            expectEvent(await stakePool.claimReward(usdt.address, 23, web3.utils.toWei(new BN(10000)), { from: darren }), "RewardClaimed")
+            await stakePool.getClaimableReward(usdt.address, 23).then((res) => {
+                expect(res.toString()).to.eq("0")
+            })
+        })
+
+        it("should not allow withdraw with pending rewards", async () => {
+            let res = await stakePool.getStakeTokenIds(darren)
+            for (const id of res.toString().split(",")) {
+                await expectRevert(stakePool.withdraw(id, web3.utils.toWei(new BN(3000)), { from: darren }), "StakePool#withdraw: CLAIM_REWARDS")
+            }
+        })
+        it("claim USDC reward", async () => {
+            expectEvent(await stakePool.claimReward(usdc.address, 23, web3.utils.toWei(new BN(10000)), { from: darren }), "RewardClaimed")
+            await stakePool.getClaimableReward(usdc.address, 23).then((res) => {
+                expect(res.toString()).to.eq("0")
+            })
+        })
+
+        it("full withdraw", async () => {
+            expectEvent.notEmitted(await stakePool.withdraw(23, web3.utils.toWei(new BN(3000)), { from: darren }), "StakeAmountDecreased")
+            await stakePool.getStakeAmount(darren).then((res) => {
+                expect(res.toString()).to.eq("0")
+            })
+            await stakePool.currentSupply().then((res) => {
+                expect(res.toString()).to.eq("1")
+            })
         })
     })
 })
