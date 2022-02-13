@@ -332,12 +332,9 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
     describe("# Sweep", async () => {
         it("should sweep funds to another account", async () => {
             let balance = await usdt.balanceOf(stakePool.address)
-            console.log(balance.toString())
             balance = await usdc.balanceOf(stakePool.address)
-            console.log(balance.toString())
             await stakePool.sweep(usdc.address, darren, web3.utils.toWei(new BN(2500)), { from: bob })
             balance = await usdc.balanceOf(stakePool.address)
-            console.log(balance.toString())
         })
     })
 
@@ -352,8 +349,6 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
             expectEvent(await stakePool.deposit(web3.utils.toWei(new BN(3000)), 0, { from: darren }), "Deposited")
 
             let res = await stakePool.getStakeTokenIds(darren)
-            console.log(res.toString())
-
             await stakePool.getStakeInfo(23).then((res) => {
                 expect(res[0].toString()).to.eq("3000000000000000000000")
             })
