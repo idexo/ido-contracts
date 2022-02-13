@@ -20,8 +20,6 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
     IERC20 public depositToken;
     // Mapping of reward tokens.
     mapping(address => IERC20) public rewardTokens;
-    // Reward tokens history
-address[] private rewardTokenAddress;
     // Timestamp when stake pool was deployed to mainnet.
     uint256 public deployedAt;
 
@@ -60,7 +58,6 @@ address[] private rewardTokenAddress;
     ) StakeTokenMultipleRewardsV1(stakeTokenName_, stakeTokenSymbol_, stakeTokenBASEUri_) {
         depositToken = depositToken_;
         rewardTokens[rewardToken_] = IERC20(rewardToken_);
-        rewardTokenAddress.push(rewardToken_);
         deployedAt = block.timestamp;
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -153,17 +150,7 @@ address[] private rewardTokenAddress;
     function withdraw(uint256 stakeId, uint256 amount) external override {
         require(amount > 0, "StakePool#withdraw: UNDER_MINIMUM_WITHDRAW_AMOUNT");
         require(stakes[stakeId].timestamplock < block.timestamp, "StakePool#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL");
-        require(!_hasRewards(stakeId), "StakePool#withdraw: CLAIM_REWARDS");
         _withdraw(msg.sender, stakeId, amount);
-    }
-
-    function _hasRewards(uint256 tokenId) internal view returns (bool) {
-        for (uint8 r =0; r < rewardTokenAddress.length; r++) {
-            if (claimableRewards[rewardTokenAddress[r]][tokenId] > 0) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /*************************|
@@ -277,7 +264,6 @@ address[] private rewardTokenAddress;
      * @param rewardToken_ address reward token.
      */
     function addRewardToken(address rewardToken_) public onlyOperator {
-        require(rewardToken_ != address(0), "StakePool#_deposit: ZERO_ADDRESS");
         _addRewardToken(rewardToken_);
     }
 
@@ -343,6 +329,5 @@ address[] private rewardTokenAddress;
 
     function _addRewardToken(address rewardToken_) private {
         rewardTokens[rewardToken_] = IERC20(rewardToken_);
-        rewardTokenAddress.push(rewardToken_);
     }
 }
