@@ -170,14 +170,16 @@ contract StakeTokenMultipleRewardsV1 is IStakeTokenMultipleRewardsV1, ERC721, ER
     /**
      * @dev Returns StakeToken multiplier.
      *
+     * @param tokenId the tokenId to check
+     *
      * 0 < `tokenId` <300: 120.
      * 300 <= `tokenId` <4000: 110.
      * 4000 <= `tokenId`: 100.
      */
-    function _getMultiplier() private view returns (uint256) {
-        if (tokenIds < 300) {
+    function getMultiplier(uint256 tokenId) public pure returns (uint256) {
+        if (tokenId < 300) {
             return 120;
-        } else if (300 <= tokenIds && tokenIds < 4000) {
+        } else if (300 <= tokenId && tokenId < 4000) {
             return 110;
         } else {
             return 100;
@@ -222,7 +224,7 @@ contract StakeTokenMultipleRewardsV1 is IStakeTokenMultipleRewardsV1, ERC721, ER
         require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
         tokenIds++;
         _currentSupply++;
-        uint256 multiplier = _getMultiplier();
+        uint256 multiplier = getMultiplier(tokenIds);
         super._mint(account, tokenIds);
         Stake storage newStake = stakes[tokenIds];
         newStake.amount = amount;
