@@ -89,13 +89,19 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
         })
     })
 
-    describe("# Token URI", async () => {
-        it("should change tokenURI", async () => {
-            await stakePool.setTokenURI(1, "test", { from: owner }),
-                await stakePool.tokenURI(1).then((res) => {
-                    expect(res.toString()).to.eq(DOMAIN + "test")
-                })
+    describe("# URI", async () => {
+      it("should change tokenURI", async () => {
+        await stakePool.setTokenURI(1, "test", { from: owner }),
+        await stakePool.tokenURI(1).then((res) => {
+          expect(res.toString()).to.eq(DOMAIN + "test")
         })
+      })
+      it("should change baseURI", async () => {
+          await stakePool.setBaseURI("http://newdomain/", { from: owner }),
+              await stakePool.baseURI().then((res) => {
+                  expect(res.toString()).to.eq("http://newdomain/")
+              })
+      })
         describe("reverts if", async () => {
             it("change tokenURI by NO-OPERATOR", async () => {
                 await expectRevert(stakePool.setTokenURI(1, "test", { from: alice }), "Ownable: caller is not the owner")
