@@ -85,6 +85,13 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
                 await stakePool.isHolder(carol).then((res) => {
                     expect(res.toString()).to.eq("true")
                 })
+                timeTraveler.advanceTime(duration.months(10))
+                const number = await ethers.provider.getBlockNumber()
+                const block = await ethers.provider.getBlock(number)
+                await stakePool.getEligibleStakeAmount(block.timestamp, { from: carol }).then((res) => {
+                    expect(res.toString()).to.not.eq("0")
+                })
+                timeTraveler.advanceTime(duration.months(-10))
             })
         })
     })
