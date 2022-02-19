@@ -102,10 +102,18 @@ contract("IDOSale", async (accounts) => {
                 await ido.approve(saleContract.address, web3.utils.toWei(new BN(10000)), { from: alice })
                 expectEvent(await saleContract.depositTokens(web3.utils.toWei(new BN(200)), { from: alice }), "Deposited")
                 await usdt.approve(saleContract.address, toUSDTWei(new BN(10000)), { from: bob })
-                /*await usdt.balanceOf(bob).then(res => {
-          console.log(res.toString());
-        });*/
                 expectEvent(await saleContract.purchase(web3.utils.toWei(new BN(20)), { from: bob }), "Purchased")
+                /*await usdt.balanceOf(bob).then(res => {
+                  console.log(res.toString());
+                });
+                expectEvent(
+                    await saleContract.permitAndPurchase(
+                        web3.utils.toWei(new BN(10)),
+                        { nonce: 0, deadline: 0, v: 0, r: dummyHash, s: dummyHash },
+                        { from: bob }
+                    ),
+                    "Purchased"
+                )*/
                 // Check USDT balance of sale contract
                 await usdt.balanceOf(saleContract.address).then((res) => {
                     expect(res.toString()).to.eq("9000000")
