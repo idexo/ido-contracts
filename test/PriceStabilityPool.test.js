@@ -246,6 +246,11 @@ describe("PriceStabilityPool", async () => {
             })
         })
     })
+    describe("createCoupon return change", async () => {
+        it("should not revert", async () => {
+            await expect(contract.connect(alice).createCoupon(1, { value: ethers.utils.parseEther("100") })).to.not.reverted
+        })
+    })
 
     describe("#Role", async () => {
         it("should add operator", async () => {
