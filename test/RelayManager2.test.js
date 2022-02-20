@@ -21,6 +21,7 @@ contract("RelayManager2", async (accounts) => {
 
         ido.mint(alice, web3.utils.toWei(new BN(1000)))
         ido.mint(carol, web3.utils.toWei(new BN(1000)))
+        ido.mint(relayManager.address, web3.utils.toWei(new BN(1000)))
         await ido.approve(relayManager.address, web3.utils.toWei(new BN(1000)), { from: alice })
     })
 
@@ -64,24 +65,18 @@ contract("RelayManager2", async (accounts) => {
                 expect(res.toString()).to.eq(receiveAmount.toString())
             })
         })
-        /*it('withdrawAdminFee', async () => {
-      expectEvent(
-        await relayManager.withdrawAdminFee(carol, adminFee),
-        'AdminFeeWithdraw'
-      );
-      await relayManager.adminFeeAccumulated().then(res => {
-        expect(res.toString()).to.eq('0');
-      });
-    });
-    it('withdrawGasFee', async () => {
-      expectEvent(
-        await relayManager.withdrawGasFee(carol, gasFee),
-        'GasFeeWithdraw'
-      );
-      await relayManager.gasFeeAccumulated().then(res => {
-        expect(res.toString()).to.eq('0');
-      });
-    });*/
+        it("withdrawAdminFee", async () => {
+            expectEvent(await relayManager.withdrawAdminFee(alice, adminFee), "AdminFeeWithdraw")
+            await relayManager.adminFeeAccumulated().then((res) => {
+                expect(res.toString()).to.eq("0")
+            })
+        })
+        it("withdrawGasFee", async () => {
+            expectEvent(await relayManager.withdrawGasFee(alice, gasFee), "GasFeeWithdraw")
+            await relayManager.gasFeeAccumulated().then((res) => {
+                expect(res.toString()).to.eq("0")
+            })
+        })
     })
 
     describe("#Ownership", async () => {
@@ -89,7 +84,21 @@ contract("RelayManager2", async (accounts) => {
             await relayManager.transferOwnership(bob)
             await relayManager.acceptOwnership({ from: bob })
             expect(await relayManager.owner()).to.eq(bob)
+        })
+        it("setAdminFee", async () => {
             expectEvent(await relayManager.setAdminFee(1, { from: bob }), "AdminFeeChanged")
+        })
+        it("setBaseGas", async () => {
+            await relayManager.setBaseGas(111, { from: bob })
+            await relayManager.baseGas().then((res) => {
+                expect(res.toString()).to.eq("111")
+            })
+        })
+        it("setMinTransferAmount", async () => {
+            await relayManager.setMinTransferAmount(112, { from: bob })
+            await relayManager.minTransferAmount().then((res) => {
+                expect(res.toString()).to.eq("112")
+            })
         })
         describe("reverts if", async () => {
             it("withdrawAdminFee insuficient funds", async () => {
