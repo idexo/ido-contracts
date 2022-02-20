@@ -25,7 +25,7 @@ async function setup() {
         wido.address,
         usdt.address,
         Math.floor(block.timestamp + duration.days(3)), // the pool stability period starts after 3 days
-        duration.months(1), // the pool stability period
+        duration.months(2), // the pool stability period
         ethers.utils.parseEther("0.0002"), // coupon gas price
         ethers.utils.parseEther("2"), // coupon stable coin price
         1000 // entrance fee in BP
@@ -157,6 +157,11 @@ describe("PriceStabilityPool", async () => {
             })
             it("caller has no valid access tickets", async () => {
                 await expect(contract.connect(carol).purchaseCoupon(7)).to.be.revertedWith("PriceStabilityPool: ACCESS_TICKET_INVALID")
+            })
+            it("purchase after a year", async () => {
+                await network.provider.send("evm_increaseTime", [duration.days(31)])
+                await network.provider.send("evm_mine")
+                await expect(contract.connect(alice).purchaseCoupon(7)).to.be.revertedWith("PriceStabilityPool: ACCESS_TICKET_INVALID")
             })
         })
     })
