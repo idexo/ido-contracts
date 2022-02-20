@@ -137,7 +137,7 @@ describe("PriceStabilityPool", async () => {
             await usdt.mock.transferFrom.withArgs(alice.address, alice.address, ethers.utils.parseEther("10")).returns(true)
             await usdt.mock.transferFrom.withArgs(alice.address, bob.address, ethers.utils.parseEther("4")).returns(true)
 
-            await contract.connect(alice).purchaseCoupon(7)
+            await expect(contract.connect(alice).purchaseCoupon(7)).to.emit(contract, "CouponPurchased")
 
             // check state variable update
             await expect(contract.ownerOf(1)).to.be.revertedWith("ERC721: owner query for nonexistent token")
@@ -216,6 +216,8 @@ describe("PriceStabilityPool", async () => {
             await contract.tickets(jack.address).then((res) => {
                 expect(res["duration"]).to.eq(1)
             })
+            await usdt.mock.transferFrom.withArgs(jack.address, bob.address, ethers.utils.parseEther("2")).returns(true)
+            await expect(contract.connect(jack).purchaseCoupon(1)).to.emit(contract, "CouponPurchased")
         })
         it("purchaseTicket(THREE_MONTH_TICKET_HASH)", async () => {
             await wido.mock.transferFrom.withArgs(darren.address, contract.address, ethers.utils.parseEther("3.3")).returns(true)
