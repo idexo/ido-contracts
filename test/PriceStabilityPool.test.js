@@ -13,7 +13,7 @@ const TWELVE_MONTH_TICKET_HASH = ethers.utils.id("Twelve month access")
 const UNLIMITED_TICKET_HASH = ethers.utils.id("Unlimited access")
 
 async function setup() {
-    const [owner, alice, bob, carol, darren, elena, jon, jane] = await ethers.getSigners()
+    const [owner, alice, bob, carol, darren, elena, jon, jane, jack] = await ethers.getSigners()
     const wido = await deployMockContract(owner, IWIDO.abi)
     const usdt = await deployMockContract(owner, IWIDO.abi)
     const PriceStabilityPool = await ethers.getContractFactory("PriceStabilityPool")
@@ -30,16 +30,16 @@ async function setup() {
         ethers.utils.parseEther("2"), // coupon stable coin price
         1000 // entrance fee in BP
     )
-    return { wido, usdt, contract, owner, alice, bob, carol, darren, elena, jon, jane }
+    return { wido, usdt, contract, owner, alice, bob, carol, darren, elena, jon, jane, jack }
 }
 
 describe("PriceStabilityPool", async () => {
     let wido, usdt, contract
-    let owner, alice, bob, carol, darren, elena, jon, jane
+    let owner, alice, bob, carol, darren, elena, jon, jane, jack
 
     describe("createCoupon()", async () => {
         it("expect to create coupon", async () => {
-            ;({ wido, usdt, contract, owner, alice, bob, carol, darren, elena, jon, jane } = await setup())
+            ;({ wido, usdt, contract, owner, alice, bob, carol, darren, elena, jon, jane, jack } = await setup())
             // whitelist
             await contract.addWhitelist([alice.address, bob.address])
 
@@ -205,6 +205,13 @@ describe("PriceStabilityPool", async () => {
     })
 
     describe("purchaseTicket", async () => {
+        it("purchaseTicket(ONE_TIME_TICKET_HASH)", async () => {
+            await wido.mock.transferFrom.withArgs(jack.address, contract.address, ethers.utils.parseEther("1.1")).returns(true)
+            await contract.connect(jack).purchaseTicket(ONE_TIME_TICKET_HASH)
+            await contract.tickets(jack.address).then((res) => {
+                expect(res["duration"]).to.eq(1)
+            })
+        })
         it("purchaseTicket(THREE_MONTH_TICKET_HASH)", async () => {
             await wido.mock.transferFrom.withArgs(darren.address, contract.address, ethers.utils.parseEther("3.3")).returns(true)
             await contract.connect(darren).purchaseTicket(THREE_MONTH_TICKET_HASH)
