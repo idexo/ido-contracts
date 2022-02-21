@@ -49,8 +49,7 @@ contract("RelayManager2", async (accounts) => {
     describe("#Fund contract", async () => {
         it("should fund contract and emit event", async () => {
             const value = web3.utils.toWei(new BN(1), "ether")
-            const instance = await RelayManager2.at(relayManager.address)
-            expectEvent(await instance.sendTransaction({value : value}), "EthReceived")
+            expectEvent(await relayManager.sendTransaction({value : value, from: alice}), "EthReceived")
             // instance provider
             const provider = waffle.provider
             const balance = await provider.getBalance(relayManager.address)
