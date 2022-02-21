@@ -50,9 +50,7 @@ contract("RelayManager2", async (accounts) => {
         it("should fund contract and emit event", async () => {
             const value = web3.utils.toWei(new BN(1), "ether")
             expectEvent(await relayManager.sendTransaction({value : value, from: alice}), "EthReceived")
-            // instance provider
-            const provider = waffle.provider
-            const balance = await provider.getBalance(relayManager.address)
+            const balance = await waffle.provider.getBalance(relayManager.address)
             expect(balance.toString()).to.eq(value.toString())
         })
     })
