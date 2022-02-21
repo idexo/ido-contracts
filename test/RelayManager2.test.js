@@ -1,6 +1,7 @@
 // Initiate `ownerPrivateKey` with the third account private key on test evm
 
 const { expect } = require("chai")
+const { ethers, waffle } = require("hardhat")
 const { BN, constants, expectEvent, expectRevert } = require("@openzeppelin/test-helpers")
 const { PERMIT_TYPEHASH, getPermitDigest, getDomainSeparator, sign } = require("./helpers/signature")
 
@@ -42,6 +43,18 @@ contract("RelayManager2", async (accounts) => {
                 await relayManager.addOperator(bob)
                 await expectRevert(relayManager.removeOperator(bob, { from: bob }), "RelayManager2: CALLER_NO_OWNER")
             })
+        })
+    })
+
+    describe("#Fund contract", async () => {
+        it("should fund contract and emit event", async () => {
+            const value = web3.utils.toWei(new BN(1), "ether")
+            const instance = await RelayManager2.at(relayManager.address)
+            expectEvent(await instance.sendTransaction({value : value}), "EthReceived")
+            // instance provider
+            const provider = waffle.provider
+            const balance = await provider.getBalance(relayManager.address)
+            expect(balance.toString()).to.eq(value.toString())
         })
     })
 
