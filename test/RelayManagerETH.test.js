@@ -122,6 +122,19 @@ contract("RelayManagerETH", async (accounts) => {
                         "RelayManager2Secure: TRANSFER_NONCE_ALREADY_PROCESSED"
                     )
                 })
+                it("empty signer", async () => {
+                    msgHash = ethers.utils.solidityKeccak256(["bytes"], [ethers.utils.solidityPack(["address"], [signer2])])
+                    sig1 = ethCrypto.sign(signer1Key, ethSign(msgHash))
+                    await relayManager.removeSigner(signer2, [sig1])
+
+                    let tx = await relayManager.deposit(bob, sendAmount, polygonChainId, { from: alice })
+                    let { from, receiver, toChainId, amount, nonce } = tx.receipt.logs[0].args
+                    // empty signer
+                    await expectRevert(
+                        relayManager.send(from, receiver, sendAmount, nonce.toString(), [], { from: bob }),
+                        "RelayManager2Secure: INVALID_SIGNATURE"
+                    )
+                })
                 it("signer is not valid signer", async () => {
                     msgHash = ethers.utils.solidityKeccak256(["bytes"], [ethers.utils.solidityPack(["address"], [signer2])])
                     sig1 = ethCrypto.sign(signer1Key, ethSign(msgHash))
