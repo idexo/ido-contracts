@@ -107,6 +107,10 @@ contract("RelayManagerETH", async (accounts) => {
                 let signature1 = getSignature(from, receiver, amount.toString(), nonce.toString(), signer1Key)
                 let signature2 = getSignature(from, receiver, amount.toString(), nonce.toString(), signer2Key)
                 expectEvent(await relayManager.send(from, receiver, sendAmount, nonce.toString(), [signature2, signature1], { from: bob }), "Sent")
+                await expectRevert(
+                    relayManager.send(from, receiver, sendAmount, nonce.toString(), [signature1, signature2], { from: bob }),
+                    "RelayManager2Secure: INVALID_SIGNATURE"
+                )
             })
 
             describe("reverts if", async () => {
