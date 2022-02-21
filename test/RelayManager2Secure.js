@@ -1,3 +1,5 @@
+const { BN, constants, expectEvent, expectRevert } = require("@openzeppelin/test-helpers")
+
 function testRelayManager(contractName) {
     const { deployMockContract } = require("@ethereum-waffle/mock-contract")
     const { ethers } = require("hardhat")
@@ -49,7 +51,7 @@ function testRelayManager(contractName) {
             it("expect to set bridge wallet", async () => {
                 msgHash = ethers.utils.solidityKeccak256(["bytes"], [ethers.utils.solidityPack(["address"], [bridgeWallet.address])])
                 sig1 = ethCrypto.sign(signer1Key, ethSign(msgHash))
-                await relayer.setBridgeWallet(bridgeWallet.address, [sig1])
+                expect(await relayer.setBridgeWallet(bridgeWallet.address, [sig1])).to.emit(relayer, "BridgeWalletChanged")
             })
             it("expect to set threshold", async () => {
                 msgHash = ethers.utils.solidityKeccak256(["bytes"], [ethers.utils.solidityPack(["uint8"], [1])])
