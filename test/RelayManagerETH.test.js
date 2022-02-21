@@ -161,7 +161,7 @@ contract("RelayManagerETH", async (accounts) => {
         it("check admin fee", async () => {
             let currentAdminFee = await relayManager.adminFee()
             let adminFee = await relayManager.adminFeeAccumulated()
-            expect(adminFee.toString()).to.eq(web3.utils.toWei(new BN(120)).toString())
+            expect(adminFee.toString()).to.eq(web3.utils.toWei(new BN(90)).toString())
         })
     })
 
