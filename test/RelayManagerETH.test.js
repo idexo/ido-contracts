@@ -90,13 +90,23 @@ contract("RelayManagerETH", async (accounts) => {
             it("should send and emit Sent event", async () => {
                 let tx = await relayManager.deposit(bob, sendAmount, polygonChainId, { from: alice })
                 let { from, receiver, toChainId, amount, nonce } = tx.receipt.logs[0].args
-                // console.log(from, receiver, toChainId.toString(), amount.toString(), nonce.toString())
                 let signature = getSignature(from, receiver, amount.toString(), nonce.toString(), signer1Key)
                 expectEvent(await relayManager.send(from, receiver, sendAmount, nonce.toString(), [signature], { from: bob }), "Sent")
 
                 await ido.balanceOf(receiver).then((resp) => {
                     expect(resp.toString()).to.eq(web3.utils.toWei(new BN(70)).toString())
                 })
+            })
+
+            it("should send with 2 signers", async () => {
+                let msgHash = ethers.utils.solidityKeccak256(["bytes"], [ethers.utils.solidityPack(["address"], [signer2])])
+                let sig1 = ethCrypto.sign(signer1Key, ethSign(msgHash))
+                await relayManager.addSigner(signer2, [sig1])
+                let tx = await relayManager.deposit(bob, sendAmount, polygonChainId, { from: alice })
+                let { from, receiver, toChainId, amount, nonce } = tx.receipt.logs[0].args
+                let signature1 = getSignature(from, receiver, amount.toString(), nonce.toString(), signer1Key)
+                let signature2 = getSignature(from, receiver, amount.toString(), nonce.toString(), signer2Key)
+                expectEvent(await relayManager.send(from, receiver, sendAmount, nonce.toString(), [signature2, signature1], { from: bob }), "Sent")
             })
 
             describe("reverts if", async () => {
@@ -114,20 +124,13 @@ contract("RelayManagerETH", async (accounts) => {
                 })
             })
         })
-
-        // it("send", async () => {
-        //     // Accept cross-chain transfer from Polygon (carol => bob)
-
-        //     await expectRevert(relayManager.send(alice, bob, sendAmount, 1, [dummyDepositHash], { from: bob }), "ECDSA: invalid signature length")
-        // })
     })
 
     describe("admin fee", async () => {
         it("check admin fee", async () => {
             let currentAdminFee = await relayManager.adminFee()
-            console.log(currentAdminFee.toString())
             let adminFee = await relayManager.adminFeeAccumulated()
-            expect(adminFee.toString()).to.eq(web3.utils.toWei(new BN(60)).toString())
+            expect(adminFee.toString()).to.eq(web3.utils.toWei(new BN(90)).toString())
         })
     })
 
@@ -212,6 +215,12 @@ contract("RelayManagerETH", async (accounts) => {
     })
 
     describe("#Signatures", async () => {
+        it("add signer2", async () => {
+            let msgHash = ethers.utils.solidityKeccak256(["bytes"], [ethers.utils.solidityPack(["address"], [signer2])])
+            let sig1 = ethCrypto.sign(signer1Key, ethSign(msgHash))
+            await relayManager.addSigner(signer2, [sig1])
+        })
+
         describe("reverts if", async () => {
             it("no signatures on setAdminFee", async () => {
                 await expectRevert(relayManager.setAdminFee(1, [], { from: bob }), "RelayManager2Secure: INVALID_SIGNATURE")
