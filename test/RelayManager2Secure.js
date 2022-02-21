@@ -70,15 +70,14 @@ function testRelayManager(contractName) {
             })
         })
 
-        describe("check isSigner", async () => {
-            ;({ alice, bob, carol } = await setup())
+        describe("#isSigner", async () => {
             it("isSigner", async () => {
                 await relayer.isSigner(signer1).then((res) => {
                     expect(res.toString()).to.eq("true")
                 })
             })
             it("not isSigner", async () => {
-                await relayer.isSigner(bob).then((res) => {
+                await relayer.isSigner(bob.address).then((res) => {
                     expect(res.toString()).to.eq("false")
                 })
             })
