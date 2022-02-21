@@ -111,7 +111,6 @@ contract("Voting1", async (accounts) => {
             })
 
             await voting1.createPoll("Tezos Integration", new BN(30), { from: bob })
-            await voting1.setPollMinimumVotes(toWei(new BN(300000)), { from: bob })
             await voting1.castVote(2, true, { from: alice })
             await voting1.castVote(2, false, { from: bob })
             await expectRevert(voting1.endPoll(2, { from: bob }), "Voting1#endPoll: POLL_PERIOD_NOT_EXPIRED")
@@ -137,6 +136,26 @@ contract("Voting1", async (accounts) => {
                 await timeTraveler.advanceTime(time.duration.days(7))
                 await voting1.endPoll(3, { from: bob })
                 await expectRevert(voting1.castVote(3, true, { from: alice }), "Voting1#castVote: POLL_ALREADY_ENDED")
+            })
+        })
+        describe("getters", async () => {
+            it("getPollMinimumVotes", async () => {
+                await voting1.setPollMinimumVotes(111, { from: bob })
+                expect(String(await voting1.getPollMinimumVotes())).to.eq("111")
+            })
+            it("getPollMaximumDurationInDays", async () => {
+                await voting1.setPollMaximumDurationInDays(112, { from: bob })
+                expect(String(await voting1.getPollMaximumDurationInDays())).to.eq("112")
+            })
+            it("getPollDurationInDays", async () => {
+                await voting1.setPollDurationInDays(113, { from: bob })
+                expect(String(await voting1.getPollDurationInDays())).to.eq("113")
+            })
+            it("getVoterInfo", async () => {
+                let vi = await voting1.getVoterInfo(1, alice)
+                expect(vi["0"]).to.eq(true)
+                expect(vi["1"]).to.eq(true)
+                expect(String(vi["2"])).to.eq("12000000000000000000000")
             })
         })
         after(async () => {
