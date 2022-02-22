@@ -180,7 +180,7 @@ contract("::StakePoolSimpleCombinedNew", async (accounts) => {
         })
 
         it("should add claimable rewards", async () => {
-            const amountForRewards = web3.utils.toWei(new BN(10000))
+            const amountForRewards = web3.utils.toWei(new BN(5000))
 
             await stakePool.addClaimableRewards(
                 [21, 22, 23, 24, 25, 26],
@@ -190,13 +190,12 @@ contract("::StakePoolSimpleCombinedNew", async (accounts) => {
                 }
             )
             await stakePool.getClaimableReward(21).then((res) => {
-                expect(res.toString()).to.eq("10000000000000000000000")
+                expect(res.toString()).to.eq("5000000000000000000000")
             })
         })
     })
 
     describe("deposit with timestamplock", async () => {
-        console.log()
         it("should shows amount staked", async () => {
             const number = await ethers.provider.getBlockNumber()
             const block = await ethers.provider.getBlock(number)
@@ -221,6 +220,13 @@ contract("::StakePoolSimpleCombinedNew", async (accounts) => {
                 expectEvent(await stakePool.withdraw(id, web3.utils.toWei(new BN(100)), { from: alice }), "StakeAmountDecreased")
             }
             timeTraveler.advanceTime(duration.months(-1))
+        })
+    })
+    describe("# Sweep", async () => {
+        it("should sweep funds to another account", async () => {
+            let balance = await erc20.balanceOf(stakePool.address)
+            balance = await erc20.balanceOf(stakePool.address)
+            await stakePool.sweep(erc20.address, bob, web3.utils.toWei(new BN(3000)), { from: bob })
         })
     })
 })
