@@ -246,12 +246,6 @@ contract("RelayManagerETH", async (accounts) => {
     })
 
     describe("#Signatures", async () => {
-        it("add signer2", async () => {
-            let msgHash = ethers.utils.solidityKeccak256(["bytes"], [ethers.utils.solidityPack(["address"], [signer2])])
-            let sig1 = ethCrypto.sign(signer1Key, ethSign(msgHash))
-            await relayManager.addSigner(signer2, [sig1])
-        })
-
         describe("reverts if", async () => {
             it("no signatures on setAdminFee", async () => {
                 await expectRevert(relayManager.setAdminFee(1, [], { from: bob }), "RelayManager2Secure: INVALID_SIGNATURE")

@@ -138,6 +138,26 @@ function testRelayManager(contractName) {
                         contractName + ": TRANSFER_NONCE_ALREADY_PROCESSED"
                     )
                 })
+                it("signer not isSigner", async () => {
+                    //remove signer
+                    msgHash = ethers.utils.solidityKeccak256(["bytes"], [ethers.utils.solidityPack(["address"], [signer2])])
+                    sig1 = ethCrypto.sign(signer1Key, ethSign(msgHash))
+                    await relayer.removeSigner(signer2, [sig1])
+
+                    msgHash = ethers.utils.solidityKeccak256(
+                        ["bytes"],
+                        [
+                            ethers.utils.solidityPack(
+                                ["address", "address", "uint256", "uint256"],
+                                [alice.address, bob.address, ethers.utils.parseEther("100"), 0]
+                            )
+                        ]
+                    )
+                    sig2 = ethCrypto.sign(signer2Key, ethSign(msgHash))
+                    await expect(relayer.send(alice.address, bob.address, ethers.utils.parseEther("100"), 0, [sig2])).to.be.revertedWith(
+                        contractName + ": INVALID_SIGNATURE"
+                    )
+                })
             })
         })
 
