@@ -166,6 +166,15 @@ contract("Voting1", async (accounts) => {
                 expect(String(vi["2"])).to.eq("12000000000000000000000")
             })
         })
+        describe("test changing minimum votes", async () => {
+            it("castVote setPollMinimumVotes", async () => {
+                await voting1.createPoll("MinVotes", new BN(30), { from: bob })
+                await voting1.castVote(3, true, { from: bob })
+                await voting1.setPollMinimumVotes(1, { from: bob })
+                await voting1.castVote(3, true, { from: alice })
+                await expectRevert(voting1.castVote(3, true, { from: carol }), "Voting1#castVote: POLL_ALREADY_ENDED")
+            })
+        })
         after(async () => {
             await timeTraveler.advanceTime(time.duration.months(-1))
         })
