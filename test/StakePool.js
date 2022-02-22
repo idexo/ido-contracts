@@ -134,8 +134,6 @@ function testStakePool(contractName, errorHead, timeIncrease) {
           await stakePool.getEligibleStakeAmount(0).then((res) => {
               expect(res.toString()).to.eq("0")
           })
-          // let elegibleStake = await stakePool.getEligibleStakeAmount(0, {from: alice})
-          // console.log("Elegible Stake Amount:",elegibleStake.toString())
         });
         describe('reverts if', async () => {
           it('elegible stake amount date is invalid', async () => {
@@ -240,6 +238,12 @@ function testStakePool(contractName, errorHead, timeIncrease) {
           await stakePool.depositReward(web3.utils.toWei(new BN(4500)), {from: alice});
           // After 15 days (1 month passed)
           timeTraveler.advanceTime(time.duration.days(timeIncrease[4]));
+
+          const latestBlock = await hre.ethers.provider.getBlock("latest")
+          await stakePool.getEligibleStakeAmount(latestBlock.timestamp).then((res) => {
+            expect(res.toString()).to.eq("17760000000000000000000")
+          })
+
           await stakePool.distribute({from: bob});
           await stakePool.claimableRewards(alice).then(res => {
             expect(res.toString()).to.eq('2124999999999999997875');
