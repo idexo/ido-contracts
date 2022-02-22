@@ -169,10 +169,14 @@ contract("Voting1", async (accounts) => {
         describe("test changing minimum votes", async () => {
             it("castVote setPollMinimumVotes", async () => {
                 await voting1.createPoll("MinVotes", new BN(30), { from: bob })
-                await voting1.castVote(3, true, { from: bob })
+                let pollId = Number(await voting1.pollIds())
+                let pollInfo = await voting1.getPollInfo(pollId)
+                const endTime = String(pollInfo["2"])
+
                 await voting1.setPollMinimumVotes(1, { from: bob })
-                await voting1.castVote(3, true, { from: alice })
-                await expectRevert(voting1.castVote(3, true, { from: carol }), "Voting1#castVote: POLL_ALREADY_ENDED")
+                await voting1.castVote(pollId, true, { from: bob })
+                pollInfo = await voting1.getPollInfo(pollId)
+                expect(endTime).to.not.eq(String(pollInfo["2"]))
             })
         })
         after(async () => {
