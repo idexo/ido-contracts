@@ -10,7 +10,7 @@ const timeTraveler = require("ganache-time-traveler")
 
 contract("Voting1", async (accounts) => {
     let ido, erc20
-    let voting1, sPool1, sPool2, sPool3
+    let voting1, sPool1, sPool2, sPool3, sPool4
     const [alice, bob, carol] = accounts
 
     before(async () => {
@@ -19,6 +19,7 @@ contract("Voting1", async (accounts) => {
         sPool1 = await StakePool.new("Idexo Stake Token", "IDS", ido.address, erc20.address)
         sPool2 = await StakePool.new("Idexo Stake Token", "IDS", ido.address, erc20.address)
         sPool3 = await StakePool.new("Idexo Stake Token", "IDS", ido.address, erc20.address)
+        sPool4 = await StakePool.new("Idexo Stake Token", "IDS", ido.address, erc20.address)
         voting1 = await Voting1.new([sPool1.address, sPool2.address], toWei(new BN(400000)), new BN(7), new BN(14))
     })
 
@@ -51,9 +52,16 @@ contract("Voting1", async (accounts) => {
                 expect(res[1]).to.eq(sPool2.address)
                 expect(res[2]).to.eq(sPool3.address)
             })
+            await voting1.addStakePool(sPool4.address, { from: bob })
         })
         it("removeStakePool", async () => {
             await voting1.removeStakePool(sPool3.address, { from: bob })
+            await voting1.getStakePools().then((res) => {
+                expect(res.length).to.eq(3)
+                expect(res[0]).to.eq(sPool1.address)
+                expect(res[2]).to.eq(sPool4.address)
+            })
+            await voting1.removeStakePool(sPool4.address, { from: bob })
             await voting1.getStakePools().then((res) => {
                 expect(res.length).to.eq(2)
                 expect(res[0]).to.eq(sPool1.address)
@@ -156,6 +164,19 @@ contract("Voting1", async (accounts) => {
                 expect(vi["0"]).to.eq(true)
                 expect(vi["1"]).to.eq(true)
                 expect(String(vi["2"])).to.eq("12000000000000000000000")
+            })
+        })
+        describe("test changing minimum votes", async () => {
+            it("castVote setPollMinimumVotes", async () => {
+                await voting1.createPoll("MinVotes", new BN(30), { from: bob })
+                let pollId = Number(await voting1.pollIds())
+                let pollInfo = await voting1.getPollInfo(pollId)
+                const endTime = String(pollInfo["2"])
+
+                await voting1.setPollMinimumVotes(1, { from: bob })
+                await voting1.castVote(pollId, true, { from: bob })
+                pollInfo = await voting1.getPollInfo(pollId)
+                expect(endTime).to.not.eq(String(pollInfo["2"]))
             })
         })
         after(async () => {
