@@ -46,10 +46,14 @@ contract('::StakePoolSimpleCombined', async accounts => {
 
   describe('# Stake', async () => {
     before(async () => {
-      await ido.mint(alice, web3.utils.toWei(new BN(20000)));
-      await ido.approve(stakePool.address, web3.utils.toWei(new BN(20000)), {from: alice});
-      await erc20.mint(alice, web3.utils.toWei(new BN(20000)));
-      await erc20.approve(stakePool.address, web3.utils.toWei(new BN(20000)), {from: alice})
+      await ido.mint(alice, web3.utils.toWei(new BN(100000)));
+      await ido.approve(stakePool.address, web3.utils.toWei(new BN(100000)), {from: alice});
+      await ido.mint(bob, web3.utils.toWei(new BN(100000)));
+      await ido.approve(stakePool.address, web3.utils.toWei(new BN(100000)), {from: bob});
+      await ido.mint(carol, web3.utils.toWei(new BN(100000)));
+      await ido.approve(stakePool.address, web3.utils.toWei(new BN(100000)), {from: carol});
+      await erc20.mint(alice, web3.utils.toWei(new BN(100000)));
+      await erc20.approve(stakePool.address, web3.utils.toWei(new BN(100000)), {from: alice})
     });
 
     describe('deposit', async () => {
@@ -109,5 +113,49 @@ contract('::StakePoolSimpleCombined', async accounts => {
         });
       });
   });
+
+  describe("multiple deposits and distribute rewards", async () => {
+      it("multiple deposits", async () => {
+          for (let i = 0; i <= 1; i++) {
+              for (const user of [alice, bob, carol]) {
+                  await stakePool.deposit(web3.utils.toWei(new BN(5000)), { from: user })
+              }
+          }
+          for (const user of [bob, alice, carol]) {
+              await stakePool.getStakeAmount(user).then((res) => {
+                  expect(res.toString()).to.not.eq("0")
+              })
+          }
+      })
+      it("should new deposit rewards", async () => {
+          expectEvent(await stakePool.depositReward(web3.utils.toWei(new BN(60000)), { from: alice }), "RewardDeposited")
+          await stakePool.getRewardDeposit(1).then((res) => {
+              expect(res[1].toString()).to.eq("60000000000000000000000")
+          })
+      })
+
+      it("should add claimable rewards", async () => {
+          const amountForRewards = web3.utils.toWei(new BN(5000))
+
+          await stakePool.addClaimableRewards(
+              [21, 22, 23, 24, 25, 26],
+              [amountForRewards, amountForRewards, amountForRewards, amountForRewards, amountForRewards, amountForRewards],
+              {
+                  from: alice
+              }
+          )
+          await stakePool.getClaimableReward(21).then((res) => {
+              expect(res.toString()).to.eq("5000000000000000000000")
+          })
+      })
+  })
+
+   describe("# Sweep", async () => {
+       it("should sweep funds to another account", async () => {
+           let balance = await erc20.balanceOf(stakePool.address)
+           balance = await erc20.balanceOf(stakePool.address)
+           await stakePool.sweep(erc20.address, bob, web3.utils.toWei(new BN(3000)), { from: bob })
+       })
+   })
 
 });
