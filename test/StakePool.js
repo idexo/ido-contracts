@@ -55,6 +55,8 @@ function testStakePool(contractName, errorHead, timeIncrease) {
       before(async () => {
         await ido.mint(alice, web3.utils.toWei(new BN(20000)));
         await ido.approve(stakePool.address, web3.utils.toWei(new BN(20000)), {from: alice});
+        await ido.mint(carol, web3.utils.toWei(new BN(20000)));
+        await ido.approve(stakePool.address, web3.utils.toWei(new BN(20000)), {from: carol});
       });
       describe('##deposit', async () => {
         it('should deposit', async () => {
@@ -97,6 +99,15 @@ function testStakePool(contractName, errorHead, timeIncrease) {
           });
         });
       });
+      describe("##burn", async () => {
+          it("should stake and withdraw/burn", async () => {
+            await stakePool.deposit(web3.utils.toWei(new BN(5000)), { from: carol })
+            await stakePool.deposit(web3.utils.toWei(new BN(5000)), { from: carol })
+              await stakePool.withdraw(3, web3.utils.toWei(new BN(5000)), { from: carol })
+              await stakePool.withdraw(4, web3.utils.toWei(new BN(5000)), { from: carol })
+              await expectRevert(stakePool.getStakeInfo(3), "StakeToken#getStakeInfo: STAKE_NOT_FOUND")
+          })
+      })
       describe('##getters', async () => {
         it('supportsInterface', async () => {
           await stakePool.supportsInterface("0x00").then(res => {
@@ -108,7 +119,7 @@ function testStakePool(contractName, errorHead, timeIncrease) {
           await stakePool.getStakeTokenIds(alice).then(res => {
             expect(res.length).to.eq(2);
             expect(res[0].toString()).to.eq('2');
-            expect(res[1].toString()).to.eq('3');
+            expect(res[1].toString()).to.eq('5');
           });
           await stakePool.getStakeAmount(alice).then(res => {
             expect(res.toString()).to.eq('5800000000000000000000');
@@ -120,7 +131,11 @@ function testStakePool(contractName, errorHead, timeIncrease) {
           });
           expect(await stakePool.isHolder(alice)).to.eq(true);
           expect(await stakePool.isHolder(bob)).to.eq(false);
-          stakePool.getEligibleStakeAmount(0, {from: alice})
+          await stakePool.getEligibleStakeAmount(0).then((res) => {
+              expect(res.toString()).to.eq("0")
+          })
+          // let elegibleStake = await stakePool.getEligibleStakeAmount(0, {from: alice})
+          // console.log("Elegible Stake Amount:",elegibleStake.toString())
         });
         describe('reverts if', async () => {
           it('elegible stake amount date is invalid', async () => {
@@ -283,13 +298,14 @@ function testStakePool(contractName, errorHead, timeIncrease) {
       });
     });
 
-    describe('#Multiplier', async () => {
+    describe('#Multiplier', function () {
+      this.timeout(120000)
       before(async () => {
         await ido.mint(alice, web3.utils.toWei(new BN(20000000)));
         await ido.approve(stakePool.address, web3.utils.toWei(new BN(20000000)), {from: alice});
       });
       it('getStakeInfo', async () => {
-        for (let i = 0; i < 310; i++) {
+        for (let i = 0; i < 4001; i++) {
             await stakePool.deposit(web3.utils.toWei(new BN(3000)), {from: alice});
         }
         await stakePool.getStakeInfo(299).then(res => {
@@ -297,6 +313,9 @@ function testStakePool(contractName, errorHead, timeIncrease) {
         });
         await stakePool.getStakeInfo(301).then(res => {
           expect(res[1].toString()).to.eq('110');
+        });
+        await stakePool.getStakeInfo(4000).then(res => {
+          expect(res[1].toString()).to.eq('100');
         });
       });
     });
