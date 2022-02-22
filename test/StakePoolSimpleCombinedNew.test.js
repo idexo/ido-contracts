@@ -40,6 +40,14 @@ contract("::StakePoolSimpleCombinedNew", async (accounts) => {
             })
         })
     })
+    describe("# URI", async () => {
+        it("should set base URI", async () => {
+            await stakePool.setBaseURI("https://newBaseURI/", { from: alice })
+            expect(await stakePool.baseURI()).to.eq("https://newBaseURI/")
+            // return to DOMAIN
+            await stakePool.setBaseURI(DOMAIN, { from: alice })
+        })
+    })
 
     describe("# Stake", async () => {
         before(async () => {
@@ -179,6 +187,16 @@ contract("::StakePoolSimpleCombinedNew", async (accounts) => {
             })
         })
 
+        it("should get elegible stake amount", async () => {
+            timeTraveler.advanceTime(duration.months(1))
+
+            const latestBlock = await hre.ethers.provider.getBlock("latest")
+            await stakePool.getEligibleStakeAmount(latestBlock.timestamp).then((res) => {
+                expect(res.toString()).to.eq("5040000000000000000000")
+            })
+            timeTraveler.advanceTime(duration.months(-1))
+        })
+
         it("should add claimable rewards", async () => {
             const amountForRewards = web3.utils.toWei(new BN(5000))
 
@@ -227,6 +245,28 @@ contract("::StakePoolSimpleCombinedNew", async (accounts) => {
             let balance = await erc20.balanceOf(stakePool.address)
             balance = await erc20.balanceOf(stakePool.address)
             await stakePool.sweep(erc20.address, bob, web3.utils.toWei(new BN(3000)), { from: bob })
+        })
+    })
+
+    describe("#Multiplier", function () {
+        // this.timeout(120000)
+        before(async () => {
+            await ido.mint(alice, web3.utils.toWei(new BN(20000000)), {from: alice})
+            await ido.approve(stakePool.address, web3.utils.toWei(new BN(20000000)), { from: alice })
+        })
+        it("getStakeInfo", async () => {
+            for (let i = 0; i < 301; i++) {
+                await stakePool.deposit(web3.utils.toWei(new BN(3000)), 0, { from: alice })
+            }
+            await stakePool.getStakeInfo(299).then((res) => {
+                expect(res[1].toString()).to.eq("120")
+            })
+            await stakePool.getStakeInfo(301).then((res) => {
+                expect(res[1].toString()).to.eq("110")
+            })
+            // await stakePool.getStakeInfo(4000).then(res => {
+            //   expect(res[1].toString()).to.eq('100');
+            // });
         })
     })
 })
