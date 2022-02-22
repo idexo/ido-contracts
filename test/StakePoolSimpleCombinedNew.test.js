@@ -44,8 +44,8 @@ contract("::StakePoolSimpleCombinedNew", async (accounts) => {
     describe("# Stake", async () => {
         before(async () => {
             for (const user of [alice, bob, carol, darren]) {
-                await ido.mint(user, web3.utils.toWei(new BN(20000)))
-                await ido.approve(stakePool.address, web3.utils.toWei(new BN(20000)), { from: user })
+                await ido.mint(user, web3.utils.toWei(new BN(30000)))
+                await ido.approve(stakePool.address, web3.utils.toWei(new BN(30000)), { from: user })
                 await erc20.mint(user, web3.utils.toWei(new BN(100000)))
                 await erc20.approve(stakePool.address, web3.utils.toWei(new BN(100000)), { from: user })
             }
@@ -195,28 +195,32 @@ contract("::StakePoolSimpleCombinedNew", async (accounts) => {
         })
     })
 
-    // describe("deposit with timestamplock", async () => {
-    //     it("should deposit", async () => {
-    //         const number = await ethers.provider.getBlockNumber()
-    //         const block = await ethers.provider.getBlock(number)
-    //         expectEvent(await stakePool.deposit(web3.utils.toWei(new BN(3000)), block.timestamp + duration.days(3), { from: alice }), "Deposited")
-    //     })
-    //     it("should not allow withdraw", async () => {
-    //         let res = await stakePool.getStakeTokenIds(alice)
-    //         for (const id of res.toString().split(",")) {
-    //             await expectRevert(
-    //                 stakePool.withdraw(id, web3.utils.toWei(new BN(1000)), { from: alice }),
-    //                 "StakePool#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL"
-    //             )
-    //         }
-    //     })
-    //     it("should allow withdraw", async () => {
-    //         timeTraveler.advanceTime(duration.months(1))
-    //         let res = await stakePool.getStakeTokenIds(alice)
-    //         for (const id of res.toString().split(",")) {
-    //             expectEvent(await stakePool.withdraw(id, web3.utils.toWei(new BN(1000)), { from: alice }), "StakeAmountDecreased")
-    //         }
-    //         timeTraveler.advanceTime(duration.months(-1))
-    //     })
-    // })
+    describe("deposit with timestamplock", async () => {
+        console.log()
+        it("should shows amount staked", async () => {
+            const number = await ethers.provider.getBlockNumber()
+            const block = await ethers.provider.getBlock(number)
+            let tokenIds = await stakePool.getStakeTokenIds(alice)
+        })
+        it("should deposit", async () => {
+            const number = await ethers.provider.getBlockNumber()
+            const block = await ethers.provider.getBlock(number)
+            expectEvent(await stakePool.deposit(web3.utils.toWei(new BN(600)), block.timestamp + duration.days(3), { from: alice }), "Deposited")
+        })
+        it("should not allow withdraw", async () => {
+            let res = await stakePool.getStakeTokenIds(alice)
+            await expectRevert(
+                stakePool.withdraw(27, web3.utils.toWei(new BN(600)), { from: alice }),
+                "StakePool#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL"
+            )
+        })
+        it("should allow withdraw", async () => {
+            timeTraveler.advanceTime(duration.months(1))
+            let res = await stakePool.getStakeTokenIds(alice)
+            for (const id of res.toString().split(",")) {
+                expectEvent(await stakePool.withdraw(id, web3.utils.toWei(new BN(100)), { from: alice }), "StakeAmountDecreased")
+            }
+            timeTraveler.advanceTime(duration.months(-1))
+        })
+    })
 })
