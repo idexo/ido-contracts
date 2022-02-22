@@ -279,6 +279,7 @@ function testStakePool(contractName, errorHead, timeIncrease) {
               expect(res.toString()).to.eq('2539864864864864859750');
             });
           }
+          expectEvent(await stakePool.claimReward(0, {from: alice}), 'RewardClaimed');
         });
         it('distribute after a year', async () => {
           timeTraveler.advanceTime(time.duration.months(15));
