@@ -8,13 +8,14 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../interfaces/IStakeTokenNew.sol";
+import "../lib/StakeMath.sol";
 
 contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
     using SafeMath for uint256;
+    using StakeMath for uint256;
     // Last stake token id, start from 1
     uint256 public tokenIds;
     uint256 public constant multiplierDenominator = 100;
-
 
     // Base NFT URI
     string public baseURI;
@@ -36,15 +37,11 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
         string memory name_,
         string memory symbol_,
         string memory baseURI_
-    )
-        ERC721(name_, symbol_) {
+    ) ERC721(name_, symbol_) {
         baseURI = baseURI_;
-
     }
 
-
-
-     /**********************|
+    /**********************|
     |          URI         |
     |_____________________*/
 
@@ -62,10 +59,7 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
      *
      * - `tokenId` must exist, see {ERC721URIStorage:_setTokenURI}
      */
-    function setTokenURI(
-        uint256 tokenId,
-        string memory _tokenURI
-    ) public onlyOwner {
+    function setTokenURI(uint256 tokenId, string memory _tokenURI) public onlyOwner {
         super._setTokenURI(tokenId, _tokenURI);
     }
 
@@ -89,27 +83,14 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
      * @dev Get stake token id array owned by wallet address.
      * @param account address
      */
-    function getStakeTokenIds(
-        address account
-    )
-        public
-        override
-        view
-        returns (uint256[] memory)
-    {
+    function getStakeTokenIds(address account) public view override returns (uint256[] memory) {
         return stakerIds[account];
     }
 
     /**
      * @dev Return total stake amount of `account`
      */
-    function getStakeAmount(
-        address account
-    )
-        external
-        view
-        returns (uint256)
-    {
+    function getStakeAmount(address account) external view returns (uint256) {
         uint256[] memory stakeIds = stakerIds[account];
         uint256 totalStakeAmount;
         for (uint256 i = 0; i < stakeIds.length; i++) {
@@ -124,10 +105,7 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
      * @param from address from
      * @param tokenId tokenId to remove
      */
-    function _popStake(
-        address from,
-        uint256 tokenId
-    ) internal {
+    function _popStake(address from, uint256 tokenId) internal {
         uint256[] storage stakeIds = stakerIds[from];
         for (uint256 i = 0; i < stakeIds.length; i++) {
             if (stakeIds[i] == tokenId) {
@@ -144,14 +122,7 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
      * @dev Check if wallet address owns any stake tokens.
      * @param account address
      */
-    function isHolder(
-        address account
-    )
-        public
-        override
-        view
-        returns (bool)
-    {
+    function isHolder(address account) public view override returns (bool) {
         return balanceOf(account) > 0;
     }
 
@@ -162,13 +133,16 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
      * - `stakeId` must exist in stake pool
      * @param stakeId uint256
      */
-    function getStakeInfo(
-        uint256 stakeId
-    )
+    function getStakeInfo(uint256 stakeId)
         public
-        override
         view
-        returns (uint256, uint256, uint256, uint256)
+        override
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
     {
         require(_exists(stakeId), "StakeToken#getStakeInfo: STAKE_NOT_FOUND");
         return (stakes[stakeId].amount, stakes[stakeId].multiplier, stakes[stakeId].depositedAt, stakes[stakeId].timestamplock);
@@ -180,14 +154,7 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
      *
      * - `fromDate` must be past date
      */
-    function getEligibleStakeAmount(
-        uint256 fromDate
-    )
-        public
-        override
-        view
-        returns (uint256)
-    {
+    function getEligibleStakeAmount(uint256 fromDate) public view override returns (uint256) {
         require(fromDate <= block.timestamp, "StakeToken#getEligibleStakeAmount: NO_PAST_DATE");
         uint256 totalSAmount;
 
@@ -197,32 +164,11 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
                 if (stake.depositedAt > fromDate) {
                     break;
                 }
-                totalSAmount += stake.amount * stake.multiplier / multiplierDenominator;
+                totalSAmount += (stake.amount * stake.multiplier) / multiplierDenominator;
             }
         }
 
         return totalSAmount;
-    }
-
-    /**
-     * @dev Returns StakeToken multiplier.
-     *
-     * 0 < `tokenId` <300: 120.
-     * 300 <= `tokenId` <4000: 110.
-     * 4000 <= `tokenId`: 100.
-     */
-    function _getMultiplier()
-        private
-        view
-        returns (uint256)
-    {
-        if (tokenIds < 300) {
-            return 120;
-        } else if (300 <= tokenIds && tokenIds < 4000) {
-            return 110;
-        } else {
-            return 100;
-        }
     }
 
     /**
@@ -240,18 +186,13 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
         uint256 amount,
         uint256 depositedAt,
         uint256 timestamplock
-    )
-        internal
-        virtual
-        returns (uint256)
-    {
+    ) internal virtual returns (uint256) {
         require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
         tokenIds++;
-        uint256 multiplier = _getMultiplier();
         super._mint(account, tokenIds);
         Stake storage newStake = stakes[tokenIds];
         newStake.amount = amount;
-        newStake.multiplier = multiplier;
+        newStake.multiplier = tokenIds.multiplier();
         newStake.depositedAt = depositedAt;
         newStake.timestamplock = timestamplock;
         stakerIds[account].push(tokenIds);
@@ -266,12 +207,7 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
      * - `stakeId` must exist in stake pool
      * @param stakeId id of buring token.
      */
-    function _burn(
-        uint256 stakeId
-    )
-        internal
-        override(ERC721, ERC721URIStorage)
-    {
+    function _burn(uint256 stakeId) internal override(ERC721, ERC721URIStorage) {
         require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
         address stakeOwner = ownerOf(stakeId);
         super._burn(stakeId);
@@ -288,13 +224,7 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
      * @param stakeId id of buring token.
      * @param amount to withdraw.
      */
-    function _decreaseStakeAmount(
-        uint256 stakeId,
-        uint256 amount
-    )
-        internal
-        virtual
-    {
+    function _decreaseStakeAmount(uint256 stakeId, uint256 amount) internal virtual {
         require(_exists(stakeId), "StakeToken#_decreaseStakeAmount: STAKE_NOT_FOUND");
         require(amount <= stakes[stakeId].amount, "StakeToken#_decreaseStakeAmount: INSUFFICIENT_STAKE_AMOUNT");
         if (amount == stakes[stakeId].amount) {
@@ -323,7 +253,6 @@ contract StakeTokenNew is IStakeTokenNew, ERC721, ERC721URIStorage, Ownable {
         address to,
         uint256 tokenId
     ) internal override {
-
         super._transfer(from, to, tokenId);
         _popStake(from, tokenId);
         stakerIds[to].push(tokenId);
