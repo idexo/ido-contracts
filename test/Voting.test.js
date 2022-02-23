@@ -141,6 +141,14 @@ contract('Voting', async accounts => {
         }
       );
     });
+
+    it("getVoterInfo", async () => {
+        let vi = await voting.getVoterInfo(1, alice)
+        expect(vi["0"]).to.eq(true)
+        expect(vi["1"]).to.eq(true)
+        expect(String(vi["2"])).to.eq("12000000000000000000000")
+    })
+
     describe('reverts if', async () => {
       it('createPoll', async () => {
         await expectRevert(
