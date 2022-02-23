@@ -1,25 +1,43 @@
 const { expect } = require("chai")
+const { PERMIT_TYPEHASH, getPermitDigest, getDomainSeparator, sign } = require("./helpers/signature")
 const { BN, constants, expectEvent, expectRevert } = require("@openzeppelin/test-helpers")
 const timeTraveler = require("ganache-time-traveler")
 const { duration, increase } = require("./helpers/time")
 
 const IDOSale = artifacts.require("IDOSale")
-const ERC20Mock = artifacts.require("ERC20Mock")
+// const ERC20Mock = artifacts.require("ERC20Mock")
+const ERC20PermitMock = artifacts.require("ERC20PermitMock")
 
 const toUSDTWei = (amount) => new BN(amount).mul(new BN(10).pow(new BN(6)))
 const dummyHash = "0xf408509b00caba5d37325ab33a92f6185c9b5f007a965dfbeff7b81ab1ec871b"
 
+/*
+Account #1: 0x70997970c51812dc3a010c7d01b50e0d17dc79c8 (10000 ETH)
+Private Key: 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
+
+Account #2: 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc (10000 ETH)
+Private Key: 0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a
+
+Account #3: 0x90f79bf6eb2c4f870365e785982e1f101e93b906 (10000 ETH)
+Private Key: 0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6
+
+Account #4: 0x15d34aaf54267db7d7c367839aaf71a00a2c6a65 (10000 ETH)
+Private Key: 0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a
+*/
+
 contract("IDOSale", async (accounts) => {
     let saleContract
     let ido, usdt
-    const [alice, bob, carol, darren] = accounts
+    const [owner, alice, bob, carol, darren] = accounts
+    const ownerPK = Buffer.from("59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d", "hex")
+    const alicePK = Buffer.from("5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a", "hex")
     let startTime, endTime
 
     before(async () => {
-        ido = await ERC20Mock.new("Idexo token", "IDO")
+        ido = await ERC20PermitMock.new("Idexo token", "IDO", { from: owner })
         ido.mint(alice, web3.utils.toWei(new BN(10000)))
         // USDT decimals is 6
-        usdt = await ERC20Mock.new("USDT token", "USDT")
+        usdt = await ERC20PermitMock.new("USDT token", "USDT", { from: owner })
         usdt.mint(alice, toUSDTWei(10000))
         usdt.mint(bob, toUSDTWei(10000))
         usdt.mint(carol, toUSDTWei(10000))
@@ -103,17 +121,21 @@ contract("IDOSale", async (accounts) => {
                 expectEvent(await saleContract.depositTokens(web3.utils.toWei(new BN(200)), { from: alice }), "Deposited")
                 await usdt.approve(saleContract.address, toUSDTWei(new BN(10000)), { from: bob })
                 expectEvent(await saleContract.purchase(web3.utils.toWei(new BN(20)), { from: bob }), "Purchased")
-                /*await usdt.balanceOf(bob).then(res => {
-                  console.log(res.toString());
-                });
-                expectEvent(
-                    await saleContract.permitAndPurchase(
-                        web3.utils.toWei(new BN(10)),
-                        { nonce: 0, deadline: 0, v: 0, r: dummyHash, s: dummyHash },
-                        { from: bob }
-                    ),
-                    "Purchased"
-                )*/
+                //////////////////////
+
+                // await usdt.balanceOf(bob).then((res) => {
+                //     console.log(res.toString())
+                // })
+                // expectEvent(
+                //     await saleContract.permitAndPurchase(
+                //         web3.utils.toWei(new BN(10)),
+                //         { nonce: 0, deadline: 0, v: 0, r: dummyHash, s: dummyHash },
+                //         { from: bob }
+                //     ),
+                //     "Purchased"
+                // )
+                ///////////////////////
+
                 // Check USDT balance of sale contract
                 await usdt.balanceOf(saleContract.address).then((res) => {
                     expect(res.toString()).to.eq("9000000")
@@ -131,11 +153,52 @@ contract("IDOSale", async (accounts) => {
                     expect(res.length).to.eq(4)
                 })
             })
-            it("permit and deposit", async () => {
-                await expectRevert(
-                    saleContract.permitAndDepositTokens(new BN(0), { nonce: 0, deadline: 0, v: 0, r: dummyHash, s: dummyHash }),
-                    "IDOSale: DEPOSIT_AMOUNT_INVALID"
-                )
+            describe("permit and deposit", async () => {
+                it("Sign approve and deposit", async () => {
+                    const tokenName = await ido.name()
+                    const chainId = 31337 // hardhat chainId
+                    // Create the approval request
+                    const approve = {
+                        owner: alice,
+                        spender: saleContract.address,
+                        value: web3.utils.toWei(new BN(200)).toString()
+                    }
+
+                    // deadline as much as you want in the future
+                    const deadline = 100000000000000
+
+                    // Get the user's nonce
+                    const nonce = await ido.nonces(alice)
+
+                    // Get the EIP712 digest
+                    const digest = getPermitDigest(tokenName, ido.address, chainId, approve, nonce.toString(), deadline)
+
+                    // Sign it
+                    // NOTE: Using web3.eth.sign will hash the message internally again which
+                    // we do not want, so we're manually signing here
+                    const { v, r, s } = sign(digest, alicePK)
+
+                    await saleContract.permitAndDepositTokens(
+                        approve.value,
+                        {
+                            nonce: 0,
+                            deadline: deadline,
+                            v: v,
+                            r: r,
+                            s: s
+                        },
+                        { from: alice }
+                    )
+                })
+                
+                describe("revert if", async () => {
+                    it("invalid amount", async () => {
+                        await expectRevert(
+                            saleContract.permitAndDepositTokens(new BN(0), { nonce: 0, deadline: 0, v: 0, r: dummyHash, s: dummyHash }),
+                            "IDOSale: DEPOSIT_AMOUNT_INVALID"
+                        )
+                    })
+                })
             })
         })
         describe("reverts if (after sale start)", async () => {
@@ -149,7 +212,7 @@ contract("IDOSale", async (accounts) => {
                 await expectRevert(saleContract.purchase(web3.utils.toWei(new BN(11111)), { from: bob }), "IDOSale: PURCHASE_CAP_EXCEEDED")
             })
             it("purchase when sellable balance exceeded", async () => {
-                await expectRevert(saleContract.purchase(web3.utils.toWei(new BN(200)), { from: bob }), "IDOSale: INSUFFICIENT_SELL_BALANCE")
+                await expectRevert(saleContract.purchase(web3.utils.toWei(new BN(400)), { from: bob }), "IDOSale: INSUFFICIENT_SELL_BALANCE")
             })
             it("claim when the sale not ended", async () => {
                 await expectRevert(saleContract.claim(web3.utils.toWei(new BN(20)), { from: bob }), "IDOSale: SALE_NOT_ENDED")
