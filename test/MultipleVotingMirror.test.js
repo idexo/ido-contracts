@@ -9,17 +9,14 @@ const time = require("./helpers/time")
 const timeTraveler = require("ganache-time-traveler")
 
 contract("MultipleVotingMirror", async (accounts) => {
-    let voting, sPool1, sPool2, sPool3
+    let voting, sPool1, sPool2, sPool3, sPool4
     const [alice, bob, carol] = accounts
 
     before(async () => {
-        // ido = await ERC20.new('Idexo Community', 'IDO');
-        // erc20 = await ERC20.new('USD Tether', 'USDT');
         sPool1 = await StakeMirrorNFT.new("IGSP Mirror", "IGSPM", "https://idexo.io/metadata/")
         sPool2 = await StakeMirrorNFT.new("IGSP Mirror", "IGSPM", "https://idexo.io/metadata/")
         sPool3 = await StakeMirrorNFT.new("IGSP Mirror", "IGSPM", "https://idexo.io/metadata/")
-        // sPool2 = await StakeMirrorNFT.new('Idexo Stake Token', 'IDS', 'https://idexo.io/metadata/');
-        // sPool3 = await StakeMirrorNFT.new('Idexo Stake Token', 'IDS', 'https://idexo.io/metadata/');
+        sPool4 = await StakeMirrorNFT.new("IGSP Mirror", "IGSPM", "https://idexo.io/metadata/")
         voting = await MultipleVotingMirror.new([sPool1.address, sPool2.address])
     })
 
@@ -81,8 +78,12 @@ contract("MultipleVotingMirror", async (accounts) => {
             })
         })
         it("removeStakePool", async () => {
+            await voting.addStakePool(sPool4.address, { from: bob })
             await voting.removeStakePool(sPool3.address, { from: bob })
             expect(await voting.isStakePool(sPool3.address)).to.eq(false)
+            expect(await voting.isStakePool(sPool4.address)).to.eq(true)
+            await voting.removeStakePool(sPool4.address, { from: bob })
+            expect(await voting.isStakePool(sPool4.address)).to.eq(false)
         })
         describe("multiples mint and burn", async () => {
             it("should stakes", async () => {
@@ -115,11 +116,10 @@ contract("MultipleVotingMirror", async (accounts) => {
             await sPool2.mint(alice, 1, toWei(new BN(8000)), 120, 1632842216)
             await sPool2.mint(bob, 2, toWei(new BN(14000)), 120, 1632842216)
         })
-        it("createPoll castVote getWeight checkIfVoted endPoll", async () => {
+        it("createPoll castVote getWeight", async () => {
             // create and start poll
             const startTime = Math.floor(Date.now() / 1000) + time.duration.days(100)
             const endTime = startTime + time.duration.days(10)
-            const newEndTime = endTime + time.duration.days(5)
             // non-operator can not create the poll
             await expectRevert(
                 voting.createPoll("Which network is next target?", ["Solana", "Tezos", "Cardano"], startTime, endTime, 0, { from: carol }),
@@ -142,6 +142,9 @@ contract("MultipleVotingMirror", async (accounts) => {
                 expect(res[4].toString()).to.eq("0")
                 expect(res[5]).to.eq(bob)
             })
+        })
+        it("checkIfVoted endPoll", async () => {
+            const newEndTime = Math.floor(Date.now() / 1000) + time.duration.days(115)
             expect(await voting.checkIfVoted(1, alice)).to.eq(false)
             expectEvent(await voting.castVote(1, 1, { from: alice }), "VoteCasted")
             expect(await voting.checkIfVoted(1, alice)).to.eq(true)
@@ -181,6 +184,17 @@ contract("MultipleVotingMirror", async (accounts) => {
                 expect(res[1].toString()).to.eq("12000000000000000000000")
             })
             await timeTraveler.advanceTimeAndBlock(time.duration.days(-200))
+        })
+        it("updatePollTime", async () => {
+            const number = await ethers.provider.getBlockNumber()
+            const block = await ethers.provider.getBlock(number)
+            await voting.createPoll("test?", ["y", "n"], block.timestamp + 1111, block.timestamp + 8888, 0, { from: bob })
+            const pollId = Number(await voting.pollIds())
+            const pollInfo1 = await voting.getPollInfo(pollId)
+            await voting.updatePollTime(pollId, block.timestamp + 8888, block.timestamp + 9999, { from: bob })
+            const pollInfo2 = await voting.getPollInfo(pollId)
+            expect(Number(pollInfo1[2])).not.eq(Number(pollInfo2[2]))
+            expect(Number(pollInfo1[3])).not.eq(Number(pollInfo2[3]))
         })
     })
 })
