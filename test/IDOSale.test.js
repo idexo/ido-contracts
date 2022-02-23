@@ -31,6 +31,7 @@ contract("IDOSale", async (accounts) => {
     const [owner, alice, bob, carol, darren] = accounts
     const ownerPK = Buffer.from("59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d", "hex")
     const alicePK = Buffer.from("5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a", "hex")
+    const bobPK = Buffer.from("7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6", "hex")
     let startTime, endTime
 
     before(async () => {
@@ -121,20 +122,7 @@ contract("IDOSale", async (accounts) => {
                 expectEvent(await saleContract.depositTokens(web3.utils.toWei(new BN(200)), { from: alice }), "Deposited")
                 await usdt.approve(saleContract.address, toUSDTWei(new BN(10000)), { from: bob })
                 expectEvent(await saleContract.purchase(web3.utils.toWei(new BN(20)), { from: bob }), "Purchased")
-                //////////////////////
-
-                // await usdt.balanceOf(bob).then((res) => {
-                //     console.log(res.toString())
-                // })
-                // expectEvent(
-                //     await saleContract.permitAndPurchase(
-                //         web3.utils.toWei(new BN(10)),
-                //         { nonce: 0, deadline: 0, v: 0, r: dummyHash, s: dummyHash },
-                //         { from: bob }
-                //     ),
-                //     "Purchased"
-                // )
-                ///////////////////////
+                
 
                 // Check USDT balance of sale contract
                 await usdt.balanceOf(saleContract.address).then((res) => {
@@ -181,7 +169,7 @@ contract("IDOSale", async (accounts) => {
                     await saleContract.permitAndDepositTokens(
                         approve.value,
                         {
-                            nonce: 0,
+                            nonce: nonce.toString(),
                             deadline: deadline,
                             v: v,
                             r: r,
@@ -191,6 +179,68 @@ contract("IDOSale", async (accounts) => {
                     )
                 })
                 
+                describe("revert if", async () => {
+                    it("invalid amount", async () => {
+                        await expectRevert(
+                            saleContract.permitAndDepositTokens(new BN(0), { nonce: 0, deadline: 0, v: 0, r: dummyHash, s: dummyHash }),
+                            "IDOSale: DEPOSIT_AMOUNT_INVALID"
+                        )
+                    })
+                })
+            })
+
+            describe("permit and purchase", async () => {
+                //////////////////////
+
+                // await usdt.balanceOf(bob).then((res) => {
+                //     console.log(res.toString())
+                // })
+                // expectEvent(
+                //     await saleContract.permitAndPurchase(
+                //         web3.utils.toWei(new BN(10)),
+                //         { nonce: 0, deadline: 0, v: 0, r: dummyHash, s: dummyHash },
+                //         { from: bob }
+                //     ),
+                //     "Purchased"
+                // )
+                ///////////////////////
+                it("Sign approve and purchase", async () => {
+                    const tokenName = await usdt.name()
+                    const chainId = 31337 // hardhat chainId
+                    // Create the approval request
+                    const approve = {
+                        owner: bob,
+                        spender: saleContract.address,
+                        value: toUSDTWei(new BN(20)).toString()
+                    }
+
+                    // deadline as much as you want in the future
+                    const deadline = 100000000000000
+
+                    // Get the user's nonce
+                    const nonce = await usdt.nonces(bob)
+
+                    // Get the EIP712 digest
+                    const digest = getPermitDigest(tokenName, usdt.address, chainId, approve, nonce.toString(), deadline)
+
+                    // Sign it
+                    // NOTE: Using web3.eth.sign will hash the message internally again which
+                    // we do not want, so we're manually signing here
+                    const { v, r, s } = sign(digest, bobPK)
+
+                    await saleContract.permitAndPurchase(
+                        approve.value,
+                        {
+                            nonce: nonce.toString(),
+                            deadline: deadline,
+                            v: v,
+                            r: r,
+                            s: s
+                        },
+                        { from: bob }
+                    )
+                })
+
                 describe("revert if", async () => {
                     it("invalid amount", async () => {
                         await expectRevert(
