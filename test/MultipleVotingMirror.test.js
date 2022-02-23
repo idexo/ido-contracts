@@ -44,7 +44,6 @@ contract("MultipleVotingMirror", async (accounts) => {
     })
 
     describe("#StakeMirrorNFT", async () => {
-        
         it("addStakePool", async () => {
             await voting.addStakePool(sPool3.address, { from: bob })
             expect(await voting.isStakePool(sPool1.address)).to.eq(true)
@@ -63,9 +62,9 @@ contract("MultipleVotingMirror", async (accounts) => {
             expect(await sPool1.checkOperator(bob)).to.eq(false)
         })
         it("set baseURI", async () => {
-          await sPool1.setBaseURI("https://newBaseURI/")
-          expect(await sPool1.baseURI()).to.eq("https://newBaseURI/")
-          await sPool1.setBaseURI("https://idexo.io/metadata/")
+            await sPool1.setBaseURI("https://newBaseURI/")
+            expect(await sPool1.baseURI()).to.eq("https://newBaseURI/")
+            await sPool1.setBaseURI("https://idexo.io/metadata/")
         })
         it("getStakeAmount isHolder setTokenURI tokenURI decreaseStakeAmount", async () => {
             await sPool1.getStakeAmount(bob).then((res) => {
@@ -84,6 +83,21 @@ contract("MultipleVotingMirror", async (accounts) => {
         it("removeStakePool", async () => {
             await voting.removeStakePool(sPool3.address, { from: bob })
             expect(await voting.isStakePool(sPool3.address)).to.eq(false)
+        })
+        describe("multiples mint and burn", async () => {
+            it("should stakes", async () => {
+                await sPool1.mint(bob, 1, toWei(new BN(4000)), 120, 1632842216)
+                await sPool1.mint(bob, 2, toWei(new BN(4000)), 120, 1632842216)
+                await sPool1.mint(bob, 3, toWei(new BN(4000)), 120, 1632842216)
+
+                await sPool1.getStakeAmount(bob).then((res) => {
+                    expect(res.toString()).to.eq("12000000000000000000000")
+                })
+
+                await sPool1.decreaseStakeAmount(1, toWei(new BN(4000)))
+                await sPool1.decreaseStakeAmount(2, toWei(new BN(4000)))
+                await sPool1.decreaseStakeAmount(3, toWei(new BN(4000)))
+            })
         })
         describe("reverts if", async () => {
             it("addStakePool removeStakePool", async () => {
