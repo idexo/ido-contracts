@@ -13,13 +13,9 @@ contract("MultipleVotingMirror", async (accounts) => {
     const [alice, bob, carol] = accounts
 
     before(async () => {
-        // ido = await ERC20.new('Idexo Community', 'IDO');
-        // erc20 = await ERC20.new('USD Tether', 'USDT');
         sPool1 = await StakeMirrorNFT.new("IGSP Mirror", "IGSPM", "https://idexo.io/metadata/")
         sPool2 = await StakeMirrorNFT.new("IGSP Mirror", "IGSPM", "https://idexo.io/metadata/")
         sPool3 = await StakeMirrorNFT.new("IGSP Mirror", "IGSPM", "https://idexo.io/metadata/")
-        // sPool2 = await StakeMirrorNFT.new('Idexo Stake Token', 'IDS', 'https://idexo.io/metadata/');
-        // sPool3 = await StakeMirrorNFT.new('Idexo Stake Token', 'IDS', 'https://idexo.io/metadata/');
         voting = await MultipleVotingMirror.new([sPool1.address, sPool2.address])
     })
 
