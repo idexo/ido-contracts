@@ -247,26 +247,4 @@ contract("::StakePoolSimpleCombinedNew", async (accounts) => {
             await stakePool.sweep(erc20.address, bob, web3.utils.toWei(new BN(3000)), { from: bob })
         })
     })
-
-    describe("#Multiplier", function () {
-        // this.timeout(120000)
-        before(async () => {
-            await ido.mint(alice, web3.utils.toWei(new BN(20000000)), {from: alice})
-            await ido.approve(stakePool.address, web3.utils.toWei(new BN(20000000)), { from: alice })
-        })
-        it("getStakeInfo", async () => {
-            for (let i = 0; i < 301; i++) {
-                await stakePool.deposit(web3.utils.toWei(new BN(3000)), 0, { from: alice })
-            }
-            await stakePool.getStakeInfo(299).then((res) => {
-                expect(res[1].toString()).to.eq("120")
-            })
-            await stakePool.getStakeInfo(301).then((res) => {
-                expect(res[1].toString()).to.eq("110")
-            })
-            // await stakePool.getStakeInfo(4000).then(res => {
-            //   expect(res[1].toString()).to.eq('100');
-            // });
-        })
-    })
 })

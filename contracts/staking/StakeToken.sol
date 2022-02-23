@@ -8,9 +8,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../interfaces/IStakeToken.sol";
+import "../lib/StakeMath.sol";
 
 contract StakeToken is IStakeToken, ERC721, Ownable {
     using SafeMath for uint256;
+    using StakeMath for uint256;
     // Last stake token id, start from 1
     uint256 public tokenIds;
     uint256 public constant multiplierDenominator = 100;
@@ -132,27 +134,6 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
     }
 
     /**
-     * @dev Returns StakeToken multiplier.
-     *
-     * 0 < `tokenId` <300: 120.
-     * 300 <= `tokenId` <4000: 110.
-     * 4000 <= `tokenId`: 100.
-     */
-    function _getMultiplier()
-        private
-        view
-        returns (uint256)
-    {
-        if (tokenIds < 300) {
-            return 120;
-        } else if (300 <= tokenIds && tokenIds < 4000) {
-            return 110;
-        } else {
-            return 100;
-        }
-    }
-
-    /**
      * @dev Mint a new StakeToken.
      * Requirements:
      *
@@ -173,11 +154,10 @@ contract StakeToken is IStakeToken, ERC721, Ownable {
     {
         require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
         tokenIds++;
-        uint256 multiplier = _getMultiplier();
         super._mint(account, tokenIds);
         Stake storage newStake = stakes[tokenIds];
         newStake.amount = amount;
-        newStake.multiplier = multiplier;
+        newStake.multiplier = tokenIds.multiplier();
         newStake.depositedAt = depositedAt;
         stakerIds[account].push(tokenIds);
 

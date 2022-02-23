@@ -7,9 +7,11 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../interfaces/IStakeTokenMultipleRewardsV1.sol";
 import "../lib/Operatorable.sol";
+import "../lib/StakeMath.sol";
 
 contract StakeTokenMultipleRewardsV1 is IStakeTokenMultipleRewardsV1, ERC721, ERC721URIStorage, Operatorable {
     using SafeMath for uint256;
+    using StakeMath for uint256;
     // Last stake token id, start from 1
     uint256 private tokenIds;
     // current supply
@@ -177,13 +179,7 @@ contract StakeTokenMultipleRewardsV1 is IStakeTokenMultipleRewardsV1, ERC721, ER
      * 4000 <= `tokenId`: 100.
      */
     function getMultiplier(uint256 tokenId) public pure returns (uint256) {
-        if (tokenId < 300) {
-            return 120;
-        } else if (300 <= tokenId && tokenId < 4000) {
-            return 110;
-        } else {
-            return 100;
-        }
+        return tokenId.multiplier();
     }
 
     /**
@@ -224,11 +220,10 @@ contract StakeTokenMultipleRewardsV1 is IStakeTokenMultipleRewardsV1, ERC721, ER
         require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
         tokenIds++;
         _currentSupply++;
-        uint256 multiplier = getMultiplier(tokenIds);
         super._mint(account, tokenIds);
         Stake storage newStake = stakes[tokenIds];
         newStake.amount = amount;
-        newStake.multiplier = multiplier;
+        newStake.multiplier = tokenIds.multiplier();
         newStake.depositedAt = depositedAt;
         newStake.timestamplock = timestamplock;
         stakerIds[account].push(tokenIds);
