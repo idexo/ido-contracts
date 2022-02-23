@@ -9,13 +9,14 @@ const time = require("./helpers/time")
 const timeTraveler = require("ganache-time-traveler")
 
 contract("MultipleVotingMirror", async (accounts) => {
-    let voting, sPool1, sPool2, sPool3
+    let voting, sPool1, sPool2, sPool3, sPool4
     const [alice, bob, carol] = accounts
 
     before(async () => {
         sPool1 = await StakeMirrorNFT.new("IGSP Mirror", "IGSPM", "https://idexo.io/metadata/")
         sPool2 = await StakeMirrorNFT.new("IGSP Mirror", "IGSPM", "https://idexo.io/metadata/")
         sPool3 = await StakeMirrorNFT.new("IGSP Mirror", "IGSPM", "https://idexo.io/metadata/")
+        sPool4 = await StakeMirrorNFT.new("IGSP Mirror", "IGSPM", "https://idexo.io/metadata/")
         voting = await MultipleVotingMirror.new([sPool1.address, sPool2.address])
     })
 
@@ -77,8 +78,12 @@ contract("MultipleVotingMirror", async (accounts) => {
             })
         })
         it("removeStakePool", async () => {
+            await voting.addStakePool(sPool4.address, { from: bob })
             await voting.removeStakePool(sPool3.address, { from: bob })
             expect(await voting.isStakePool(sPool3.address)).to.eq(false)
+            expect(await voting.isStakePool(sPool4.address)).to.eq(true)
+            await voting.removeStakePool(sPool4.address, { from: bob })
+            expect(await voting.isStakePool(sPool4.address)).to.eq(false)
         })
         describe("multiples mint and burn", async () => {
             it("should stakes", async () => {
