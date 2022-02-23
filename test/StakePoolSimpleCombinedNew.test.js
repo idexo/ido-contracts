@@ -72,6 +72,16 @@ contract("::StakePoolSimpleCombinedNew", async (accounts) => {
                     expect(res[0].toString()).to.eq("3000000000000000000000")
                 })
             })
+            it("should get only elegible before blocktimestamp", async () => {
+                timeTraveler.advanceTime(duration.months(1))
+                const latestBlock = await hre.ethers.provider.getBlock("latest")
+                await stakePool.deposit(web3.utils.toWei(new BN(3000)), 0, { from: alice })
+                await stakePool.getEligibleStakeAmount(latestBlock.timestamp).then((res) => {
+                    expect(res.toString()).to.eq("3600000000000000000000")
+                })
+                await stakePool.withdraw(2, web3.utils.toWei(new BN(3000)), { from: alice })
+                timeTraveler.advanceTime(duration.months(-1))
+            })
             it("should change tokenURI", async () => {
                 await stakePool.setTokenURI(1, "test", { from: alice }),
                     await stakePool.tokenURI(1).then((res) => {
@@ -108,7 +118,7 @@ contract("::StakePoolSimpleCombinedNew", async (accounts) => {
             it("should transfer", async () => {
                 await stakePool.deposit(web3.utils.toWei(new BN(600)), 0, { from: darren })
                 await stakePool.tokenIds().then((res) => {
-                    expect(res.toString()).to.eq("2")
+                    expect(res.toString()).to.eq("3")
                 })
                 expectEvent(await stakePool.transferFrom(alice, carol, 1, { from: alice }), "Transfer")
                 await stakePool.getStakeInfo(1).then((res) => {
@@ -227,7 +237,7 @@ contract("::StakePoolSimpleCombinedNew", async (accounts) => {
         it("should not allow withdraw", async () => {
             let res = await stakePool.getStakeTokenIds(alice)
             await expectRevert(
-                stakePool.withdraw(27, web3.utils.toWei(new BN(600)), { from: alice }),
+                stakePool.withdraw(28, web3.utils.toWei(new BN(600)), { from: alice }),
                 "StakePool#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL"
             )
         })
