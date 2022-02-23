@@ -16,7 +16,7 @@ const timeTraveler = require('ganache-time-traveler');
 
 contract('Voting', async accounts => {
   let ido, erc20;
-  let voting, sPool1, sPool2, sPool3;
+  let voting, sPool1, sPool2, sPool3, sPool4;
   const [alice, bob, carol] = accounts;
 
   before(async () => {
@@ -25,6 +25,7 @@ contract('Voting', async accounts => {
     sPool1 = await StakePool.new('Idexo Stake Token', 'IDS', ido.address, erc20.address);
     sPool2 = await StakePool.new('Idexo Stake Token', 'IDS', ido.address, erc20.address);
     sPool3 = await StakePool.new('Idexo Stake Token', 'IDS', ido.address, erc20.address);
+    sPool4 = await StakePool.new('Idexo Stake Token', 'IDS', ido.address, erc20.address);
     voting = await Voting.new([sPool1.address, sPool2.address]);
   });
 
@@ -57,15 +58,18 @@ contract('Voting', async accounts => {
   describe('#StakePool', async () => {
     it('addStakePool', async () => {
       await voting.addStakePool(sPool3.address, {from: bob});
+      await voting.addStakePool(sPool4.address, {from: bob});
       await voting.getStakePools().then(res => {
-        expect(res.length).to.eq(3);
+        expect(res.length).to.eq(4);
         expect(res[0]).to.eq(sPool1.address);
         expect(res[1]).to.eq(sPool2.address);
         expect(res[2]).to.eq(sPool3.address);
+        expect(res[3]).to.eq(sPool4.address);
       });
     });
     it('removeStakePool', async () => {
       await voting.removeStakePool(sPool3.address, {from: bob});
+      await voting.removeStakePool(sPool4.address, {from: bob});
       await voting.getStakePools().then(res => {
         expect(res.length).to.eq(2);
         expect(res[0]).to.eq(sPool1.address);
