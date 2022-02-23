@@ -151,6 +151,10 @@ contract("MultipleVotingMirror", async (accounts) => {
             await voting.castVote(1, 2, { from: bob })
             // zero weight stakers can not cast vote
             await expectRevert(voting.castVote(1, 1, { from: carol }), "NO_VALID_VOTING_NFTS_PRESENT")
+            const number = await ethers.provider.getBlockNumber()
+            const block = await ethers.provider.getBlock(number)
+            await sPool1.mint(carol, 3, toWei(new BN(4000)), 120, block.timestamp)
+            await expectRevert(voting.castVote(1, 1, { from: carol }), "STAKE_NOT_OLD_ENOUGH")
             await voting.updatePollTime(1, 0, newEndTime, { from: bob })
             // poll is still on
             // operators only can call
