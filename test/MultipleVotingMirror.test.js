@@ -149,12 +149,6 @@ contract("MultipleVotingMirror", async (accounts) => {
             expectEvent(await voting.castVote(1, 1, { from: alice }), "VoteCasted")
             expect(await voting.checkIfVoted(1, alice)).to.eq(true)
             await voting.castVote(1, 2, { from: bob })
-            // zero weight stakers can not cast vote
-            await expectRevert(voting.castVote(1, 1, { from: carol }), "NO_VALID_VOTING_NFTS_PRESENT")
-            const number = await ethers.provider.getBlockNumber()
-            const block = await ethers.provider.getBlock(number)
-            await sPool1.mint(carol, 3, toWei(new BN(4000)), 120, block.timestamp)
-            await expectRevert(voting.castVote(1, 1, { from: carol }), "STAKE_NOT_OLD_ENOUGH")
             await voting.updatePollTime(1, 0, newEndTime, { from: bob })
             // poll is still on
             // operators only can call
@@ -190,8 +184,7 @@ contract("MultipleVotingMirror", async (accounts) => {
             await timeTraveler.advanceTimeAndBlock(time.duration.days(-200))
         })
         it("updatePollTime", async () => {
-            const number = await ethers.provider.getBlockNumber()
-            const block = await ethers.provider.getBlock(number)
+            const block = await ethers.provider.getBlock("latest")
             await voting.createPoll("test?", ["y", "n"], block.timestamp + 1111, block.timestamp + 8888, 0, { from: bob })
             const pollId = Number(await voting.pollIds())
             const pollInfo1 = await voting.getPollInfo(pollId)
@@ -199,6 +192,11 @@ contract("MultipleVotingMirror", async (accounts) => {
             const pollInfo2 = await voting.getPollInfo(pollId)
             expect(Number(pollInfo1[2])).not.eq(Number(pollInfo2[2]))
             expect(Number(pollInfo1[3])).not.eq(Number(pollInfo2[3]))
+
+            // zero weight stakers can not cast vote
+            await expectRevert(voting.castVote(pollId, 1, { from: carol }), "NO_VALID_VOTING_NFTS_PRESENT")
+            await sPool1.mint(carol, 3, 1, 0, block.timestamp + 3600*48)
+            await expectRevert(voting.castVote(pollId, 1, { from: carol }), "STAKE_NOT_OLD_ENOUGH")
         })
     })
 })
