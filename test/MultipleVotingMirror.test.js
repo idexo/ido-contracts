@@ -116,11 +116,10 @@ contract("MultipleVotingMirror", async (accounts) => {
             await sPool2.mint(alice, 1, toWei(new BN(8000)), 120, 1632842216)
             await sPool2.mint(bob, 2, toWei(new BN(14000)), 120, 1632842216)
         })
-        it("createPoll castVote getWeight checkIfVoted endPoll", async () => {
+        it("createPoll castVote getWeight", async () => {
             // create and start poll
             const startTime = Math.floor(Date.now() / 1000) + time.duration.days(100)
             const endTime = startTime + time.duration.days(10)
-            const newEndTime = endTime + time.duration.days(5)
             // non-operator can not create the poll
             await expectRevert(
                 voting.createPoll("Which network is next target?", ["Solana", "Tezos", "Cardano"], startTime, endTime, 0, { from: carol }),
@@ -143,6 +142,9 @@ contract("MultipleVotingMirror", async (accounts) => {
                 expect(res[4].toString()).to.eq("0")
                 expect(res[5]).to.eq(bob)
             })
+        })
+        it("checkIfVoted endPoll", async () => {
+            const newEndTime = Math.floor(Date.now() / 1000) + time.duration.days(115)
             expect(await voting.checkIfVoted(1, alice)).to.eq(false)
             expectEvent(await voting.castVote(1, 1, { from: alice }), "VoteCasted")
             expect(await voting.checkIfVoted(1, alice)).to.eq(true)
@@ -182,6 +184,12 @@ contract("MultipleVotingMirror", async (accounts) => {
                 expect(res[1].toString()).to.eq("12000000000000000000000")
             })
             await timeTraveler.advanceTimeAndBlock(time.duration.days(-200))
+        })
+        it("updatePollTime", async () => {
+            const number = await ethers.provider.getBlockNumber()
+            const block = await ethers.provider.getBlock(number)
+            await voting.createPoll("test?", ["y", "n"], block.timestamp + 1111, block.timestamp + 8888, 0, { from: bob })
+            await voting.updatePollTime(2, block.timestamp + 8888, block.timestamp + 9999, { from: bob })
         })
     })
 })
