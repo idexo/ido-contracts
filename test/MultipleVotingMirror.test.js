@@ -111,15 +111,18 @@ contract("MultipleVotingMirror", async (accounts) => {
 
     describe("#Poll", async () => {
         before(async () => {
-            await sPool1.mint(alice, 1, toWei(new BN(4000)), 120, 1632842216)
-            await sPool1.mint(bob, 2, toWei(new BN(7000)), 120, 1632842216)
-            await sPool2.mint(alice, 1, toWei(new BN(8000)), 120, 1632842216)
-            await sPool2.mint(bob, 2, toWei(new BN(14000)), 120, 1632842216)
+            const latestBlock = await hre.ethers.provider.getBlock("latest")
+            await sPool1.mint(alice, 1, toWei(new BN(4000)), 120, latestBlock.timestamp)
+            await sPool1.mint(bob, 2, toWei(new BN(7000)), 120, latestBlock.timestamp - time.duration.days(90))
+            
+            // await sPool2.mint(alice, 1, toWei(new BN(8000)), 120, latestBlock.timestamp)
+            // await sPool2.mint(bob, 2, toWei(new BN(14000)), 120, latestBlock.timestamp)
         })
         it("createPoll castVote getWeight", async () => {
             // create and start poll
-            const startTime = Math.floor(Date.now() / 1000) + time.duration.days(100)
-            const endTime = startTime + time.duration.days(10)
+            const latestBlock = await hre.ethers.provider.getBlock("latest")
+            const startTime = latestBlock.timestamp + time.duration.days(10)
+            const endTime = startTime + time.duration.days(80)
             // non-operator can not create the poll
             await expectRevert(
                 voting.createPoll("Which network is next target?", ["Solana", "Tezos", "Cardano"], startTime, endTime, 0, { from: carol }),
@@ -133,68 +136,80 @@ contract("MultipleVotingMirror", async (accounts) => {
                 "END_TIME_INVALID"
             )
             // operator can create
-            await voting.createPoll("Which network is next target?", ["Solana", "Tezos", "Cardano"], startTime, endTime, 0, { from: bob })
+            await voting.createPoll("Which network is next target?", ["Solana", "Tezos", "Cardano"], startTime, endTime, 100, { from: bob })
             // returns general poll info, anybody can call anytime
             await voting.getPollInfo(1).then((res) => {
                 expect(res[0]).to.eq("Which network is next target?")
                 expect(res[1].length).to.eq(4)
-                expect(res[3].sub(res[2]).toString()).to.eq(time.duration.days(10).toString())
-                expect(res[4].toString()).to.eq("0")
+                expect(res[3].sub(res[2]).toString()).to.eq(time.duration.days(80).toString())
+                expect(res[4].toString()).to.eq("100")
                 expect(res[5]).to.eq(bob)
             })
         })
-        it("checkIfVoted endPoll", async () => {
-            const newEndTime = Math.floor(Date.now() / 1000) + time.duration.days(115)
-            expect(await voting.checkIfVoted(1, alice)).to.eq(false)
-            expectEvent(await voting.castVote(1, 1, { from: alice }), "VoteCasted")
-            expect(await voting.checkIfVoted(1, alice)).to.eq(true)
-            await voting.castVote(1, 2, { from: bob })
-            // zero weight stakers can not cast vote
-            await expectRevert(voting.castVote(1, 1, { from: carol }), "NO_VALID_VOTING_NFTS_PRESENT")
-            await voting.updatePollTime(1, 0, newEndTime, { from: bob })
-            // poll is still on
-            // operators only can call
-            await voting.getPollVotingInfo(1, { from: bob }).then((res) => {
-                expect(res[0][0].toString()).to.eq("0")
-                expect(res[0][1].toString()).to.eq("12000000000000000000000")
-                expect(res[0][2].toString()).to.eq("21000000000000000000000")
-                expect(res[0][3].toString()).to.eq("0")
-                expect(res[1].toString()).to.eq("2")
+        describe("reverts if", async () => {
+            it("voting before minimum stake time", async () => {
+                await expectRevert(voting.castVote(1, 1, { from: alice }), "STAKE_NOT_OLD_ENOUGH")
             })
-            // non-operator can not call
-            await expectRevert(voting.getPollVotingInfo(1, { from: carol }), "POLL_NOT_ENDED__CALLER_NO_OPERATOR")
-            // operators only can call
-            await voting.getVoterInfo(1, alice, { from: bob }).then((res) => {
-                expect(res[0].toString()).to.eq("1")
-                expect(res[1].toString()).to.eq("12000000000000000000000")
-            })
-            // non-operator can not call
-            await expectRevert(voting.getVoterInfo(1, alice, { from: carol }), "POLL_NOT_ENDED__CALLER_NO_OPERATOR")
-            await timeTraveler.advanceTimeAndBlock(time.duration.days(200))
-            // poll ended, anybody can call
-            await voting.getPollVotingInfo(1, { from: carol }).then((res) => {
-                expect(res[0][0].toString()).to.eq("0")
-                expect(res[0][1].toString()).to.eq("12000000000000000000000")
-                expect(res[0][2].toString()).to.eq("21000000000000000000000")
-                expect(res[0][3].toString()).to.eq("0")
-                expect(res[1].toString()).to.eq("2")
-            })
-            await voting.getVoterInfo(1, alice, { from: carol }).then((res) => {
-                expect(res[0].toString()).to.eq("1")
-                expect(res[1].toString()).to.eq("12000000000000000000000")
-            })
-            await timeTraveler.advanceTimeAndBlock(time.duration.days(-200))
         })
-        it("updatePollTime", async () => {
-            const number = await ethers.provider.getBlockNumber()
-            const block = await ethers.provider.getBlock(number)
-            await voting.createPoll("test?", ["y", "n"], block.timestamp + 1111, block.timestamp + 8888, 0, { from: bob })
-            const pollId = Number(await voting.pollIds())
-            const pollInfo1 = await voting.getPollInfo(pollId)
-            await voting.updatePollTime(pollId, block.timestamp + 8888, block.timestamp + 9999, { from: bob })
-            const pollInfo2 = await voting.getPollInfo(pollId)
-            expect(Number(pollInfo1[2])).not.eq(Number(pollInfo2[2]))
-            expect(Number(pollInfo1[3])).not.eq(Number(pollInfo2[3]))
+        describe("check", async () => {
+            it("checkIfVoted endPoll", async () => {
+                const newEndTime = Math.floor(Date.now() / 1000) + time.duration.days(115)
+                expect(await voting.checkIfVoted(1, bob)).to.eq(false)
+                expectEvent(await voting.castVote(1, 1, { from: bob }), "VoteCasted")
+                expect(await voting.checkIfVoted(1, bob)).to.eq(true)
+                // zero weight stakers can not cast vote
+                await expectRevert(voting.castVote(1, 1, { from: carol }), "NO_VALID_VOTING_NFTS_PRESENT")
+                await voting.updatePollTime(1, 0, newEndTime, { from: bob })
+                //add one more staker
+                const latestBlock = await hre.ethers.provider.getBlock("latest")
+                await sPool1.mint(carol, 3, toWei(new BN(10000)), 120, latestBlock.timestamp - time.duration.days(91))
+                expect(await voting.checkIfVoted(1, carol)).to.eq(false)
+                expectEvent(await voting.castVote(1, 2, { from: carol}), "VoteCasted")
+                expect(await voting.checkIfVoted(1, carol)).to.eq(true)
+                // poll is still on
+                // operators only can call
+                await voting.getPollVotingInfo(1, { from: bob }).then((res) => {
+                    expect(res[0][0].toString()).to.eq("0")
+                    expect(res[0][1].toString()).to.eq("7000000000000000000000")
+                    expect(res[0][2].toString()).to.eq("10000000000000000000000")
+                    expect(res[0][3].toString()).to.eq("0")
+                    expect(res[1].toString()).to.eq("2")
+                })
+                // non-operator can not call
+                await expectRevert(voting.getPollVotingInfo(1, { from: carol }), "POLL_NOT_ENDED__CALLER_NO_OPERATOR")
+                // operators only can call
+                await voting.getVoterInfo(1, carol, { from: bob }).then((res) => {
+                    expect(res[0].toString()).to.eq("2")
+                    expect(res[1].toString()).to.eq("10000000000000000000000")
+                })
+                // non-operator can not call
+                await expectRevert(voting.getVoterInfo(1, alice, { from: carol }), "POLL_NOT_ENDED__CALLER_NO_OPERATOR")
+                await timeTraveler.advanceTimeAndBlock(time.duration.days(200))
+                // poll ended, anybody can call
+                await voting.getPollVotingInfo(1, { from: carol }).then((res) => {
+                    expect(res[0][0].toString()).to.eq("0")
+                    expect(res[0][1].toString()).to.eq("7000000000000000000000")
+                    expect(res[0][2].toString()).to.eq("10000000000000000000000")
+                    expect(res[0][3].toString()).to.eq("0")
+                    expect(res[1].toString()).to.eq("2")
+                })
+                await voting.getVoterInfo(1, bob, { from: carol }).then((res) => {
+                    expect(res[0].toString()).to.eq("1")
+                    expect(res[1].toString()).to.eq("7000000000000000000000")
+                })
+                await timeTraveler.advanceTimeAndBlock(time.duration.days(-200))
+            })
+            it("updatePollTime", async () => {
+                const number = await ethers.provider.getBlockNumber()
+                const block = await ethers.provider.getBlock(number)
+                await voting.createPoll("test?", ["y", "n"], block.timestamp + 1111, block.timestamp + 8888, 0, { from: bob })
+                const pollId = Number(await voting.pollIds())
+                const pollInfo1 = await voting.getPollInfo(pollId)
+                await voting.updatePollTime(pollId, block.timestamp + 8888, block.timestamp + 9999, { from: bob })
+                const pollInfo2 = await voting.getPollInfo(pollId)
+                expect(Number(pollInfo1[2])).not.eq(Number(pollInfo2[2]))
+                expect(Number(pollInfo1[3])).not.eq(Number(pollInfo2[3]))
+            })
         })
     })
 })
