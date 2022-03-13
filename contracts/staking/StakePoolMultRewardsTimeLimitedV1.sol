@@ -15,11 +15,13 @@ contract StakePoolMultRewardsTimeLimitedV1 is IStakePoolMultipleRewardsV1, Stake
     // Minimum pool stake amount
     uint256 public minPoolStakeAmount;
 
+    // Days to close pool from minPoolStakeAmount is reached
     uint256 public timeLimitInDays;
 
     // Time Limit after min pool stake amount reached
     uint256 public timeLimit;
 
+    // True if timeLimit is greater than 0
     bool public isTimeLimited;
 
     // Address of deposit token.
@@ -69,7 +71,6 @@ contract StakePoolMultRewardsTimeLimitedV1 is IStakePoolMultipleRewardsV1, Stake
         minPoolStakeAmount = minPoolStakeAmount_;
         rewardTokens[rewardToken_] = IERC20(rewardToken_);
         deployedAt = block.timestamp;
-        isTimeLimited = false;
     }
 
     /************************|
@@ -247,7 +248,7 @@ contract StakePoolMultRewardsTimeLimitedV1 is IStakePoolMultipleRewardsV1, Stake
         if (isTimeLimited) {
             require(block.timestamp < timeLimit, "StakePool#_deposit: DEPOSIT_TIME_CLOSED");
         }
-        
+
         require(depositToken.transferFrom(account, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
 
         if (depositToken.balanceOf(address(this)) >= minPoolStakeAmount) {
@@ -277,6 +278,11 @@ contract StakePoolMultRewardsTimeLimitedV1 is IStakePoolMultipleRewardsV1, Stake
         require(ownerOf(stakeId) == account, "StakePool#_withdraw: NO_STAKE_OWNER");
         _decreaseStakeAmount(stakeId, withdrawAmount);
         require(depositToken.transfer(account, withdrawAmount), "StakePool#_withdraw: TRANSFER_FAILED");
+
+        if (block.timestamp < timeLimit && depositToken.balanceOf(address(this)) < minPoolStakeAmount) {
+            timeLimit = 0;
+            isTimeLimited = false;
+        }
 
         emit Withdrawn(account, stakeId, withdrawAmount);
     }
