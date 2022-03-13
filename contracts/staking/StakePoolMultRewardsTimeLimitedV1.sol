@@ -9,8 +9,18 @@ import "../interfaces/IStakePoolMultipleRewardsV1.sol";
 contract StakePoolMultRewardsTimeLimitedV1 is IStakePoolMultipleRewardsV1, StakeTokenMultipleRewardsV1, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    // Minimum stake amount per user
+    // Minimum address stake amount
     uint256 public constant minStakeAmount = 500 * 1e18;
+
+    // Minimum pool stake amount
+    uint256 public minPoolStakeAmount;
+
+    uint256 public timeLimitInDays;
+
+    // Time Limit after min pool stake amount reached
+    uint256 public timeLimit;
+
+    bool public isTimeLimited;
 
     // Address of deposit token.
     IERC20 public depositToken;
@@ -49,12 +59,17 @@ contract StakePoolMultRewardsTimeLimitedV1 is IStakePoolMultipleRewardsV1, Stake
         string memory stakeTokenName_,
         string memory stakeTokenSymbol_,
         string memory stakeTokenBASEUri_,
+        uint256 timeLimitInDays_,
+        uint256 minPoolStakeAmount_,
         IERC20 depositToken_,
         address rewardToken_
     ) StakeTokenMultipleRewardsV1(stakeTokenName_, stakeTokenSymbol_, stakeTokenBASEUri_) {
         depositToken = depositToken_;
+        timeLimitInDays = timeLimitInDays_;
+        minPoolStakeAmount = minPoolStakeAmount_;
         rewardTokens[rewardToken_] = IERC20(rewardToken_);
         deployedAt = block.timestamp;
+        isTimeLimited = false;
     }
 
     /************************|
@@ -228,7 +243,17 @@ contract StakePoolMultRewardsTimeLimitedV1 is IStakePoolMultipleRewardsV1, Stake
     ) private nonReentrant {
         uint256 depositedAt = block.timestamp;
         uint256 stakeId = _mint(account, amount, depositedAt, timestamplock);
+
+        if (isTimeLimited) {
+            require(block.timestamp < timeLimit, "StakePool#_deposit: DEPOSIT_TIME_CLOSED");
+        }
+        
         require(depositToken.transferFrom(account, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
+
+        if (depositToken.balanceOf(address(this)) >= minPoolStakeAmount) {
+            timeLimit = block.timestamp + (timeLimitInDays * 1 days);
+            isTimeLimited = true;
+        }
 
         emit Deposited(account, stakeId, amount, timestamplock);
     }
