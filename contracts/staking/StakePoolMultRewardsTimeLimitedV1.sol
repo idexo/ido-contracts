@@ -240,7 +240,7 @@ contract StakePoolMultRewardsTimeLimitedV1 is IStakePoolMultipleRewardsV1, Stake
             require(block.timestamp < timeLimit, "StakePool#_deposit: DEPOSIT_TIME_CLOSED");
         }
         require(depositToken.transferFrom(account, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
-        if (depositToken.balanceOf(address(this)) >= minPoolStakeAmount) {
+        if (timeLimit == 0 && depositToken.balanceOf(address(this)) >= minPoolStakeAmount) {
             timeLimit = block.timestamp + (timeLimitInDays * 1 days);
         }
         emit Deposited(account, stakeId, amount, timestamplock);
@@ -265,7 +265,7 @@ contract StakePoolMultRewardsTimeLimitedV1 is IStakePoolMultipleRewardsV1, Stake
         require(ownerOf(stakeId) == account, "StakePool#_withdraw: NO_STAKE_OWNER");
         _decreaseStakeAmount(stakeId, withdrawAmount);
         require(depositToken.transfer(account, withdrawAmount), "StakePool#_withdraw: TRANSFER_FAILED");
-        if (block.timestamp < timeLimit && depositToken.balanceOf(address(this)) < minPoolStakeAmount) {
+        if (timeLimit > 0 && block.timestamp < timeLimit && depositToken.balanceOf(address(this)) < minPoolStakeAmount) {
             timeLimit = 0;
         }
         emit Withdrawn(account, stakeId, withdrawAmount);
