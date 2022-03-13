@@ -8,22 +8,16 @@ import "../interfaces/IStakePoolMultipleRewardsV1.sol";
 
 contract StakePoolMultRewardsTimeLimitedV1 is IStakePoolMultipleRewardsV1, StakeTokenMultipleRewardsV1, ReentrancyGuard {
     using SafeERC20 for IERC20;
-
     // Minimum address stake amount
     uint256 public constant minStakeAmount = 500 * 1e18;
-
     // Minimum pool stake amount
     uint256 public minPoolStakeAmount;
-
     // Days to close pool from minPoolStakeAmount is reached
     uint256 public timeLimitInDays;
-
     // Time Limit after min pool stake amount reached
     uint256 public timeLimit;
-
     // True if timeLimit is greater than 0
     bool public isTimeLimited;
-
     // Address of deposit token.
     IERC20 public depositToken;
     // Mapping of reward tokens.
@@ -244,18 +238,14 @@ contract StakePoolMultRewardsTimeLimitedV1 is IStakePoolMultipleRewardsV1, Stake
     ) private nonReentrant {
         uint256 depositedAt = block.timestamp;
         uint256 stakeId = _mint(account, amount, depositedAt, timestamplock);
-
         if (isTimeLimited) {
             require(block.timestamp < timeLimit, "StakePool#_deposit: DEPOSIT_TIME_CLOSED");
         }
-
         require(depositToken.transferFrom(account, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
-
         if (depositToken.balanceOf(address(this)) >= minPoolStakeAmount) {
             timeLimit = block.timestamp + (timeLimitInDays * 1 days);
             isTimeLimited = true;
         }
-
         emit Deposited(account, stakeId, amount, timestamplock);
     }
 
@@ -278,12 +268,10 @@ contract StakePoolMultRewardsTimeLimitedV1 is IStakePoolMultipleRewardsV1, Stake
         require(ownerOf(stakeId) == account, "StakePool#_withdraw: NO_STAKE_OWNER");
         _decreaseStakeAmount(stakeId, withdrawAmount);
         require(depositToken.transfer(account, withdrawAmount), "StakePool#_withdraw: TRANSFER_FAILED");
-
         if (block.timestamp < timeLimit && depositToken.balanceOf(address(this)) < minPoolStakeAmount) {
             timeLimit = 0;
             isTimeLimited = false;
         }
-
         emit Withdrawn(account, stakeId, withdrawAmount);
     }
 
