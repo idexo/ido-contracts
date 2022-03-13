@@ -427,14 +427,14 @@ contract("::StakePoolMultRewardsTimeLimited", async (accounts) => {
     //     })
     // })
 
-    // describe("# Sweep", async () => {
-    //     it("should sweep funds to another account", async () => {
-    //         let balance = await usdt.balanceOf(stakePool.address)
-    //         balance = await usdc.balanceOf(stakePool.address)
-    //         await stakePool.sweep(usdc.address, darren, web3.utils.toWei(new BN(2500)), { from: bob })
-    //         balance = await usdc.balanceOf(stakePool.address)
-    //     })
-    // })
+    describe("# Sweep", async () => {
+        it("should sweep funds to another account", async () => {
+            let balance = await usdt.balanceOf(stakePool.address)
+            balance = await usdc.balanceOf(stakePool.address)
+            await stakePool.sweep(usdc.address, darren, web3.utils.toWei(new BN(2500)), { from: bob })
+            balance = await usdc.balanceOf(stakePool.address)
+        })
+    })
 
     // describe("# Stake, Deposit Rewards, Add Rewards, Withdraw with pending Claim Rewards", async () => {
     //     it("stake", async () => {
