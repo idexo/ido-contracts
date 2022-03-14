@@ -213,7 +213,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
     }
 
     /*************************|
-    |   Private Functions     |
+    |   Internal Functions     |
     |________________________*/
 
     /**
@@ -225,7 +225,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
         address account,
         uint256 amount,
         uint256 timestamplock
-    ) private nonReentrant {
+    ) internal nonReentrant {
         uint256 depositedAt = block.timestamp;
         uint256 stakeId = _mint(account, amount, depositedAt, timestamplock);
         require(depositToken.transferFrom(account, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
@@ -248,7 +248,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
         address account,
         uint256 stakeId,
         uint256 withdrawAmount
-    ) private nonReentrant {
+    ) internal nonReentrant {
         require(ownerOf(stakeId) == account, "StakePool#_withdraw: NO_STAKE_OWNER");
         _decreaseStakeAmount(stakeId, withdrawAmount);
         require(depositToken.transfer(account, withdrawAmount), "StakePool#_withdraw: TRANSFER_FAILED");
@@ -265,7 +265,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
         address account,
         address rewardTokenAddress,
         uint256 amount
-    ) private {
+    ) internal {
         rewardTokens[rewardTokenAddress].safeTransferFrom(account, address(this), amount);
         rewardDeposits[rewardTokenAddress].push(RewardDeposit({ operator: account, amount: amount, depositedAt: block.timestamp }));
 
@@ -276,7 +276,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
      * @dev Add new reward token.
      * @param rewardToken_ reward token address.
      */
-    function _addRewardToken(address rewardToken_) private {
+    function _addRewardToken(address rewardToken_) internal {
         rewardTokens[rewardToken_] = IERC20(rewardToken_);
     }
 }
