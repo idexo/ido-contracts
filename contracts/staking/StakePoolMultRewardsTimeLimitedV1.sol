@@ -27,7 +27,6 @@ contract StakePoolMultRewardsTimeLimitedV1 is StakePoolMultipleRewardsV1 {
         minPoolStakeAmount = minPoolStakeAmount_;
     }
 
-
     /**
      * @dev Deposit stake to the pool.
      * @param account address of recipient.
@@ -38,13 +37,13 @@ contract StakePoolMultRewardsTimeLimitedV1 is StakePoolMultipleRewardsV1 {
         uint256 amount,
         uint256 timestamplock
     ) internal virtual override {
+        StakePoolMultipleRewardsV1._deposit(account, amount, timestamplock);
         if (timeLimit > 0) {
             require(block.timestamp < timeLimit, "StakePool#_deposit: DEPOSIT_TIME_CLOSED");
         }
         if (timeLimit == 0 && depositToken.balanceOf(address(this)) >= minPoolStakeAmount) {
             timeLimit = block.timestamp + (timeLimitInDays * 1 days);
         }
-        StakePoolMultipleRewardsV1._deposit(account, amount, timestamplock);
     }
 
     /**
@@ -63,9 +62,9 @@ contract StakePoolMultRewardsTimeLimitedV1 is StakePoolMultipleRewardsV1 {
         uint256 stakeId,
         uint256 withdrawAmount
     ) internal virtual override {
+        StakePoolMultipleRewardsV1._withdraw(account, stakeId, withdrawAmount);
         if (timeLimit > 0 && block.timestamp < timeLimit && depositToken.balanceOf(address(this)) < minPoolStakeAmount) {
             timeLimit = 0;
         }
-        StakePoolMultipleRewardsV1._withdraw(account, stakeId, withdrawAmount);
     }
 }
