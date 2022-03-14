@@ -66,10 +66,14 @@ contract("::StakePoolMultRewardsTimeLimited", async (accounts) => {
                 expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
             })
         })
-
         it("should get timeLimit", async () => {
             await stakePool.timeLimit().then((res) => {
                 expect(res.toString()).to.eq("0")
+            })
+        })
+        it("should get depositToken", async () => {
+            await stakePool.depositToken().then((res) => {
+                expect(res.toString()).to.eq(ido.address)
             })
         })
     })
