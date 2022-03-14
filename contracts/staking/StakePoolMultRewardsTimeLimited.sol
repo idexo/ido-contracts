@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import "./StakePoolMultipleRewardsV1.sol";
+import "./StakePoolMultipleRewards.sol";
 
-contract StakePoolMultRewardsTimeLimitedV1 is StakePoolMultipleRewardsV1 {
+contract StakePoolMultRewardsTimeLimited is StakePoolMultipleRewards {
     using SafeERC20 for IERC20;
 
     // Minimum pool stake amount
@@ -22,7 +22,7 @@ contract StakePoolMultRewardsTimeLimitedV1 is StakePoolMultipleRewardsV1 {
         uint256 minPoolStakeAmount_,
         IERC20 depositToken_,
         address rewardToken_
-    ) StakePoolMultipleRewardsV1(stakeTokenName_, stakeTokenSymbol_, stakeTokenBASEUri_, depositToken_, rewardToken_) {
+    ) StakePoolMultipleRewards(stakeTokenName_, stakeTokenSymbol_, stakeTokenBASEUri_, depositToken_, rewardToken_) {
         timeLimitInDays = timeLimitInDays_;
         minPoolStakeAmount = minPoolStakeAmount_;
     }
@@ -37,7 +37,7 @@ contract StakePoolMultRewardsTimeLimitedV1 is StakePoolMultipleRewardsV1 {
         uint256 amount,
         uint256 timestamplock
     ) internal virtual override {
-        StakePoolMultipleRewardsV1._deposit(account, amount, timestamplock);
+        StakePoolMultipleRewards._deposit(account, amount, timestamplock);
         if (timeLimit > 0) {
             require(block.timestamp < timeLimit, "StakePool#_deposit: DEPOSIT_TIME_CLOSED");
         }
@@ -62,7 +62,7 @@ contract StakePoolMultRewardsTimeLimitedV1 is StakePoolMultipleRewardsV1 {
         uint256 stakeId,
         uint256 withdrawAmount
     ) internal virtual override {
-        StakePoolMultipleRewardsV1._withdraw(account, stakeId, withdrawAmount);
+        StakePoolMultipleRewards._withdraw(account, stakeId, withdrawAmount);
         if (timeLimit > 0 && block.timestamp < timeLimit && depositToken.balanceOf(address(this)) < minPoolStakeAmount) {
             timeLimit = 0;
         }

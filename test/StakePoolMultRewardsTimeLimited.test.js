@@ -3,7 +3,7 @@ const { duration } = require("./helpers/time")
 const timeTraveler = require("ganache-time-traveler")
 const { BN, expectEvent, expectRevert } = require("@openzeppelin/test-helpers")
 const { network } = require("hardhat")
-const StakePool = artifacts.require("contracts/staking/StakePoolMultRewardsTimeLimitedV1.sol:StakePoolMultRewardsTimeLimitedV1")
+const StakePool = artifacts.require("contracts/staking/StakePoolMultRewardsTimeLimited.sol:StakePoolMultRewardsTimeLimited")
 const ERC20 = artifacts.require("ERC20Mock")
 
 contract("::StakePoolMultRewardsTimeLimited", async (accounts) => {

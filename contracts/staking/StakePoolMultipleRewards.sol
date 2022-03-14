@@ -3,10 +3,10 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./StakeTokenMultipleRewardsV1.sol";
-import "../interfaces/IStakePoolMultipleRewardsV1.sol";
+import "./StakeTokenMultipleRewards.sol";
+import "../interfaces/IStakePoolMultipleRewards.sol";
 
-contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMultipleRewardsV1, ReentrancyGuard {
+contract StakePoolMultipleRewards is IStakePoolMultipleRewards, StakeTokenMultipleRewards, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // Minimum stake amount
@@ -51,7 +51,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
         string memory stakeTokenBASEUri_,
         IERC20 depositToken_,
         address rewardToken_
-    ) StakeTokenMultipleRewardsV1(stakeTokenName_, stakeTokenSymbol_, stakeTokenBASEUri_) {
+    ) StakeTokenMultipleRewards(stakeTokenName_, stakeTokenSymbol_, stakeTokenBASEUri_) {
         depositToken = depositToken_;
         rewardTokens[rewardToken_] = IERC20(rewardToken_);
         deployedAt = block.timestamp;

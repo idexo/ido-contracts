@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.4;
 
-import "./IStakeTokenMultipleRewardsV1.sol";
+import "./IStakeTokenMultipleRewards.sol";
 
-interface IStakePoolMultipleRewardsV1 is IStakeTokenMultipleRewardsV1 {
+interface IStakePoolMultipleRewards is IStakeTokenMultipleRewards {
     function deposit(
         uint256 amount,
         uint256 timestamplock
