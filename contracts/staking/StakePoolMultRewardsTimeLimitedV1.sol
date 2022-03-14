@@ -37,7 +37,7 @@ contract StakePoolMultRewardsTimeLimitedV1 is StakePoolMultipleRewardsV1 {
         address account,
         uint256 amount,
         uint256 timestamplock
-    ) internal virtual override nonReentrant {
+    ) internal virtual override {
         if (timeLimit > 0) {
             require(block.timestamp < timeLimit, "StakePool#_deposit: DEPOSIT_TIME_CLOSED");
         }
@@ -62,7 +62,7 @@ contract StakePoolMultRewardsTimeLimitedV1 is StakePoolMultipleRewardsV1 {
         address account,
         uint256 stakeId,
         uint256 withdrawAmount
-    ) internal virtual override nonReentrant {
+    ) internal virtual override {
         if (timeLimit > 0 && block.timestamp < timeLimit && depositToken.balanceOf(address(this)) < minPoolStakeAmount) {
             timeLimit = 0;
         }
