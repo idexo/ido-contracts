@@ -5,11 +5,11 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "../interfaces/IStakeTokenMultipleRewardsV1.sol";
+import "../interfaces/IStakeTokenMultipleRewards.sol";
 import "../lib/Operatorable.sol";
 import "../lib/StakeMath.sol";
 
-contract StakeTokenMultipleRewardsV1 is IStakeTokenMultipleRewardsV1, ERC721, ERC721URIStorage, Operatorable {
+contract StakeTokenMultipleRewards is IStakeTokenMultipleRewards, ERC721, ERC721URIStorage, Operatorable {
     using SafeMath for uint256;
     using StakeMath for uint256;
     // Last stake token id, start from 1

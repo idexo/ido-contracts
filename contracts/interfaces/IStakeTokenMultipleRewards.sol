@@ -4,7 +4,7 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-interface IStakeTokenMultipleRewardsV1 is IERC721 {
+interface IStakeTokenMultipleRewards is IERC721 {
     function getStakeTokenIds(
         address account
     )

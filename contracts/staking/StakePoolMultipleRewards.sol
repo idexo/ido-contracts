@@ -3,10 +3,10 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./StakeTokenMultipleRewardsV1.sol";
-import "../interfaces/IStakePoolMultipleRewardsV1.sol";
+import "./StakeTokenMultipleRewards.sol";
+import "../interfaces/IStakePoolMultipleRewards.sol";
 
-contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMultipleRewardsV1, ReentrancyGuard {
+contract StakePoolMultipleRewards is IStakePoolMultipleRewards, StakeTokenMultipleRewards, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // Minimum stake amount
@@ -51,7 +51,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
         string memory stakeTokenBASEUri_,
         IERC20 depositToken_,
         address rewardToken_
-    ) StakeTokenMultipleRewardsV1(stakeTokenName_, stakeTokenSymbol_, stakeTokenBASEUri_) {
+    ) StakeTokenMultipleRewards(stakeTokenName_, stakeTokenSymbol_, stakeTokenBASEUri_) {
         depositToken = depositToken_;
         rewardTokens[rewardToken_] = IERC20(rewardToken_);
         deployedAt = block.timestamp;
@@ -213,7 +213,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
     }
 
     /*************************|
-    |   Private Functions     |
+    |   Internal Functions     |
     |________________________*/
 
     /**
@@ -225,7 +225,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
         address account,
         uint256 amount,
         uint256 timestamplock
-    ) private nonReentrant {
+    ) internal virtual nonReentrant {
         uint256 depositedAt = block.timestamp;
         uint256 stakeId = _mint(account, amount, depositedAt, timestamplock);
         require(depositToken.transferFrom(account, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
@@ -248,7 +248,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
         address account,
         uint256 stakeId,
         uint256 withdrawAmount
-    ) private nonReentrant {
+    ) internal virtual nonReentrant {
         require(ownerOf(stakeId) == account, "StakePool#_withdraw: NO_STAKE_OWNER");
         _decreaseStakeAmount(stakeId, withdrawAmount);
         require(depositToken.transfer(account, withdrawAmount), "StakePool#_withdraw: TRANSFER_FAILED");
@@ -265,7 +265,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
         address account,
         address rewardTokenAddress,
         uint256 amount
-    ) private {
+    ) internal virtual {
         rewardTokens[rewardTokenAddress].safeTransferFrom(account, address(this), amount);
         rewardDeposits[rewardTokenAddress].push(RewardDeposit({ operator: account, amount: amount, depositedAt: block.timestamp }));
 
@@ -276,7 +276,7 @@ contract StakePoolMultipleRewardsV1 is IStakePoolMultipleRewardsV1, StakeTokenMu
      * @dev Add new reward token.
      * @param rewardToken_ reward token address.
      */
-    function _addRewardToken(address rewardToken_) private {
+    function _addRewardToken(address rewardToken_) internal virtual {
         rewardTokens[rewardToken_] = IERC20(rewardToken_);
     }
 }
