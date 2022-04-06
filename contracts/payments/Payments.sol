@@ -9,20 +9,15 @@ import "../interfaces/IPayments.sol";
 contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-   
-
     // Address of payment token.
     IERC20 public paymentToken;
 
     // // Stubbing out ability to have more than one payment token
-    // // would need to specify the number of decimals to differentiate 
+    // // would need to specify the number of decimals to differentiate
     // // ones with different decimals
     // mapping(address => IERC20) public paymentTokens;
 
-    
-
-
-    event Paid(address indexed account, uint256 indexed receiptId, uint256 amount, uint256 productId);
+    event Paid(address indexed account, uint256 indexed receiptId, string productId, uint256 amount);
     event Swept(address indexed operator, address token, address indexed to, uint256 amount);
 
     constructor(
@@ -32,8 +27,6 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         IERC20 paymentToken_
     ) ReceiptToken(receiptTokenName_, receiptTokenSymbol_, receiptTokenBASEUri_) {
         paymentToken = paymentToken_;
-        
-        deployedAt = block.timestamp;
     }
 
     /************************|
@@ -47,17 +40,9 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
      * - `amount` must not be zero
      * @param amount deposit amount.
      */
-    function payProduct(uint256 amount, uint256 productId) external override {
-        
-        _payProduct(msg.sender, amount, productId);
+    function payProduct(string memory productId, uint256 amount) external override {
+        _payProduct(msg.sender, productId, amount);
     }
-
-    
-
-   
-
-
-   
 
     /**
      * @dev Sweep funds
@@ -74,8 +59,6 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         emit Swept(msg.sender, token_, to, amount);
     }
 
-   
-
     /*************************|
     |   Internal Functions     |
     |________________________*/
@@ -87,17 +70,13 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
      */
     function _payProduct(
         address account,
-        uint256 amount,
-        uint256 productId
+        string memory productId,
+        uint256 amount
     ) internal virtual nonReentrant {
         uint256 paidAt = block.timestamp;
-        uint256 receiptId = _mint(account, amount, paidAt, productIsd);
-        require(paymentToken.safeTransferFrom(account, address(this), amount), "Payments#_payProduct: TRANSFER_FAILED");
+        uint256 receiptId = _mint(account, productId, amount, paidAt);
+        // require(paymentToken.safeTransferFrom(account, address(this), amount), "Payments#_payProduct: TRANSFER_FAILED");
 
-        emit Paid(account, receiptId, amount, productId);
+        emit Paid(account, receiptId, productId, amount);
     }
-
-   
-
-   
 }

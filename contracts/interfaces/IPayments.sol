@@ -6,8 +6,8 @@ import "./IReceiptToken.sol";
 
 interface IPayments is IReceiptToken {
     function payProduct(
-        uint256 amount,
-        uint256 productId
+        string memory productId,
+        uint256 amount
     )
         external;
 

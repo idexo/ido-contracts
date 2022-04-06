@@ -83,14 +83,15 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
         return payerIds[account];
     }
 
+    // getPaidAmount must consider the different types of paymentTokens
     /**
      * @dev Return total paid amount of `account`
      */
     function getPaidAmount(address account) external view returns (uint256) {
-        uint256[] memory receiptIds = payerIds[account];
+        uint256[] memory tokenIds = payerIds[account];
         uint256 totalPaidAmount;
-        for (uint256 i = 0; i < receiptIds.length; i++) {
-            totalPaidAmount += receipts[receiptIds[i]].amount;
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            totalPaidAmount += receipts[tokenIds[i]].amount;
         }
         return totalPaidAmount;
     }
@@ -151,13 +152,13 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
      * @param receiptId receiptId to remove
      */
     function _popStake(address from, uint256 receiptId) internal {
-        uint256[] storage receiptIds = payerIds[from];
-        for (uint256 i = 0; i < receiptIds.length; i++) {
-            if (receiptIds[i] == receiptId) {
-                if (i != receiptIds.length - 1) {
-                    receiptIds[i] = receiptIds[receiptIds.length - 1];
+        uint256[] storage tokenIds = payerIds[from];
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            if (tokenIds[i] == receiptId) {
+                if (i != tokenIds.length - 1) {
+                    tokenIds[i] = tokenIds[tokenIds.length - 1];
                 }
-                receiptIds.pop();
+                tokenIds.pop();
                 break;
             }
         }
