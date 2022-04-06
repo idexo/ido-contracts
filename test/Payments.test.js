@@ -152,7 +152,7 @@ contract("::Payments", async (accounts) => {
             console.log("Contract CRED before Balance:", contractBalance.toString())
         })
         it("should refund purchasedProduct from user", async () => {
-            await payment.refund(carol, 2, { from: owner })
+            await payment.refund(carol, 1, { from: owner })
             let receiptBalance = await payment.balanceOf(carol, { from: carol })
             console.log("Carol Receipts: ", receiptBalance.toString())
         })

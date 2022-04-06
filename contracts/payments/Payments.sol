@@ -171,35 +171,31 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
 
         _burn(receiptId);
 
-        Purchased[] storage purchases = purchasedProducts[account];
+        Purchased[] memory purchases = purchasedProducts[account];
         for (uint256 i = 0; i < purchases.length; i++) {
             if (purchases[i].receiptId == receiptId) {
                 uint256 index = productsIndex[purchases[i].productId];
                 refundToken = IERC20(_productsList[index].paymentToken);
                 refundToken.transfer(account, _productsList[index].price);
+                _popPurchase(account, i);
                 break;
             }
         }
-        _popPurchase(account, receiptId);
     }
 
     /**
      * @dev Remove the purchase from purchasedProducts.
      *
      * @param from address from
-     * @param receiptId receiptId to remove
+     * @param purchaseIndex receiptId to remove
      */
-    function _popPurchase(address from, uint256 receiptId) internal {
+    function _popPurchase(address from, uint256 purchaseIndex) internal {
         Purchased[] storage purchases = purchasedProducts[from];
-        for (uint256 i = 0; i < purchases.length; i++) {
-            if (purchases[i].receiptId == receiptId) {
-                if (i != purchases.length - 1) {
-                    purchases[i] = purchases[purchases.length - 1];
-                }
-                purchases.pop();
-                break;
-            }
+
+        if (purchaseIndex != purchases.length - 1) {
+            purchases[purchaseIndex] = purchases[purchases.length - 1];
         }
+        purchases.pop();
     }
 
     /**
