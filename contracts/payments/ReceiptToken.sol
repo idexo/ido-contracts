@@ -197,15 +197,6 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
         _currentSupply--;
     }
 
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 tokenId
-    ) internal virtual override(ERC721) {
-        require(from == address(0) || to == address(0), "NonTransferrableERC721Token: non transferrable");
-        super._beforeTokenTransfer(from, to, tokenId);
-    }
-
     /**
      * @dev Transfers `receiptId` from `from` to `to`.
      *  As opposed to {transferFrom}, this imposes no restrictions on msg.sender.
@@ -223,9 +214,8 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
         address from,
         address to,
         uint256 receiptId
-    ) internal override {
-        super._transfer(from, to, receiptId);
-        _popStake(from, receiptId);
-        payerIds[to].push(receiptId);
+    ) internal pure override {
+        require(receiptId != 0, "ReceiptToken: INVALID_TOKEN");
+        require(from == address(0) || to == address(0), "ReceiptToken: NON_TRANSFERRABLE");
     }
 }

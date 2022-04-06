@@ -247,11 +247,7 @@ contract("::Payments", async (accounts) => {
 
     describe("# Transfer not allowed", async () => {
         it("should revert transfer", async () => {
-            await expectRevert(payment.transferFrom(carol, alice, 2, { from: carol }), "NonTransferrableERC721Token: non transferrable")
+            await expectRevert(payment.transferFrom(carol, alice, 2, { from: carol }), "ReceiptToken: NON_TRANSFERRABLE")
         })
-        // check this, allow transfer to address 0x. override the function
-        // it("should transfer to address(0)", async () => {
-        //     await payment.transferFrom(carol, ZERO_ADDRESS, 2, { from: carol })
-        // })
     })
 })
