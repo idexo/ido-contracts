@@ -150,7 +150,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         // Does not work with require
 
         // require(pToken.safeTransferFrom(account, address(this), price), "Payments#_payProduct: TRANSFER_FAILED");
-        pToken.safeTransferFrom(account, address(this), price);
+        pToken.transferFrom(account, address(this), price);
 
         uint256 receiptId = _mint(account, productId, price, paidAt);
 
