@@ -117,12 +117,17 @@ contract("::Payments", async (accounts) => {
         // })
         it("should purchase ID01", async () => {
             expect(await payment.hasPaid(carol)).to.eq(false)
+            expect(Number(await payment.getPaidAmount(carol))).to.eq(0)
             await payment.payProduct("ID01", { from: carol })
             expect(await payment.hasPaid(carol)).to.eq(true)
+            let res = Number(web3.utils.toWei(new BN(1000)))
+            expect(Number(await payment.getPaidAmount(carol))).to.eq(res)
         })
 
         it("should purchase ID02", async () => {
             await payment.payProduct("ID02", { from: carol })
+            let res = Number(web3.utils.toWei(new BN(3000)))
+            expect(Number(await payment.getPaidAmount(carol))).to.eq(res)
         })
         it("should show contract balance after purchase ID01", async () => {
             let contractBalance = await cred.balanceOf(payment.address, { from: owner })
