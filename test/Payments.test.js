@@ -92,8 +92,8 @@ contract("::Payments", async (accounts) => {
     describe("# Payment Balance", async () => {
         before(async () => {
             for (const user of [alice, bob, carol, darren]) {
-                await cred.mint(user, web3.utils.toWei(new BN(20000)))
-                await cred.approve(payment.address, web3.utils.toWei(new BN(20000)), { from: user })
+                await cred.mint(user, web3.utils.toWei(new BN(3000)))
+                await cred.approve(payment.address, web3.utils.toWei(new BN(3000)), { from: user })
             }
         })
         it("should get payment balance", async () => {
@@ -144,18 +144,38 @@ contract("::Payments", async (accounts) => {
         })
     })
 
+    describe("# Refund", async () => {
+        it("should show balance before refund ID01", async () => {
+            let beforeBalance = await cred.balanceOf(carol, { from: carol })
+            console.log("Carol Before Refund: ", beforeBalance.toString())
+            let contractBalance = await cred.balanceOf(payment.address, { from: owner })
+            console.log("Contract CRED before Balance:", contractBalance.toString())
+        })
+        it("should refund purchasedProduct from user", async () => {
+            await payment.refund(carol, 2, { from: owner })
+            let receiptBalance = await payment.balanceOf(carol, { from: carol })
+            console.log("Carol Receipts: ", receiptBalance.toString())
+        })
+        it("should show balance after refund ID01", async () => {
+            let afterBalance = await cred.balanceOf(carol, { from: carol })
+            console.log("Carol after Refund: ", afterBalance.toString())
+            let contractBalance = await cred.balanceOf(payment.address, { from: owner })
+            console.log("Contract CRED after Balance:", contractBalance.toString())
+        })
+    })
+
     describe("# OpenForSale", async () => {
         it("should change openForSale attribute of product ID01", async () => {
             await payment.setOpenForSale("ID01", false, { from: owner })
             let product = await payment.getProduct("ID01", { from: carol })
-            console.log(product)
+            // console.log(product)
         })
     })
 
     describe("# Purchased", async () => {
         it("should show purchased products by account", async () => {
             let purchased = await payment.getPurchased(carol, { from: carol })
-            console.log(purchased)
+            // console.log(purchased)
         })
     })
 

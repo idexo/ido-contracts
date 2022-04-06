@@ -198,14 +198,15 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
      * @dev Burn receipt - maybe in case of refund?
      * Requirements:
      *
-     * - `stakeId` must exist in stake pool
-     * @param stakeId id of buring token.
+     * - `receiptId` must exist in stake pool
+     * @param receiptId id of buring token.
      */
-    function _burn(uint256 stakeId) internal override(ERC721, ERC721URIStorage) {
-        require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
-        address stakeOwner = ownerOf(stakeId);
-        super._burn(stakeId);
-        delete receipts[stakeId];
+    function _burn(uint256 receiptId) internal override(ERC721, ERC721URIStorage) {
+        require(_exists(receiptId), "ReceiptToken#_burn: RECEIPT_NOT_FOUND");
+        address receiptOwner = ownerOf(receiptId);
+        super._burn(receiptId);
+        delete receipts[receiptId];
+        _popStake(receiptOwner, receiptId);
         _currentSupply--;
     }
 
