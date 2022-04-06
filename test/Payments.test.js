@@ -10,6 +10,7 @@ contract("::Payments", async (accounts) => {
 
     before(async () => {
         cred = await ERC20.new("CRED Coin", "CRED", { from: owner })
+        usdc = await ERC20.new("USD Coin", "USDC", { from: owner })
         payment = await Payment.new("Idexo Receipt", "IRCPT", BASE_URI, cred.address, { from: owner })
     })
 
@@ -38,6 +39,23 @@ contract("::Payments", async (accounts) => {
         })
     })
 
+    describe("# Payment Tokens", async () => {
+        it("should add a new payment token", async () => {
+            await payment.addPaymentToken(usdc.address, { from: owner })
+            // expect(await payment.checkOperator(alice)).to.eq(true)
+        })
+        
+        // describe("reverts if", async () => {
+        //     it("add operator by NO-OWNER", async () => {
+        //         await expectRevert(payment.addOperator(bob, { from: alice }), "Ownable: CALLER_NO_OWNER")
+        //     })
+        //     it("remove operator by NO-OWNER", async () => {
+        //         await payment.addOperator(bob, { from: owner })
+        //         await expectRevert(payment.removeOperator(bob, { from: alice }), "Ownable: CALLER_NO_OWNER")
+        //     })
+        // })
+    })
+
     describe("# Products", async () => {
         it("should add operator", async () => {
             await payment.addOperator(bob, { from: owner })
@@ -50,13 +68,13 @@ contract("::Payments", async (accounts) => {
             await payment.addProduct("ID02", cred.address, web3.utils.toWei(new BN(2000)), true, { from: bob })
         })
 
-        // it("should get products", async () => {
-        //     let products = await payment.getProducts()
-        //     console.log(products)
+        it("should get products", async () => {
+            let products = await payment.getProducts()
+            console.log(products)
 
-        //     // let productOne = await payment.getProduct("ID03")
-        //     // console.log(productOne)
-        // })
+            let productOne = await payment.getProduct("ID01")
+            console.log(productOne)
+        })
         // it("should remove a product", async () => {
         //     await payment.remProduct("Product two", { from: bob })
         // })
@@ -82,7 +100,7 @@ contract("::Payments", async (accounts) => {
         })
         it("should get payment balance", async () => {
             let balance = await cred.balanceOf(carol, { from: carol })
-            console.log("CRED balance:", balance.toString())
+            // console.log("CRED balance:", balance.toString())
             // expect(await payment.checkOperator(bob)).to.eq(true)
         })
     })
@@ -104,7 +122,13 @@ contract("::Payments", async (accounts) => {
         })
         it("should show contract balance after purchase ID01", async () => {
             let contractBalance = await cred.balanceOf(payment.address, { from: owner })
-            console.log("Contract CRED Balance:", contractBalance.toString())
+            // console.log("Contract CRED Balance:", contractBalance.toString())
+        })
+        it("should show receipt balance after purchase ID01", async () => {
+            let receiptBalance = await payment.balanceOf(carol, { from: carol })
+            // console.log("Carol Receipts: ", receiptBalance.toString())
+            let contractBalance = await cred.balanceOf(payment.address, { from: owner })
+            // console.log("Contract CRED Balance:", contractBalance.toString())
         })
     })
 })

@@ -31,6 +31,9 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     // Products
     Product[] private _productsList;
 
+    // Products Ids List
+    string[] public productsList;
+
     // Products index
     mapping(string => uint256) productsIndex;
 
@@ -47,7 +50,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         address paymentToken_
     ) ReceiptToken(receiptTokenName_, receiptTokenSymbol_, receiptTokenBASEUri_) {
         paymentTokens[paymentToken_] = IERC20(paymentToken_);
-        _productsList.push(Product({ productId: "NOT_FOUND", paymentToken: address(0), price: 0, openForSale: false, insertedAt: 0 }));
+        _productsList.push(Product("DEFAULT", address(0), 0, false, 0));
         deployedAt = block.timestamp;
     }
 
@@ -88,8 +91,20 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         _addProduct(productId_, paymentToken_, price_, openForSale_);
     }
 
-    function getProductList() external view returns (Product[] memory) {
-        return _productsList;
+    function getProducts() external view returns (string[] memory) {
+        return productsList;
+    }
+
+    function getProduct(string memory productId) external view returns (Product[] memory) {
+        uint256 index = productsIndex[productId];
+        if (index == 0) {
+            Product[] memory product = new Product[](0);
+            return product;
+        } else {
+            Product[] memory product = new Product[](1);
+            product[0] = _productsList[index];
+            return product;
+        }
     }
 
     /************************|
@@ -163,9 +178,8 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         uint256 price,
         bool openForSale
     ) internal virtual {
-        _productsList.push(
-            Product({ productId: productId, paymentToken: paymentToken, price: price, openForSale: openForSale, insertedAt: block.timestamp })
-        );
+        _productsList.push(Product(productId, paymentToken, price, openForSale, block.timestamp));
+        productsList.push(productId);
         productsIndex[productId] = _productsList.length - 1;
     }
 
