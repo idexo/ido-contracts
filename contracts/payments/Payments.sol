@@ -9,13 +9,33 @@ import "../interfaces/IPayments.sol";
 contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    // Address of payment token.
-    IERC20 public paymentToken;
+    // Mapping of payment tokens.
+    mapping(address => IERC20) public paymentTokens;
 
-    // // Stubbing out ability to have more than one payment token
-    // // would need to specify the number of decimals to differentiate
-    // // ones with different decimals
-    // mapping(address => IERC20) public paymentTokens;
+    // Timestamp when contract was deployed to mainnet.
+    uint256 public deployedAt;
+
+    struct Product {
+        string productId;
+        address paymentToken;
+        uint256 price;
+        bool openForSale;
+        uint256 insertedAt;
+    }
+
+    struct Purchased {
+        string productId;
+        uint256 purchasedAt;
+    }
+
+    // Products
+    Product[] private _productsList;
+
+    // Products index
+    mapping(string => uint256) productsIndex;
+
+    // User purchases
+    mapping(address => Purchased[]) public purchasedProducts;
 
     event Paid(address indexed account, uint256 indexed receiptId, string productId, uint256 amount);
     event Swept(address indexed operator, address token, address indexed to, uint256 amount);
@@ -24,9 +44,46 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         string memory receiptTokenName_,
         string memory receiptTokenSymbol_,
         string memory receiptTokenBASEUri_,
-        IERC20 paymentToken_
+        address paymentToken_
     ) ReceiptToken(receiptTokenName_, receiptTokenSymbol_, receiptTokenBASEUri_) {
-        paymentToken = paymentToken_;
+        paymentTokens[paymentToken_] = IERC20(paymentToken_);
+    }
+
+    /*************************|
+    |     Payment Tokens      |
+    |________________________*/
+
+    /**
+     * @dev Add new payment token.
+     * @param paymentToken_ payment token address.
+     */
+    function addPaymentToken(address paymentToken_) public onlyOperator {
+        require(paymentToken_ != address(0), "Payment#_addPayment: ZERO_ADDRESS");
+        _addPaymentToken(paymentToken_);
+    }
+
+    /*************************|
+    |         Product         |
+    |________________________*/
+
+    /**
+     * @dev Deposit reward to the pool.
+     * Requirements:
+     *
+     * - `amount` must not be zero
+     * @param productId_ deposit amount.
+     * @param paymentToken_ deposit amount.
+     * @param price_ reward token address
+     * @param openForSale_ reward token address
+     */
+    function addProduct(
+        string memory productId_,
+        address paymentToken_,
+        uint256 price_,
+        bool openForSale_
+    ) external onlyOperator {
+        require(price_ > 0, "Payment#addProduct: ZERO_PRICE");
+        _addProduct(productId_, paymentToken_, price_, openForSale_);
     }
 
     /************************|
@@ -75,8 +132,36 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     ) internal virtual nonReentrant {
         uint256 paidAt = block.timestamp;
         uint256 receiptId = _mint(account, productId, amount, paidAt);
+        // check this require
         // require(paymentToken.safeTransferFrom(account, address(this), amount), "Payments#_payProduct: TRANSFER_FAILED");
 
         emit Paid(account, receiptId, productId, amount);
+    }
+
+    /**
+     * @dev Deposit reward to the pool.
+     * @param price deposit aproductName_  price_
+     * @param productId deposit aproductName_  price_
+     * @param paymentToken deposit aproductName_  price_
+     * @param openForSale deposit aproductName_  price_
+     */
+    function _addProduct(
+        string memory productId,
+        address paymentToken,
+        uint256 price,
+        bool openForSale
+    ) internal virtual {
+        _productsList.push(
+            Product({ productId: productId, paymentToken: paymentToken, price: price, openForSale: openForSale, insertedAt: block.timestamp })
+        );
+        productsIndex[productId] = _productsList.length - 1;
+    }
+
+    /**
+     * @dev Add new payment token.
+     * @param paymentToken_ payment token address.
+     */
+    function _addPaymentToken(address paymentToken_) internal virtual {
+        paymentTokens[paymentToken_] = IERC20(paymentToken_);
     }
 }

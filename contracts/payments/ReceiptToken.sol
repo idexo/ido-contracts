@@ -133,6 +133,8 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
         return _currentSupply;
     }
 
+
+
     /*************************|
     |   Private Functions     |
     |________________________*/
@@ -231,4 +233,5 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
         _popStake(from, receiptId);
         payerIds[to].push(receiptId);
     }
+
 }
