@@ -42,7 +42,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     mapping(address => Purchased[]) public userPurchases;
 
     // User paid amount address => paymentToken => amount
-    mapping(address => mapping(address => uint256)) private userPaidAmount;
+    mapping(address => mapping(address => uint256)) private userTotalPaidAmount;
 
     event Paid(address indexed account, uint256 indexed receiptId, string productId, uint256 amount);
     event Swept(address indexed operator, address token, address indexed to, uint256 amount);
@@ -157,7 +157,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     }
 
     /************************|
-    |        Paid Amount     |
+    |    Total Paid Amount   |
     |_______________________*/
 
     /**
@@ -167,9 +167,9 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
      * - `productId` must be exists
      * @param account deposit amount.
      */
-    function getPaidAmount(address account, address paymentToken) external view returns (uint256) {
+    function getTotalPaidAmount(address account, address paymentToken) external view returns (uint256) {
         require(account != address(0), "ZERO_ADDRESS");
-        return userPaidAmount[account][paymentToken];
+        return userTotalPaidAmount[account][paymentToken];
     }
 
     /************************|
@@ -198,7 +198,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
                 refundToken = IERC20(_productsList[index].paymentToken);
                 refundToken.transfer(account, _productsList[index].price);
                 _popPurchase(account, i);
-                userPaidAmount[account][_productsList[index].paymentToken] -= _productsList[index].price;
+                userTotalPaidAmount[account][_productsList[index].paymentToken] -= _productsList[index].price;
                 break;
             }
         }
@@ -263,7 +263,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
 
         uint256 receiptId = _mint(account, productId, price, paidAt);
         userPurchases[account].push(Purchased(productId, receiptId, paidAt));
-        userPaidAmount[account][paymentToken] += price;
+        userTotalPaidAmount[account][paymentToken] += price;
         emit Paid(account, receiptId, productId, price);
     }
 

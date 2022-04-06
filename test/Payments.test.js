@@ -1,5 +1,6 @@
 const { expect } = require("chai")
 const { BN, expectEvent, expectRevert } = require("@openzeppelin/test-helpers")
+const { ZERO_ADDRESS } = require("@openzeppelin/test-helpers/src/constants")
 const Payment = artifacts.require("contracts/payments/Payments.sol:Payments")
 const ERC20 = artifacts.require("ERC20Mock")
 
@@ -117,17 +118,17 @@ contract("::Payments", async (accounts) => {
         // })
         it("should purchase ID01", async () => {
             expect(await payment.hasPaid(carol)).to.eq(false)
-            // expect(Number(await payment.getPaidAmount(carol))).to.eq(0)
+            // expect(Number(await payment.getTotalPaidAmount(carol))).to.eq(0)
             await payment.payProduct("ID01", { from: carol })
             expect(await payment.hasPaid(carol)).to.eq(true)
             let res = Number(web3.utils.toWei(new BN(1000)))
-            // expect(Number(await payment.getPaidAmount(carol))).to.eq(res)
+            // expect(Number(await payment.getTotalPaidAmount(carol))).to.eq(res)
         })
 
         it("should purchase ID02", async () => {
             await payment.payProduct("ID02", { from: carol })
             let res = Number(web3.utils.toWei(new BN(3000)))
-            // expect(Number(await payment.getPaidAmount(carol))).to.eq(res)
+            // expect(Number(await payment.getTotalPaidAmount(carol))).to.eq(res)
         })
         it("should show contract balance after purchase ID01", async () => {
             let contractBalance = await cred.balanceOf(payment.address, { from: owner })
@@ -206,7 +207,7 @@ contract("::Payments", async (accounts) => {
 
     describe("# PaidAmount", async () => {
         it("should show paid amount from a user", async () => {
-            let paidAmount = await payment.getPaidAmount(carol, cred.address, { from: owner })
+            let paidAmount = await payment.getTotalPaidAmount(carol, cred.address, { from: owner })
             console.log("Carol paid amount:", paidAmount.toString())
         })
     })
@@ -248,5 +249,9 @@ contract("::Payments", async (accounts) => {
         it("should revert transfer", async () => {
             await expectRevert(payment.transferFrom(carol, alice, 2, { from: carol }), "NonTransferrableERC721Token: non transferrable")
         })
+        // check this, allow transfer to address 0x. override the function
+        // it("should transfer to address(0)", async () => {
+        //     await payment.transferFrom(carol, ZERO_ADDRESS, 2, { from: carol })
+        // })
     })
 })
