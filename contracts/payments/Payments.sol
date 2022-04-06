@@ -45,6 +45,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     mapping(address => mapping(address => uint256)) private userTotalPaidAmount;
 
     event Paid(address indexed account, uint256 indexed receiptId, string productId, uint256 amount);
+    event Refund(address indexed account, uint256 indexed receiptId, string productId, uint256 amount);
     event Swept(address indexed operator, address token, address indexed to, uint256 amount);
 
     constructor(
@@ -180,6 +181,8 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
                 refundToken.transfer(account, _productsList[index].price);
                 _popPurchase(account, i);
                 userTotalPaidAmount[account][_productsList[index].paymentToken] -= _productsList[index].price;
+
+                emit Refund(account, receiptId, _productsList[index].productId, _productsList[index].price);
                 break;
             }
         }

@@ -7,8 +7,6 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 interface IReceiptToken is IERC721 {
     function getReceiptIds(address account) external returns (uint256[] memory);
 
-    function hasPaid(address account) external returns (bool);
-
     function getReceiptInfo(uint256 receiptId)
         external
         returns (

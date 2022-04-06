@@ -84,19 +84,6 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
     }
 
     /**
-     * @dev Check if wallet address owns any receipt tokens.
-     * @param account address
-     */
-    function hasPaid(address account) public view override returns (bool) {
-        //this one gets tricky if we wanted to specify a product
-        //it may be easier to have one contract per one product
-        //then we can simply use below logic without using product id
-        //or we can use hasPaid, then follow it up with getReceipts and parse the results
-        //to check for a matching productId
-        return balanceOf(account) > 0;
-    }
-
-    /**
      * @dev Return receipt info from `receiptId`.
      * Requirements:
      * - `receiptId` must exist in receipt pool

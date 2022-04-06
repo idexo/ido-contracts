@@ -144,18 +144,6 @@ contract("::Payments", async (accounts) => {
             contractBalance = await usdc.balanceOf(payment.address, { from: owner })
             expect(contractBalance.toString()).to.eq(web3.utils.toWei(new BN(5000)).toString())
         })
-
-        it("should show receipt balance after purchase ID01", async () => {
-            let receiptBalance = await payment.balanceOf(carol, { from: carol })
-            // console.log("Carol Receipts: ", receiptBalance.toString())
-            let contractBalance = await cred.balanceOf(payment.address, { from: owner })
-            // console.log("Contract CRED Balance:", contractBalance.toString())
-        })
-
-        it("should show receipts by account", async () => {
-            let receipts = await payment.getReceiptIds(carol, { from: carol })
-            console.log("Receipts: ", receipts.toString())
-        })
     })
 
     describe("# openForSale", async () => {
@@ -192,23 +180,42 @@ contract("::Payments", async (accounts) => {
         })
         describe("reverts if", async () => {
             it("change tokenURI by NO-OPERATOR", async () => {
-                await expectRevert(payment.setTokenURI(1, "test", { from: alice }), "Ownable: CALLER_NO_OWNER")
+                await expectRevert(payment.setTokenURI(2, "test", { from: alice }), "Ownable: CALLER_NO_OWNER")
             })
         })
     })
 
     describe("# Refund", async () => {
         it("should show balance before refund ID01", async () => {
-            let beforeBalance = await cred.balanceOf(carol, { from: carol })
-            console.log("Carol Before Refund: ", beforeBalance.toString())
-            let contractBalance = await cred.balanceOf(payment.address, { from: owner })
-            console.log("Contract CRED before Balance:", contractBalance.toString())
+            await cred.balanceOf(carol, { from: carol }).then((res) => {
+                expect(res.toString()).to.eq(web3.utils.toWei(new BN(2000)).toString())
+            })
+
+            await cred.balanceOf(payment.address, { from: owner }).then((res) => {
+                expect(res.toString()).to.eq(web3.utils.toWei(new BN(3000)).toString())
+            })
         })
         it("should refund purchasedProduct from user", async () => {
-            await payment.refund(carol, 1, { from: owner })
-            let receiptBalance = await payment.balanceOf(carol, { from: carol })
-            console.log("Carol Receipts: ", receiptBalance.toString())
+            expectEvent(await payment.refund(carol, 1, { from: owner }), "Refund", {
+                account: carol,
+                receiptId: "1",
+                productId: "ID01",
+                amount: web3.utils.toWei(new BN(1000)).toString()
+            })
+
+            await cred.balanceOf(carol, { from: carol }).then((res) => {
+                expect(res.toString()).to.eq(web3.utils.toWei(new BN(3000)).toString())
+            })
+
+            await cred.balanceOf(payment.address, { from: owner }).then((res) => {
+                expect(res.toString()).to.eq(web3.utils.toWei(new BN(2000)).toString())
+            })
+
+            await payment.balanceOf(carol, { from: carol }).then((res) => {
+                expect(res.toString()).to.eq("1")
+            })
         })
+
         it("should show balance after refund ID01", async () => {
             let afterBalance = await cred.balanceOf(carol, { from: carol })
             console.log("Carol after Refund: ", afterBalance.toString())
