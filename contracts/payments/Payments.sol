@@ -39,7 +39,10 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     mapping(string => uint256) productsIndex;
 
     // User purchases
-    mapping(address => Purchased[]) public purchasedProducts;
+    mapping(address => Purchased[]) public userPurchases;
+
+    // User paid amount address => paymentToken => amount
+    mapping(address => mapping(address => uint256)) private userPaidAmount;
 
     event Paid(address indexed account, uint256 indexed receiptId, string productId, uint256 amount);
     event Swept(address indexed operator, address token, address indexed to, uint256 amount);
@@ -150,7 +153,23 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
      */
     function getPurchased(address account) external view returns (Purchased[] memory purchased) {
         require(account != address(0), "ZERO_ADDRESS");
-        return purchasedProducts[account];
+        return userPurchases[account];
+    }
+
+    /************************|
+    |        Paid Amount     |
+    |_______________________*/
+
+    /**
+     * @dev Make payment to the pool for product.
+     * Requirements:
+     *
+     * - `productId` must be exists
+     * @param account deposit amount.
+     */
+    function getPaidAmount(address account, address paymentToken) external view returns (uint256) {
+        require(account != address(0), "ZERO_ADDRESS");
+        return userPaidAmount[account][paymentToken];
     }
 
     /************************|
@@ -171,26 +190,32 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
 
         _burn(receiptId);
 
-        Purchased[] memory purchases = purchasedProducts[account];
+        Purchased[] memory purchases = userPurchases[account];
+
         for (uint256 i = 0; i < purchases.length; i++) {
             if (purchases[i].receiptId == receiptId) {
                 uint256 index = productsIndex[purchases[i].productId];
                 refundToken = IERC20(_productsList[index].paymentToken);
                 refundToken.transfer(account, _productsList[index].price);
                 _popPurchase(account, i);
+                userPaidAmount[account][_productsList[index].paymentToken] -= _productsList[index].price;
                 break;
             }
         }
     }
 
     /**
-     * @dev Remove the purchase from purchasedProducts.
+     * @dev Remove the purchase from userPurchases.
+
+     // User paid amount
+     mapping(address => mapping(address => uint256));
      *
      * @param from address from
      * @param purchaseIndex receiptId to remove
      */
     function _popPurchase(address from, uint256 purchaseIndex) internal {
-        Purchased[] storage purchases = purchasedProducts[from];
+        Purchased[] storage purchases = userPurchases[from];
+
         if (purchaseIndex != purchases.length - 1) {
             purchases[purchaseIndex] = purchases[purchases.length - 1];
         }
@@ -237,8 +262,8 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         pToken.safeTransferFrom(account, address(this), price);
 
         uint256 receiptId = _mint(account, productId, price, paidAt);
-        purchasedProducts[account].push(Purchased(productId, receiptId, paidAt));
-
+        userPurchases[account].push(Purchased(productId, receiptId, paidAt));
+        userPaidAmount[account][paymentToken] += price;
         emit Paid(account, receiptId, productId, price);
     }
 

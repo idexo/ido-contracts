@@ -137,6 +137,11 @@ contract("::Payments", async (accounts) => {
             await payment.setOpenForSale("ID01", false, { from: owner })
         })
 
+        it("should show receipts by account", async () => {
+            let receipts = await payment.getReceiptIds(carol, { from: carol })
+            console.log("Receipts: ", receipts.toString())
+        })
+
         describe("reverts if", async () => {
             it("product not openForSale", async () => {
                 await expectRevert(payment.payProduct("ID01", { from: alice }), "PRODUCT_UNAVAILABLE")
@@ -192,6 +197,13 @@ contract("::Payments", async (accounts) => {
         })
     })
 
+    describe("# PaidAmount", async () => {
+        it("should show paid amount from a user", async () => {
+            let paidAmount = await payment.getPaidAmount(carol, cred.address, { from: owner })
+            console.log("Carol paid amount:", paidAmount.toString())
+        })
+    })
+
     describe("# Purchased", async () => {
         it("should show purchased products by account", async () => {
             let purchased = await payment.getPurchased(carol, { from: carol })
@@ -199,6 +211,24 @@ contract("::Payments", async (accounts) => {
         })
     })
 
+    describe("# Receipts", async () => {
+        it("should show receipts by account", async () => {
+            let receipts = await payment.getReceiptIds(carol, { from: carol })
+            // console.log("Receipts: ", receipts.toString())
+        })
+
+        it("should get receipt info", async () => {
+            let receiptInfo = await payment.getReceiptInfo(2, { from: carol })
+            // console.log("ReceiptInfo: ", receiptInfo)
+        })
+    })
+
+    describe("# Current Supply", async () => {
+        it("should show current receipts suply", async () => {
+            let supply = await payment.currentSupply({ from: owner })
+            console.log("Supply: ", supply.toString())
+        })
+    })
     describe("# Sweep", async () => {
         it("should sweep funds to another account", async () => {
             balance = await cred.balanceOf(payment.address)
