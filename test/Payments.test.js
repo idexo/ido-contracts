@@ -68,31 +68,31 @@ contract("::Payments", async (accounts) => {
 
         it("should returns a product ID02", async () => {
             let product = await payment.getProduct("ID02")
+            expect(product.length).to.equal(1)
             expect(product[0].productId).to.equal("ID02")
         })
 
-        it("should returns empty product array", async () => {
-            let product = await payment.getProduct("ID04")
-            console.log(product)
+        describe("reverts if", async () => {
+            it("invalid productId", async () => {
+                await expectRevert(payment.getProduct("ID04", { from: alice }), "Payments#getProduct: INVALID_PRODUCT_ID")
+            })
         })
-
-        // describe("reverts if", async () => {
-        //     it("add reward token by NO-OPERATOR", async () => {
-        //         await expectRevert(payment.addRewardToken(usdc.address, { from: alice }), "Operatorable: CALLER_NO_OPERATOR_ROLE")
-        //     })
-        // })
     })
+
     describe("# Payment Balance", async () => {
         before(async () => {
             for (const user of [alice, bob, carol, darren]) {
-                await cred.mint(user, web3.utils.toWei(new BN(3000)))
-                await cred.approve(payment.address, web3.utils.toWei(new BN(3000)), { from: user })
+                await cred.mint(user, web3.utils.toWei(new BN(5000)))
+                await cred.approve(payment.address, web3.utils.toWei(new BN(5000)), { from: user })
+                await usdc.mint(user, web3.utils.toWei(new BN(10000)))
+                await usdc.approve(payment.address, web3.utils.toWei(new BN(10000)), { from: user })
             }
         })
-        it("should get payment balance", async () => {
-            let balance = await cred.balanceOf(carol, { from: carol })
-            // console.log("CRED balance:", balance.toString())
-            // expect(await payment.checkOperator(bob)).to.eq(true)
+        it("should show payment tokens balance", async () => {
+            let balance = await cred.balanceOf(alice, { from: carol })
+            expect(balance.toString()).to.eq(web3.utils.toWei(new BN(5000)).toString())
+            balance = await usdc.balanceOf(bob, { from: carol })
+            expect(balance.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
         })
     })
 

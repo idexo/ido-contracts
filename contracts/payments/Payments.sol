@@ -67,7 +67,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
      * @param paymentToken_ payment token address.
      */
     function addPaymentToken(address paymentToken_) public onlyOperator {
-        require(paymentToken_ != address(0), "Payment#_addPayment: ZERO_ADDRESS");
+        require(paymentToken_ != address(0), "Payments#addPayment: ZERO_ADDRESS");
         _addPaymentToken(paymentToken_);
     }
 
@@ -91,13 +91,13 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         uint256 price_,
         bool openForSale_
     ) external onlyOperator {
-        require(price_ > 0, "Payment#addProduct: ZERO_PRICE");
+        require(price_ > 0, "Payments#addProduct: ZERO_PRICE");
         _addProduct(productId_, paymentToken_, price_, openForSale_);
     }
 
     function setOpenForSale(string memory productId, bool openForSale) external onlyOperator {
         uint256 index = productsIndex[productId];
-        require(index != 0, "INVALID_PRODUCT_ID");
+        require(index != 0, "Payments#setOpenForSale: INVALID_PRODUCT_ID");
 
         _productsList[index].openForSale = openForSale;
     }
@@ -108,14 +108,11 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
 
     function getProduct(string memory productId) external view returns (Product[] memory) {
         uint256 index = productsIndex[productId];
-        if (index == 0) {
-            Product[] memory product = new Product[](0);
-            return product;
-        } else {
-            Product[] memory product = new Product[](1);
-            product[0] = _productsList[index];
-            return product;
-        }
+        require(index != 0, "Payments#getProduct: INVALID_PRODUCT_ID");
+
+        Product[] memory product = new Product[](1);
+        product[0] = _productsList[index];
+        return product;
     }
 
     /************************|
@@ -131,8 +128,8 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
      */
     function payProduct(string memory productId) external override {
         uint256 index = productsIndex[productId];
-        require(index != 0, "INVALID_PRODUCT_ID");
-        require(_productsList[index].openForSale, "PRODUCT_UNAVAILABLE");
+        require(index != 0, "Payments#payProduct: INVALID_PRODUCT_ID");
+        require(_productsList[index].openForSale, "Payments#payProduct: PRODUCT_UNAVAILABLE");
 
         address paymentToken = _productsList[index].paymentToken;
         uint256 price = _productsList[index].price;
@@ -152,7 +149,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
      * @param account deposit amount.
      */
     function getPurchased(address account) external view returns (Purchased[] memory purchased) {
-        require(account != address(0), "ZERO_ADDRESS");
+        require(account != address(0), "Payments#getPurchased: ZERO_ADDRESS");
         return userPurchases[account];
     }
 
@@ -169,7 +166,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
      * @param receiptId deposit amount.
      */
     function refund(address account, uint256 receiptId) external onlyOperator {
-        require(account != address(0), "ZERO_ADDRESS");
+        require(account != address(0), "Payments#refund: ZERO_ADDRESS");
         IERC20 refundToken;
 
         _burn(receiptId);
