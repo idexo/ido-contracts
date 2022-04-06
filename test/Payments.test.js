@@ -132,6 +132,24 @@ contract("::Payments", async (accounts) => {
             let contractBalance = await cred.balanceOf(payment.address, { from: owner })
             // console.log("Contract CRED Balance:", contractBalance.toString())
         })
+
+        it("should change openForSale attribute of product ID01", async () => {
+            await payment.setOpenForSale("ID01", false, { from: owner })
+        })
+
+        describe("reverts if", async () => {
+            it("product not openForSale", async () => {
+                await expectRevert(payment.payProduct("ID01", { from: alice }), "PRODUCT_UNAVAILABLE")
+            })
+        })
+    })
+
+    describe("# OpenForSale", async () => {
+        it("should change openForSale attribute of product ID01", async () => {
+            await payment.setOpenForSale("ID01", false, { from: owner })
+            let product = await payment.getProduct("ID01", { from: carol })
+            console.log(product)
+        })
     })
 
     describe("# Purchased", async () => {

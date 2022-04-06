@@ -92,6 +92,13 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         _addProduct(productId_, paymentToken_, price_, openForSale_);
     }
 
+    function setOpenForSale(string memory productId, bool openForSale) external onlyOperator {
+        uint256 index = productsIndex[productId];
+        require(index != 0, "INVALID_PRODUCT_ID");
+
+        _productsList[index].openForSale = openForSale;
+    }
+
     function getProducts() external view returns (string[] memory) {
         return productsList;
     }
@@ -122,6 +129,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     function payProduct(string memory productId) external override {
         uint256 index = productsIndex[productId];
         require(index != 0, "INVALID_PRODUCT_ID");
+        require(_productsList[index].openForSale, "PRODUCT_UNAVAILABLE");
 
         address paymentToken = _productsList[index].paymentToken;
         uint256 price = _productsList[index].price;
