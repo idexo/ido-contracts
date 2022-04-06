@@ -191,7 +191,6 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
      */
     function _popPurchase(address from, uint256 purchaseIndex) internal {
         Purchased[] storage purchases = purchasedProducts[from];
-
         if (purchaseIndex != purchases.length - 1) {
             purchases[purchaseIndex] = purchases[purchases.length - 1];
         }
