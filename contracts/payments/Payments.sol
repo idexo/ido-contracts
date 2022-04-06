@@ -25,6 +25,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
 
     struct Purchased {
         string productId;
+        uint256 receiptId;
         uint256 purchasedAt;
     }
 
@@ -128,6 +129,22 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         _payProduct(msg.sender, productId, price, paymentToken);
     }
 
+    /************************|
+    |         Purchased      |
+    |_______________________*/
+
+    /**
+     * @dev Make payment to the pool for product.
+     * Requirements:
+     *
+     * - `productId` must be exists
+     * @param account deposit amount.
+     */
+    function getPurchased(address account) external view returns (Purchased[] memory purchased) {
+        require(account != address(0), "ZERO_ADDRESS");
+        return purchasedProducts[account];
+    }
+
     /**
      * @dev Sweep funds
      * Accessible by operators
@@ -165,9 +182,10 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         // Does not work with require
 
         // require(pToken.safeTransferFrom(account, address(this), price), "Payments#_payProduct: TRANSFER_FAILED");
-        pToken.transferFrom(account, address(this), price);
+        pToken.safeTransferFrom(account, address(this), price);
 
         uint256 receiptId = _mint(account, productId, price, paidAt);
+        purchasedProducts[account].push(Purchased(productId, receiptId, paidAt));
 
         emit Paid(account, receiptId, productId, price);
     }

@@ -118,6 +118,10 @@ contract("::Payments", async (accounts) => {
         it("should purchase ID01", async () => {
             await payment.payProduct("ID01", { from: carol })
         })
+
+        it("should purchase ID02", async () => {
+            await payment.payProduct("ID02", { from: carol })
+        })
         it("should show contract balance after purchase ID01", async () => {
             let contractBalance = await cred.balanceOf(payment.address, { from: owner })
             // console.log("Contract CRED Balance:", contractBalance.toString())
@@ -127,6 +131,13 @@ contract("::Payments", async (accounts) => {
             // console.log("Carol Receipts: ", receiptBalance.toString())
             let contractBalance = await cred.balanceOf(payment.address, { from: owner })
             // console.log("Contract CRED Balance:", contractBalance.toString())
+        })
+    })
+
+    describe("# Purchased", async () => {
+        it("should show purchased products by account", async () => {
+            let purchased = await payment.getPurchased(carol, { from: carol })
+            console.log(purchased)
         })
     })
 
