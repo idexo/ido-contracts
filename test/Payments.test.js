@@ -231,6 +231,7 @@ contract("::Payments", async (accounts) => {
             console.log("Supply: ", supply.toString())
         })
     })
+
     describe("# Sweep", async () => {
         it("should sweep funds to another account", async () => {
             balance = await cred.balanceOf(payment.address)
