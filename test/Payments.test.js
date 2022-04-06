@@ -116,7 +116,9 @@ contract("::Payments", async (accounts) => {
         //     // expect(await payment.checkOperator(bob)).to.eq(true)
         // })
         it("should purchase ID01", async () => {
+            expect(await payment.hasPaid(carol)).to.eq(false)
             await payment.payProduct("ID01", { from: carol })
+            expect(await payment.hasPaid(carol)).to.eq(true)
         })
 
         it("should purchase ID02", async () => {
