@@ -238,4 +238,10 @@ contract("::Payments", async (accounts) => {
             await payment.sweep(cred.address, darren, web3.utils.toWei(new BN(1000)), { from: owner })
         })
     })
+
+    describe("# Transfer not allowed", async () => {
+        it("should revert transfer", async () => {
+            await expectRevert(payment.transferFrom(carol, alice, 2, { from: carol }), "NonTransferrableERC721Token: non transferrable")
+        })
+    })
 })

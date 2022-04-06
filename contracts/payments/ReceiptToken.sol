@@ -83,19 +83,6 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
         return payerIds[account];
     }
 
-    // getPaidAmount must consider the different types of paymentTokens
-    /**
-     * @dev Return total paid amount of `account`
-     */
-    function getPaidAmount(address account) external view returns (uint256) {
-        uint256[] memory tokenIds = payerIds[account];
-        uint256 totalPaidAmount;
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            totalPaidAmount += receipts[tokenIds[i]].amount;
-        }
-        return totalPaidAmount;
-    }
-
     /**
      * @dev Check if wallet address owns any receipt tokens.
      * @param account address
@@ -208,6 +195,15 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
         delete receipts[receiptId];
         _popStake(receiptOwner, receiptId);
         _currentSupply--;
+    }
+
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal virtual override(ERC721) {
+        require(from == address(0) || to == address(0), "NonTransferrableERC721Token: non transferrable");
+        super._beforeTokenTransfer(from, to, tokenId);
     }
 
     /**
