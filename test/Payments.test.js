@@ -215,31 +215,43 @@ contract("::Payments", async (accounts) => {
                 expect(res.toString()).to.eq("1")
             })
         })
-
-        it("should show balance after refund ID01", async () => {
-            let afterBalance = await cred.balanceOf(carol, { from: carol })
-            console.log("Carol after Refund: ", afterBalance.toString())
-            let contractBalance = await cred.balanceOf(payment.address, { from: owner })
-            console.log("Contract CRED after Balance:", contractBalance.toString())
-        })
     })
 
     describe("# Purchased", async () => {
-        it("should show purchased products by account", async () => {
-            let purchased = await payment.getPurchased(carol, { from: carol })
-            console.log("Carol purchases: ", purchased)
+        it("should show purchased products by carol", async () => {
+            await payment.getPurchased(carol, { from: carol }).then((res) => {
+                expect(res.length).to.eq(1)
+                expect(res[0].productId).to.eq("ID02")
+            })
+        })
+        it("should show purchased products by bob", async () => {
+            await payment.getPurchased(bob, { from: bob }).then((res) => {
+                expect(res.length).to.eq(1)
+                expect(res[0].productId).to.eq("ID03")
+            })
         })
     })
 
     describe("# Receipts", async () => {
         it("should show receipts by account", async () => {
-            let receipts = await payment.getReceiptIds(carol, { from: carol })
-            // console.log("Receipts: ", receipts.toString())
+            await payment.payProduct("ID03", { from: carol })
+            await payment.getReceiptIds(carol, { from: carol }).then((res) => {
+                expect(res.length).to.eq(2)
+                expect(res[0].toString()).to.eq("2")
+                expect(res[1].toString()).to.eq("4")
+            })
         })
 
         it("should get receipt info", async () => {
-            let receiptInfo = await payment.getReceiptInfo(2, { from: carol })
-            // console.log("ReceiptInfo: ", receiptInfo)
+            await payment.getReceiptInfo(2, { from: carol }).then((res) => {
+                expect(res[0]).to.eq("ID02")
+                expect(res[1].toString()).to.eq(web3.utils.toWei(new BN(2000)).toString())
+            })
+
+            await payment.getReceiptInfo(3, { from: bob }).then((res) => {
+                expect(res[0]).to.eq("ID03")
+                expect(res[1].toString()).to.eq(web3.utils.toWei(new BN(5000)).toString())
+            })
         })
     })
 
