@@ -245,6 +245,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         uint256 receiptId = _mint(account, productId, price, paidAt);
         userPurchases[account].push(Purchased(productId, receiptId, paidAt));
         userTotalPaidAmount[account][paymentToken] += price;
+
         emit Paid(account, receiptId, productId, price);
     }
 

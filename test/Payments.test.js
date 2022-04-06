@@ -60,12 +60,10 @@ contract("::Payments", async (accounts) => {
         it("should add a new product 3", async () => {
             await payment.addProduct("ID03", usdc.address, web3.utils.toWei(new BN(5000)), true, { from: bob })
         })
-
         it("should get all productIds", async () => {
             let products = await payment.getProducts()
             expect(products.length).to.eq(3)
         })
-
         it("should returns a product ID02", async () => {
             let product = await payment.getProduct("ID02")
             expect(product.length).to.equal(1)
@@ -88,6 +86,7 @@ contract("::Payments", async (accounts) => {
                 await usdc.approve(payment.address, web3.utils.toWei(new BN(10000)), { from: user })
             }
         })
+
         it("should show payment tokens balance", async () => {
             let balance = await cred.balanceOf(alice, { from: carol })
             expect(balance.toString()).to.eq(web3.utils.toWei(new BN(5000)).toString())
@@ -97,32 +96,55 @@ contract("::Payments", async (accounts) => {
     })
 
     describe("# Purchase", async () => {
-        // it("should get payment balance", async () => {
-        //     let balance = await payment.checkPaymentBalance(cred.address, { from: carol })
-        //     console.log("CRED balance:", balance.toString())
-        //     // expect(await payment.checkOperator(bob)).to.eq(true)
-        // })
-
-        // it("should get product price", async () => {
-        //     let productPrice = await payment.getPrice("ID01", { from: carol })
-        //     console.log("Price:", productPrice.toString())
-        //     // expect(await payment.checkOperator(bob)).to.eq(true)
-        // })
         it("should purchase ID01", async () => {
-            expect(await payment.hasPaid(carol)).to.eq(false)
-            await payment.payProduct("ID01", { from: carol })
-            expect(await payment.hasPaid(carol)).to.eq(true)
-            let res = Number(web3.utils.toWei(new BN(1000)))
+            let receiptBalance = await payment.balanceOf(carol)
+            expect(receiptBalance.toString()).to.eq("0")
+            expectEvent(await payment.payProduct("ID01", { from: carol }), "Paid", {
+                account: carol,
+                receiptId: "1",
+                productId: "ID01",
+                amount: web3.utils.toWei(new BN(1000)).toString()
+            })
+            receiptBalance = await payment.balanceOf(carol)
+            expect(receiptBalance.toString()).to.eq("1")
         })
 
         it("should purchase ID02", async () => {
-            await payment.payProduct("ID02", { from: carol })
-            let res = Number(web3.utils.toWei(new BN(3000)))
+            let receiptBalance = await payment.balanceOf(carol)
+            expect(receiptBalance.toString()).to.eq("1")
+            expectEvent(await payment.payProduct("ID02", { from: carol }), "Paid", {
+                account: carol,
+                receiptId: "2",
+                productId: "ID02",
+                amount: web3.utils.toWei(new BN(2000)).toString()
+            })
+            receiptBalance = await payment.balanceOf(carol)
+            expect(receiptBalance.toString()).to.eq("2")
         })
-        it("should show contract balance after purchase ID01", async () => {
+
+        it("should purchase ID03", async () => {
+            let receiptBalance = await payment.balanceOf(bob)
+            expect(receiptBalance.toString()).to.eq("0")
+            await payment.payProduct("ID03", { from: bob })
+            receiptBalance = await payment.balanceOf(bob)
+            expect(receiptBalance.toString()).to.eq("1")
+        })
+
+        it("should show users balance after purchases", async () => {
+            let userBalance = await cred.balanceOf(carol, { from: carol })
+            expect(userBalance.toString()).to.eq(web3.utils.toWei(new BN(2000)).toString())
+
+            userBalance = await usdc.balanceOf(bob, { from: owner })
+            expect(userBalance.toString()).to.eq(web3.utils.toWei(new BN(5000)).toString())
+        })
+        it("should show contract balance after purchases", async () => {
             let contractBalance = await cred.balanceOf(payment.address, { from: owner })
-            // console.log("Contract CRED Balance:", contractBalance.toString())
+            expect(contractBalance.toString()).to.eq(web3.utils.toWei(new BN(3000)).toString())
+
+            contractBalance = await usdc.balanceOf(payment.address, { from: owner })
+            expect(contractBalance.toString()).to.eq(web3.utils.toWei(new BN(5000)).toString())
         })
+
         it("should show receipt balance after purchase ID01", async () => {
             let receiptBalance = await payment.balanceOf(carol, { from: carol })
             // console.log("Carol Receipts: ", receiptBalance.toString())
@@ -130,19 +152,28 @@ contract("::Payments", async (accounts) => {
             // console.log("Contract CRED Balance:", contractBalance.toString())
         })
 
-        it("should change openForSale attribute of product ID01", async () => {
-            await payment.setOpenForSale("ID01", false, { from: owner })
-        })
-
         it("should show receipts by account", async () => {
             let receipts = await payment.getReceiptIds(carol, { from: carol })
             console.log("Receipts: ", receipts.toString())
         })
+    })
+
+    describe("# openForSale", async () => {
+        it("should change openForSale attribute of product ID01", async () => {
+            await payment.setOpenForSale("ID01", false, { from: owner })
+        })
 
         describe("reverts if", async () => {
             it("product not openForSale", async () => {
-                await expectRevert(payment.payProduct("ID01", { from: alice }), "PRODUCT_UNAVAILABLE")
+                await expectRevert(payment.payProduct("ID01", { from: alice }), "Payments#payProduct: PRODUCT_UNAVAILABLE")
             })
+        })
+    })
+
+    describe("# Current Supply", async () => {
+        it("should show current receipts suply", async () => {
+            let supply = await payment.currentSupply({ from: owner })
+            expect(supply.toString()).to.eq("3")
         })
     })
 
@@ -186,22 +217,10 @@ contract("::Payments", async (accounts) => {
         })
     })
 
-    describe("# OpenForSale", async () => {
-        it("should change openForSale attribute of product ID01", async () => {
-            await payment.setOpenForSale("ID01", false, { from: owner })
-            let product = await payment.getProduct("ID01", { from: carol })
-            // console.log(product)
-        })
-    })
-
-    describe("# PaidAmount", async () => {
-        it("should show paid amount from a user", async () => {})
-    })
-
     describe("# Purchased", async () => {
         it("should show purchased products by account", async () => {
             let purchased = await payment.getPurchased(carol, { from: carol })
-            // console.log(purchased)
+            console.log("Carol purchases: ", purchased)
         })
     })
 
@@ -214,13 +233,6 @@ contract("::Payments", async (accounts) => {
         it("should get receipt info", async () => {
             let receiptInfo = await payment.getReceiptInfo(2, { from: carol })
             // console.log("ReceiptInfo: ", receiptInfo)
-        })
-    })
-
-    describe("# Current Supply", async () => {
-        it("should show current receipts suply", async () => {
-            let supply = await payment.currentSupply({ from: owner })
-            console.log("Supply: ", supply.toString())
         })
     })
 
