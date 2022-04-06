@@ -30,7 +30,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     }
 
     // Products
-    Product[] private _productsList;
+    Product[] private _products;
 
     // Products Ids List
     string[] public productsList;
@@ -52,7 +52,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         address paymentToken_
     ) ReceiptToken(receiptTokenName_, receiptTokenSymbol_, receiptTokenBASEUri_) {
         paymentTokens[paymentToken_] = IERC20(paymentToken_);
-        _productsList.push(Product("DEFAULT", address(0), 0, false, 0));
+        _products.push(Product("DEFAULT", address(0), 0, false, 0));
         deployedAt = block.timestamp;
     }
 
@@ -97,7 +97,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         uint256 index = productsIndex[productId];
         require(index != 0, "Payments#setOpenForSale: INVALID_PRODUCT_ID");
 
-        _productsList[index].openForSale = openForSale;
+        _products[index].openForSale = openForSale;
     }
 
     function getProducts() external view returns (string[] memory) {
@@ -109,7 +109,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         require(index != 0, "Payments#getProduct: INVALID_PRODUCT_ID");
 
         Product[] memory product = new Product[](1);
-        product[0] = _productsList[index];
+        product[0] = _products[index];
         return product;
     }
 
@@ -127,10 +127,10 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     function payProduct(string memory productId) external override {
         uint256 index = productsIndex[productId];
         require(index != 0, "Payments#payProduct: INVALID_PRODUCT_ID");
-        require(_productsList[index].openForSale, "Payments#payProduct: PRODUCT_UNAVAILABLE");
+        require(_products[index].openForSale, "Payments#payProduct: PRODUCT_UNAVAILABLE");
 
-        address paymentToken = _productsList[index].paymentToken;
-        uint256 price = _productsList[index].price;
+        address paymentToken = _products[index].paymentToken;
+        uint256 price = _products[index].price;
 
         _payProduct(msg.sender, productId, price, paymentToken);
     }
@@ -174,11 +174,11 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         for (uint256 i = 0; i < purchases.length; i++) {
             if (purchases[i].receiptId == receiptId) {
                 uint256 index = productsIndex[purchases[i].productId];
-                refundToken = IERC20(_productsList[index].paymentToken);
-                refundToken.transfer(account, _productsList[index].price);
+                refundToken = IERC20(_products[index].paymentToken);
+                refundToken.transfer(account, _products[index].price);
                 _popPurchase(account, i);
 
-                emit Refund(account, receiptId, _productsList[index].productId, _productsList[index].price);
+                emit Refund(account, receiptId, _products[index].productId, _products[index].price);
                 break;
             }
         }
@@ -253,9 +253,9 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         uint256 price,
         bool openForSale
     ) internal virtual {
-        _productsList.push(Product(productId, paymentToken, price, openForSale, block.timestamp));
+        _products.push(Product(productId, paymentToken, price, openForSale, block.timestamp));
         productsList.push(productId);
-        productsIndex[productId] = _productsList.length - 1;
+        productsIndex[productId] = _products.length - 1;
     }
 
     function _addPaymentToken(address paymentToken_) internal virtual {
