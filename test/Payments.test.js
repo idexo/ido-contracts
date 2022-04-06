@@ -144,6 +144,26 @@ contract("::Payments", async (accounts) => {
         })
     })
 
+    describe("# URI", async () => {
+        it("should change tokenURI", async () => {
+            await payment.setTokenURI(1, "test", { from: owner }),
+                await payment.tokenURI(1).then((res) => {
+                    expect(res.toString()).to.eq(BASE_URI + "test")
+                })
+        })
+        it("should change baseURI", async () => {
+            await payment.setBaseURI("http://newdomain/", { from: owner }),
+                await payment.baseURI().then((res) => {
+                    expect(res.toString()).to.eq("http://newdomain/")
+                })
+        })
+        describe("reverts if", async () => {
+            it("change tokenURI by NO-OPERATOR", async () => {
+                await expectRevert(payment.setTokenURI(1, "test", { from: alice }), "Ownable: CALLER_NO_OWNER")
+            })
+        })
+    })
+
     describe("# Refund", async () => {
         it("should show balance before refund ID01", async () => {
             let beforeBalance = await cred.balanceOf(carol, { from: carol })
