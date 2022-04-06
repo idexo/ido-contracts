@@ -17,21 +17,18 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
     // current supply
     uint256 private _currentSupply;
 
-    uint256 public constant multiplierDenominator = 100;
-
     // Base NFT URI
     string public baseURI;
 
     struct Receipt {
+        string productId;
         uint256 amount;
         uint256 paidAt;
-        uint256 productId;
     }
     // receipt id => receipt info
     mapping(uint256 => Receipt) public override receipts;
     // receipt wallet => receipt id array
     mapping(address => uint256[]) public override payerIds;
-
 
     constructor(
         string memory name_,
@@ -90,7 +87,7 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
      * @dev Return total paid amount of `account`
      */
     function getPaidAmount(address account) external view returns (uint256) {
-        uint256[] memory receiptIds = receiptIds[account];
+        uint256[] memory receiptIds = payerIds[account];
         uint256 totalPaidAmount;
         for (uint256 i = 0; i < receiptIds.length; i++) {
             totalPaidAmount += receipts[receiptIds[i]].amount;
@@ -112,27 +109,24 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
     }
 
     /**
-     * @dev Return recceipt info from `receiptId`.
+     * @dev Return receipt info from `receiptId`.
      * Requirements:
-     *
      * - `receiptId` must exist in receipt pool
-     * @param stakeId uint256
+     * @param receiptId uint256
      */
     function getReceiptInfo(uint256 receiptId)
         public
         view
         override
         returns (
-            uint256,
+            string memory,
             uint256,
             uint256
         )
     {
         require(_exists(receiptId), "ReceiptToken#getReceiptInfo: RECEIPT_NOT_FOUND");
-        return (receipts[receiptId].amount, receipts[receiptId].paiddAt, receipts[receiptId].productId);
+        return (receipts[receiptId].productId, receipts[receiptId].amount, receipts[receiptId].paidAt);
     }
-
-    
 
     function currentSupply() public view returns (uint256) {
         return _currentSupply;
@@ -150,8 +144,7 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
         return baseURI;
     }
 
-    
-     /**
+    /**
      * @dev Remove the given receipt from receiptIds.
      *
      * @param from address from
@@ -177,27 +170,27 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
      * - `account` must not be zero address, check ERC721 {_mint}
      * - `amount` must not be zero
      * @param account address of recipient.
+     * @param productId id of product.
      * @param amount payment amount.
-     * @param paiddAt timestamp when payment amount was paid.
+     * @param paidAt timestamp when payment amount was paid.
      */
     function _mint(
         address account,
+        string memory productId,
         uint256 amount,
-        uint256 depositedAt,
-        uint256 timestamplock
+        uint256 paidAt
     ) internal virtual returns (uint256) {
-        require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
-        tokenIds++;
+        require(amount > 0, "ReceiptToken#_mint: INVALID_AMOUNT");
+        receiptIds++;
         _currentSupply++;
-        super._mint(account, tokenIds);
-        Stake storage newStake = stakes[tokenIds];
-        newStake.amount = amount;
-        newStake.multiplier = tokenIds.multiplier();
-        newStake.depositedAt = depositedAt;
-        newStake.timestamplock = timestamplock;
-        stakerIds[account].push(tokenIds);
+        super._mint(account, receiptIds);
+        Receipt storage newReceipt = receipts[receiptIds];
+        newReceipt.amount = amount;
+        newReceipt.productId = productId;
+        newReceipt.paidAt = paidAt;
+        payerIds[account].push(receiptIds);
 
-        return tokenIds;
+        return receiptIds;
     }
 
     /**
@@ -211,12 +204,9 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
         require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
         address stakeOwner = ownerOf(stakeId);
         super._burn(stakeId);
-        delete stakes[stakeId];
+        delete receipts[stakeId];
         _currentSupply--;
-        
     }
-
-   
 
     /**
      * @dev Transfers `receiptId` from `from` to `to`.
@@ -229,7 +219,7 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
      *
      * @param from address from
      * @param to address to
-     * @param tokenId tokenId to transfer
+     * @param receiptId tokenId to transfer
      */
     function _transfer(
         address from,
@@ -238,6 +228,6 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
     ) internal override {
         super._transfer(from, to, receiptId);
         _popStake(from, receiptId);
-        receiptIds[to].push(receiptId);
+        payerIds[to].push(receiptId);
     }
 }

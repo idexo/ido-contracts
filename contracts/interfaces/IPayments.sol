@@ -2,9 +2,9 @@
 
 pragma solidity 0.8.4;
 
-import "./IStakeTokenMultipleRewards.sol";
+import "./IReceiptToken.sol";
 
-interface IPayments is IReceipttoken {
+interface IPayments is IReceiptToken {
     function payProduct(
         uint256 amount,
         uint256 productId
