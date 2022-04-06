@@ -196,7 +196,7 @@ contract("::Payments", async (accounts) => {
             })
         })
         it("should refund purchasedProduct from user", async () => {
-            expectEvent(await payment.refund(carol, 1, { from: owner }), "Refund", {
+            expectEvent(await payment.refund(1, { from: owner }), "Refund", {
                 account: carol,
                 receiptId: "1",
                 productId: "ID01",
@@ -232,6 +232,18 @@ contract("::Payments", async (accounts) => {
         })
     })
 
+    describe("# Product Price", async () => {
+        it("should update product price", async () => {
+            await payment.setPrice("ID03", web3.utils.toWei(new BN(7000)), { from: owner })
+        })
+
+        describe("reverts if", async () => {
+            it("sweep by NO-OPERATOR", async () => {
+                await expectRevert(payment.setPrice("ID03", web3.utils.toWei(new BN(500)), { from: darren }), "Operatorable: CALLER_NO_OPERATOR_ROLE")
+            })
+        })
+    })
+
     describe("# Receipts", async () => {
         it("should show receipts by account", async () => {
             await payment.payProduct("ID03", { from: carol })
@@ -262,7 +274,7 @@ contract("::Payments", async (accounts) => {
             })
 
             await usdc.balanceOf(payment.address, { from: owner }).then((res) => {
-                expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
+                expect(res.toString()).to.eq(web3.utils.toWei(new BN(12000)).toString())
             })
 
             expectEvent(await payment.sweep(cred.address, darren, web3.utils.toWei(new BN(2000)), { from: owner }), "Swept", {
@@ -272,23 +284,23 @@ contract("::Payments", async (accounts) => {
                 amount: web3.utils.toWei(new BN(2000)).toString()
             })
 
-            expectEvent(await payment.sweep(usdc.address, darren, web3.utils.toWei(new BN(10000)), { from: owner }), "Swept", {
+            expectEvent(await payment.sweep(usdc.address, darren, web3.utils.toWei(new BN(12000)), { from: owner }), "Swept", {
                 operator: owner,
                 token: usdc.address,
                 to: darren,
-                amount: web3.utils.toWei(new BN(10000)).toString()
+                amount: web3.utils.toWei(new BN(12000)).toString()
             })
         })
         describe("reverts if", async () => {
             it("sweep by NO-OPERATOR", async () => {
                 await expectRevert(
-                    payment.sweep(usdc.address, darren, web3.utils.toWei(new BN(10000)), { from: carol }),
+                    payment.sweep(usdc.address, darren, web3.utils.toWei(new BN(12000)), { from: carol }),
                     "Operatorable: CALLER_NO_OPERATOR_ROLE"
                 )
             })
 
             it("no funds for refund", async () => {
-                await expectRevert(payment.refund(bob, 3, { from: owner }), "ERC20: transfer amount exceeds balance")
+                await expectRevert(payment.refund(3, { from: owner }), "ERC20: transfer amount exceeds balance")
             })
         })
     })

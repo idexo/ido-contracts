@@ -26,6 +26,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     struct Purchased {
         string productId;
         uint256 receiptId;
+        uint256 amount;
         uint256 purchasedAt;
     }
 
@@ -100,6 +101,13 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         _products[index].openForSale = openForSale;
     }
 
+    function setPrice(string memory productId_, uint256 newPrice_) external onlyOperator {
+        uint256 index = productsIndex[productId_];
+
+        if (index == 0) return;
+        _products[index].price = newPrice_;
+    }
+
     function getProducts() external view returns (string[] memory) {
         return productsList;
     }
@@ -160,25 +168,25 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
      * Requirements:
      *
      * - `account` must be not zero
-     * @param account deposit amount.
      * @param receiptId deposit amount.
      */
-    function refund(address account, uint256 receiptId) external onlyOperator {
-        require(account != address(0), "Payments#refund: ZERO_ADDRESS");
+    function refund(uint256 receiptId) external onlyOperator {
+        address reimbursed = ownerOf(receiptId);
+        // require(account != address(0), "Payments#refund: ZERO_ADDRESS");
         IERC20 refundToken;
 
         _burn(receiptId);
 
-        Purchased[] memory purchases = userPurchases[account];
+        Purchased[] memory purchases = userPurchases[reimbursed];
 
         for (uint256 i = 0; i < purchases.length; i++) {
             if (purchases[i].receiptId == receiptId) {
                 uint256 index = productsIndex[purchases[i].productId];
                 refundToken = IERC20(_products[index].paymentToken);
-                refundToken.transfer(account, _products[index].price);
-                _popPurchase(account, i);
+                refundToken.transfer(reimbursed, purchases[i].amount);
+                _popPurchase(reimbursed, i);
 
-                emit Refund(account, receiptId, _products[index].productId, _products[index].price);
+                emit Refund(reimbursed, receiptId, _products[index].productId, purchases[i].amount);
                 break;
             }
         }
@@ -242,7 +250,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         pToken.safeTransferFrom(account, address(this), price);
 
         uint256 receiptId = _mint(account, productId, price, paidAt);
-        userPurchases[account].push(Purchased(productId, receiptId, paidAt));
+        userPurchases[account].push(Purchased(productId, receiptId, price, paidAt));
 
         emit Paid(account, receiptId, productId, price);
     }
