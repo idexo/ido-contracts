@@ -133,8 +133,6 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
         return _currentSupply;
     }
 
-
-
     /*************************|
     |   Private Functions     |
     |________________________*/
@@ -188,8 +186,8 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
         _currentSupply++;
         super._mint(account, receiptIds);
         Receipt storage newReceipt = receipts[receiptIds];
-        newReceipt.amount = amount;
         newReceipt.productId = productId;
+        newReceipt.amount = amount;
         newReceipt.paidAt = paidAt;
         payerIds[account].push(receiptIds);
 
@@ -233,5 +231,4 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
         _popStake(from, receiptId);
         payerIds[to].push(receiptId);
     }
-
 }

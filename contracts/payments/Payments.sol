@@ -47,6 +47,8 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         address paymentToken_
     ) ReceiptToken(receiptTokenName_, receiptTokenSymbol_, receiptTokenBASEUri_) {
         paymentTokens[paymentToken_] = IERC20(paymentToken_);
+        _productsList.push(Product({ productId: "NOT_FOUND", paymentToken: address(0), price: 0, openForSale: false, insertedAt: 0 }));
+        deployedAt = block.timestamp;
     }
 
     /*************************|
@@ -67,14 +69,14 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     |________________________*/
 
     /**
-     * @dev Deposit reward to the pool.
+     * @dev Add a new product.
      * Requirements:
      *
-     * - `amount` must not be zero
-     * @param productId_ deposit amount.
-     * @param paymentToken_ deposit amount.
-     * @param price_ reward token address
-     * @param openForSale_ reward token address
+     * - `price` must not be zero
+     * @param productId_ productId.
+     * @param paymentToken_ address paymentToken.
+     * @param price_ price in wei, considering the token decimals
+     * @param openForSale_ product available
      */
     function addProduct(
         string memory productId_,
@@ -86,6 +88,10 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         _addProduct(productId_, paymentToken_, price_, openForSale_);
     }
 
+    function getProductList() external view returns (Product[] memory) {
+        return _productsList;
+    }
+
     /************************|
     |          Payment       |
     |_______________________*/
@@ -94,11 +100,17 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
      * @dev Make payment to the pool for product.
      * Requirements:
      *
-     * - `amount` must not be zero
-     * @param amount deposit amount.
+     * - `productId` must be exists
+     * @param productId deposit amount.
      */
-    function payProduct(string memory productId, uint256 amount) external override {
-        _payProduct(msg.sender, productId, amount);
+    function payProduct(string memory productId) external override {
+        uint256 index = productsIndex[productId];
+        require(index != 0, "INVALID_PRODUCT_ID");
+
+        address paymentToken = _productsList[index].paymentToken;
+        uint256 price = _productsList[index].price;
+
+        _payProduct(msg.sender, productId, price, paymentToken);
     }
 
     /**
@@ -123,28 +135,28 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     /**
      * @dev Deposit stake to the pool.
      * @param account address of recipient.
-     * @param amount deposit amount.
+     * @param price deposit amount.
      */
     function _payProduct(
         address account,
         string memory productId,
-        uint256 amount
+        uint256 price,
+        address paymentToken
     ) internal virtual nonReentrant {
+        IERC20 pToken = IERC20(paymentToken);
         uint256 paidAt = block.timestamp;
-        uint256 receiptId = _mint(account, productId, amount, paidAt);
         // check this require
-        // require(paymentToken.safeTransferFrom(account, address(this), amount), "Payments#_payProduct: TRANSFER_FAILED");
+        // it seems that safeTransferFrom already verifies the correct execution of the transfer.
+        // Does not work with require
 
-        emit Paid(account, receiptId, productId, amount);
+        // require(pToken.safeTransferFrom(account, address(this), price), "Payments#_payProduct: TRANSFER_FAILED");
+        pToken.safeTransferFrom(account, address(this), price);
+
+        uint256 receiptId = _mint(account, productId, price, paidAt);
+
+        emit Paid(account, receiptId, productId, price);
     }
 
-    /**
-     * @dev Deposit reward to the pool.
-     * @param price deposit aproductName_  price_
-     * @param productId deposit aproductName_  price_
-     * @param paymentToken deposit aproductName_  price_
-     * @param openForSale deposit aproductName_  price_
-     */
     function _addProduct(
         string memory productId,
         address paymentToken,
@@ -157,10 +169,6 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         productsIndex[productId] = _productsList.length - 1;
     }
 
-    /**
-     * @dev Add new payment token.
-     * @param paymentToken_ payment token address.
-     */
     function _addPaymentToken(address paymentToken_) internal virtual {
         paymentTokens[paymentToken_] = IERC20(paymentToken_);
     }
