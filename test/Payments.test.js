@@ -44,7 +44,7 @@ contract("::Payments", async (accounts) => {
             await payment.addPaymentToken(usdc.address, { from: owner })
             // expect(await payment.checkOperator(alice)).to.eq(true)
         })
-        
+
         // describe("reverts if", async () => {
         //     it("add operator by NO-OWNER", async () => {
         //         await expectRevert(payment.addOperator(bob, { from: alice }), "Ownable: CALLER_NO_OWNER")
@@ -129,6 +129,13 @@ contract("::Payments", async (accounts) => {
             // console.log("Carol Receipts: ", receiptBalance.toString())
             let contractBalance = await cred.balanceOf(payment.address, { from: owner })
             // console.log("Contract CRED Balance:", contractBalance.toString())
+        })
+    })
+
+    describe("# Sweep", async () => {
+        it("should sweep funds to another account", async () => {
+            balance = await cred.balanceOf(payment.address)
+            await payment.sweep(cred.address, darren, web3.utils.toWei(new BN(1000)), { from: owner })
         })
     })
 })
