@@ -157,22 +157,6 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     }
 
     /************************|
-    |    Total Paid Amount   |
-    |_______________________*/
-
-    /**
-     * @dev Make payment to the pool for product.
-     * Requirements:
-     *
-     * - `productId` must be exists
-     * @param account deposit amount.
-     */
-    function getTotalPaidAmount(address account, address paymentToken) external view returns (uint256) {
-        require(account != address(0), "ZERO_ADDRESS");
-        return userTotalPaidAmount[account][paymentToken];
-    }
-
-    /************************|
     |          Refund        |
     |_______________________*/
 
