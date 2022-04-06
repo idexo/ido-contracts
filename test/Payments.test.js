@@ -75,16 +75,14 @@ contract("::Payments", async (accounts) => {
             let productOne = await payment.getProduct("ID01")
             console.log(productOne)
         })
-        // it("should remove a product", async () => {
-        //     await payment.remProduct("Product two", { from: bob })
-        // })
-        // it("should get products", async () => {
-        //     let products = await payment.getProducts()
-        //     console.log(products)
+        it("should returns empty product array", async () => {
+            let products = await payment.getProducts()
+            console.log(products)
 
-        //     // let productOne = await payment.getProduct("Product two")
-        //     // console.log(productOne)
-        // })
+            let product = await payment.getProduct("ID03")
+            console.log(product)
+        })
+
         // describe("reverts if", async () => {
         //     it("add reward token by NO-OPERATOR", async () => {
         //         await expectRevert(payment.addRewardToken(usdc.address, { from: alice }), "Operatorable: CALLER_NO_OPERATOR_ROLE")
