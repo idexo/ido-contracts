@@ -77,10 +77,9 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     /**
      * @dev Add a new product.
      * Requirements:
-     *
-     * - `price` must not be zero
-     * @param productId_ productId.
-     * @param paymentToken_ address paymentToken.
+     * - `price_` must not be zero
+     * @param productId_ productId
+     * @param paymentToken_ address paymentToken
      * @param price_ price in wei, considering the token decimals
      * @param openForSale_ product available
      */
@@ -94,28 +93,50 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         _addProduct(productId_, paymentToken_, price_, openForSale_);
     }
 
-    function setOpenForSale(string memory productId, bool openForSale) external onlyOperator {
-        uint256 index = productsIndex[productId];
+    /**
+     * @dev Product sale status.
+     * Requirements:
+     * - `productId_` must be exists
+     * @param productId_ productId.
+     * @param openForSale_ product available for sale
+     */
+    function setOpenForSale(string memory productId_, bool openForSale_) external onlyOperator {
+        uint256 index = productsIndex[productId_];
         require(index != 0, "Payments#setOpenForSale: INVALID_PRODUCT_ID");
-
-        _products[index].openForSale = openForSale;
+        _products[index].openForSale = openForSale_;
     }
 
+    /**
+     * @dev Set new product price.
+     * Requirements:
+     * - `productId_` must be exists
+     * @param productId_ productId.
+     * @param newPrice_ product available
+     */
     function setPrice(string memory productId_, uint256 newPrice_) external onlyOperator {
         uint256 index = productsIndex[productId_];
-
-        if (index == 0) return;
+        require(index != 0, "Payments#setPrice: INVALID_PRODUCT_ID");
         _products[index].price = newPrice_;
     }
 
+    /**
+     * @dev Get ProductIds list.
+     * Return:
+     * - array of productIds
+     */
     function getProducts() external view returns (string[] memory) {
         return productsList;
     }
 
-    function getProduct(string memory productId) external view returns (Product[] memory) {
-        uint256 index = productsIndex[productId];
+    /**
+     * @dev Get especific product details.
+     * Requirements:
+     * - `productId_` must be exists
+     * @param productId_ productId.
+     */
+    function getProduct(string memory productId_) external view returns (Product[] memory) {
+        uint256 index = productsIndex[productId_];
         require(index != 0, "Payments#getProduct: INVALID_PRODUCT_ID");
-
         Product[] memory product = new Product[](1);
         product[0] = _products[index];
         return product;
@@ -128,31 +149,27 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     /**
      * @dev Make payment to the pool for product.
      * Requirements:
-     *
      * - `productId` must be exists
+     * - `openForSale` must be true
      * @param productId deposit amount.
      */
     function payProduct(string memory productId) external override {
         uint256 index = productsIndex[productId];
         require(index != 0, "Payments#payProduct: INVALID_PRODUCT_ID");
         require(_products[index].openForSale, "Payments#payProduct: PRODUCT_UNAVAILABLE");
-
-        address paymentToken = _products[index].paymentToken;
-        uint256 price = _products[index].price;
-
-        _payProduct(msg.sender, productId, price, paymentToken);
+        _payProduct(msg.sender, productId, _products[index].price, _products[index].paymentToken);
     }
 
     /************************|
-    |         Purchased      |
+    |       Purchased        |
     |_______________________*/
 
     /**
-     * @dev Make payment to the pool for product.
+     * @dev Return user purchases.
      * Requirements:
      *
-     * - `productId` must be exists
-     * @param account deposit amount.
+     * - `account` must not be 0x
+     * @param account address of buyer.
      */
     function getPurchased(address account) external view returns (Purchased[] memory purchased) {
         require(account != address(0), "Payments#getPurchased: ZERO_ADDRESS");
@@ -167,47 +184,15 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
      * @dev Make refund.
      * Requirements:
      *
-     * - `account` must be not zero
-     * @param receiptId deposit amount.
+     * - `receiptId` must be exists
+     * - `reimbursed` must not be 0x
+     * @param receiptId_ the receiptId for refund.
      */
-    function refund(uint256 receiptId) external onlyOperator {
-        address reimbursed = ownerOf(receiptId);
-        // require(account != address(0), "Payments#refund: ZERO_ADDRESS");
-        IERC20 refundToken;
-
-        _burn(receiptId);
-
-        Purchased[] memory purchases = userPurchases[reimbursed];
-
-        for (uint256 i = 0; i < purchases.length; i++) {
-            if (purchases[i].receiptId == receiptId) {
-                uint256 index = productsIndex[purchases[i].productId];
-                refundToken = IERC20(_products[index].paymentToken);
-                refundToken.transfer(reimbursed, purchases[i].amount);
-                _popPurchase(reimbursed, i);
-
-                emit Refund(reimbursed, receiptId, _products[index].productId, purchases[i].amount);
-                break;
-            }
-        }
-    }
-
-    /**
-     * @dev Remove the purchase from userPurchases.
-
-     // User paid amount
-     mapping(address => mapping(address => uint256));
-     *
-     * @param from address from
-     * @param purchaseIndex receiptId to remove
-     */
-    function _popPurchase(address from, uint256 purchaseIndex) internal {
-        Purchased[] storage purchases = userPurchases[from];
-
-        if (purchaseIndex != purchases.length - 1) {
-            purchases[purchaseIndex] = purchases[purchases.length - 1];
-        }
-        purchases.pop();
+    function refund(uint256 receiptId_) external onlyOperator {
+        require(_exists(receiptId_), "Payments#refund: RECEIPT_NOT_FOUND");
+        address reimbursed = ownerOf(receiptId_);
+        require(reimbursed != address(0), "Payments#refund: ZERO_ADDRESS");
+        _refund(receiptId_, reimbursed);
     }
 
     /**
@@ -229,30 +214,21 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     |   Internal Functions     |
     |________________________*/
 
-    /**
-     * @dev Deposit stake to the pool.
-     * @param account address of recipient.
-     * @param price deposit amount.
-     */
+    function _addPaymentToken(address paymentToken_) internal virtual {
+        paymentTokens[paymentToken_] = IERC20(paymentToken_);
+    }
+
     function _payProduct(
-        address account,
-        string memory productId,
-        uint256 price,
-        address paymentToken
+        address account_,
+        string memory productId_,
+        uint256 price_,
+        address paymentToken_
     ) internal virtual nonReentrant {
-        IERC20 pToken = IERC20(paymentToken);
-        uint256 paidAt = block.timestamp;
-        // check this require
-        // it seems that safeTransferFrom already verifies the correct execution of the transfer.
-        // Does not work with require
-
-        // require(pToken.safeTransferFrom(account, address(this), price), "Payments#_payProduct: TRANSFER_FAILED");
-        pToken.safeTransferFrom(account, address(this), price);
-
-        uint256 receiptId = _mint(account, productId, price, paidAt);
-        userPurchases[account].push(Purchased(productId, receiptId, price, paidAt));
-
-        emit Paid(account, receiptId, productId, price);
+        IERC20 pToken = IERC20(paymentToken_);
+        pToken.safeTransferFrom(account_, address(this), price_);
+        uint256 receiptId = _mint(account_, productId_, price_, block.timestamp);
+        userPurchases[account_].push(Purchased(productId_, receiptId, price_, block.timestamp));
+        emit Paid(account_, receiptId, productId_, price_);
     }
 
     function _addProduct(
@@ -266,7 +242,27 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         productsIndex[productId] = _products.length - 1;
     }
 
-    function _addPaymentToken(address paymentToken_) internal virtual {
-        paymentTokens[paymentToken_] = IERC20(paymentToken_);
+    function _refund(uint256 receiptId, address reimbursed) internal virtual nonReentrant {
+        IERC20 refundToken;
+        _burn(receiptId);
+        Purchased[] memory purchases = userPurchases[reimbursed];
+        for (uint256 i = 0; i < purchases.length; i++) {
+            if (purchases[i].receiptId == receiptId) {
+                uint256 index = productsIndex[purchases[i].productId];
+                refundToken = IERC20(_products[index].paymentToken);
+                refundToken.transfer(reimbursed, purchases[i].amount);
+                _popPurchase(reimbursed, i);
+                emit Refund(reimbursed, receiptId, _products[index].productId, purchases[i].amount);
+                break;
+            }
+        }
+    }
+
+    function _popPurchase(address from, uint256 purchaseIndex) internal {
+        Purchased[] storage purchases = userPurchases[from];
+        if (purchaseIndex != purchases.length - 1) {
+            purchases[purchaseIndex] = purchases[purchases.length - 1];
+        }
+        purchases.pop();
     }
 }
