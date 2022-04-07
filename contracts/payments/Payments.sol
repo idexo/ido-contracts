@@ -195,6 +195,10 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
         _refund(receiptId_, reimbursed);
     }
 
+    /************************|
+    |      Sweep Funds       |
+    |_______________________*/
+
     /**
      * @dev Sweep funds
      * Accessible by operators

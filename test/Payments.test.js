@@ -256,13 +256,13 @@ contract("::Payments", async (accounts) => {
 
         it("should get receipt info", async () => {
             await payment.getReceiptInfo(2, { from: carol }).then((res) => {
-                expect(res[0]).to.eq("ID02")
-                expect(res[1].toString()).to.eq(web3.utils.toWei(new BN(2000)).toString())
+                expect(res.productId).to.eq("ID02")
+                expect(res.paidAmount.toString()).to.eq(web3.utils.toWei(new BN(2000)).toString())
             })
 
             await payment.getReceiptInfo(3, { from: bob }).then((res) => {
-                expect(res[0]).to.eq("ID03")
-                expect(res[1].toString()).to.eq(web3.utils.toWei(new BN(5000)).toString())
+                expect(res.productId).to.eq("ID03")
+                expect(res.paidAmount.toString()).to.eq(web3.utils.toWei(new BN(5000)).toString())
             })
         })
     })

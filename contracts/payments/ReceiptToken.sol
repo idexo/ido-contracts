@@ -20,11 +20,6 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
     // Base NFT URI
     string public baseURI;
 
-    struct Receipt {
-        string productId;
-        uint256 amount;
-        uint256 paidAt;
-    }
     // receipt id => receipt info
     mapping(uint256 => Receipt) public override receipts;
     // receipt wallet => receipt id array
@@ -60,7 +55,6 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
     /**
      * @dev Set token URI
      * Only `operator` can call
-     *
      * - `tokenId` must exist, see {ERC721URIStorage:_setTokenURI}
      */
     function setTokenURI(uint256 tokenId, string memory _tokenURI) public onlyOwner {
@@ -75,34 +69,39 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
         baseURI = baseURI_;
     }
 
+    /*************************|
+    |         Receipts        |
+    |________________________*/
+
     /**
-     * @dev Get receipt id array owned by wallet address.
+     * @dev Return receipt id array owned by wallet address.
+     *
      * @param account address
      */
     function getReceiptIds(address account) public view override returns (uint256[] memory) {
+        require(account != address(0), "ReceiptToken#getReceiptIds: ZERO_ADDRESS");
         return payerIds[account];
     }
 
     /**
      * @dev Return receipt info from `receiptId`.
+     *
      * Requirements:
      * - `receiptId` must exist in receipt pool
      * @param receiptId uint256
      */
-    function getReceiptInfo(uint256 receiptId)
-        public
-        view
-        override
-        returns (
-            string memory,
-            uint256,
-            uint256
-        )
-    {
+    function getReceiptInfo(uint256 receiptId) public view override returns (Receipt memory) {
         require(_exists(receiptId), "ReceiptToken#getReceiptInfo: RECEIPT_NOT_FOUND");
-        return (receipts[receiptId].productId, receipts[receiptId].amount, receipts[receiptId].paidAt);
+        return Receipt(receipts[receiptId].productId, receipts[receiptId].paidAmount, receipts[receiptId].paidAt);
     }
 
+    /*************************|
+    |     Current Supply      |
+    |________________________*/
+
+    /**
+     * @dev Return current receipt supply.
+     */
     function currentSupply() public view returns (uint256) {
         return _currentSupply;
     }
@@ -161,7 +160,7 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
         super._mint(account, receiptIds);
         Receipt storage newReceipt = receipts[receiptIds];
         newReceipt.productId = productId;
-        newReceipt.amount = amount;
+        newReceipt.paidAmount = amount;
         newReceipt.paidAt = paidAt;
         payerIds[account].push(receiptIds);
 
@@ -190,9 +189,7 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
      *
      * Requirements:
      *
-     * - `to` cannot be the zero address.
-     * - `receiptId` token must be owned by `from`.
-     *
+     * - transfers not allowed
      * @param from address from
      * @param to address to
      * @param receiptId tokenId to transfer
