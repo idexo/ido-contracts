@@ -151,7 +151,7 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
      * Requirements:
      * - `productId` must be exists
      * - `openForSale` must be true
-     * @param productId deposit amount.
+     * @param productId productId.
      */
     function payProduct(string memory productId) external override {
         uint256 index = productsIndex[productId];
@@ -174,6 +174,27 @@ contract Payments is IPayments, ReceiptToken, ReentrancyGuard {
     function getPurchased(address account) external view returns (Purchased[] memory purchased) {
         require(account != address(0), "Payments#getPurchased: ZERO_ADDRESS");
         return userPurchases[account];
+    }
+
+    /**
+     * @dev Return if user purchase a especific product.
+     * Requirements:
+     *
+     * - `account` must not be 0x
+     * - `productId` must be exists
+     * @param account_ address of buyer.
+     * @param productId_ productId.
+     */
+    function hasPurchased(address account_, string memory productId_) external view returns (bool) {
+        uint256 index = productsIndex[productId_];
+        require(index != 0, "Payments#hasPurchased: INVALID_PRODUCT_ID");
+        Purchased[] memory purchases = userPurchases[account_];
+        for (uint256 i = 0; i < purchases.length; i++) {
+            if (keccak256(abi.encodePacked(purchases[i].productId)) == keccak256(abi.encodePacked(productId_))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /************************|

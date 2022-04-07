@@ -230,6 +230,22 @@ contract("::Payments", async (accounts) => {
                 expect(res[0].productId).to.eq("ID03")
             })
         })
+        it("should returns if user purchased a especific product", async () => {
+            await payment.hasPurchased(bob, "ID03", { from: bob }).then((res) => {
+                expect(res).to.eq(true)
+            })
+        })
+        it("should returns if user purchased a especifi product", async () => {
+            await payment.hasPurchased(bob, "ID01", { from: bob }).then((res) => {
+                expect(res).to.eq(false)
+            })
+        })
+
+        describe("reverts if", async () => {
+            it("productId not exists", async () => {
+                await expectRevert(payment.hasPurchased(carol, "ID05", { from: darren }), "Payments#hasPurchased: INVALID_PRODUCT_ID")
+            })
+        })
     })
 
     describe("# Product Price", async () => {
