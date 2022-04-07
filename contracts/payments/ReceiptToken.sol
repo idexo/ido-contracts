@@ -184,22 +184,13 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
     }
 
     /**
-     * @dev Transfers `receiptId` from `from` to `to`.
-     *  As opposed to {transferFrom}, this imposes no restrictions on msg.sender.
-     *
-     * Requirements:
-     *
-     * - transfers not allowed
-     * @param from address from
-     * @param to address to
-     * @param receiptId tokenId to transfer
+     * @dev Transfers are not allowed.
      */
     function _transfer(
         address from,
         address to,
         uint256 receiptId
     ) internal pure override {
-        require(receiptId != 0, "ReceiptToken: INVALID_TOKEN");
-        require(from == address(0) || to == address(0), "ReceiptToken: NON_TRANSFERRABLE");
+        require(false, "ReceiptToken: NON_TRANSFERRABLE");
     }
 }
