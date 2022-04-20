@@ -11,7 +11,7 @@ contract("::DirectSale", async (accounts) => {
     let directSale, royaltyNFT, nft, ido, usdt, usdc
     const [owner, alice, bob, carol, darren] = accounts
     const DOMAIN = "https://idexo.com/"
-    const startTime = Math.floor(Date.now() / 1000) + duration.days(1)
+    const startTime = Math.floor(Date.now() / 1000) + duration.seconds(10)
 
     before(async () => {
         ido = await ERC20.new("Idexo Community", "IDO", { from: owner })
@@ -20,28 +20,26 @@ contract("::DirectSale", async (accounts) => {
         directSale = await DirectSale.new(ido.address, startTime, { from: owner })
     })
 
-    // describe("# Get Contract info", async () => {
-    //     it("should get timeLimitInDays", async () => {
-    //         await directSale.timeLimitInDays().then((res) => {
-    //             expect(res.toString()).to.eq("1")
-    //         })
-    //     })
-    //     it("should get minPoolStakeAmount", async () => {
-    //         await directSale.minPoolStakeAmount().then((res) => {
-    //             expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
-    //         })
-    //     })
-    //     it("should get timeLimit", async () => {
-    //         await directSale.timeLimit().then((res) => {
-    //             expect(res.toString()).to.eq("0")
-    //         })
-    //     })
-    //     it("should get depositToken", async () => {
-    //         await directSale.depositToken().then((res) => {
-    //             expect(res.toString()).to.eq(ido.address)
-    //         })
-    //     })
-    // })
+    describe("# SaleStartTime", async () => {
+        it("should set sale start time", async () => {
+            await directSale.setSaleStartTime(Math.floor(Date.now() / 1000) + duration.seconds(10), { from: owner })
+        })
+        // it("should get minPoolStakeAmount", async () => {
+        //     await directSale.minPoolStakeAmount().then((res) => {
+        //         expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
+        //     })
+        // })
+        // it("should get timeLimit", async () => {
+        //     await directSale.timeLimit().then((res) => {
+        //         expect(res.toString()).to.eq("0")
+        //     })
+        // })
+        // it("should get depositToken", async () => {
+        //     await directSale.depositToken().then((res) => {
+        //         expect(res.toString()).to.eq(ido.address)
+        //     })
+        // })
+    })
 
     // describe("# Staking", async () => {
     //     before(async () => {
