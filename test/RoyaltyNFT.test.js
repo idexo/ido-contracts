@@ -46,28 +46,18 @@ contract("::RoyaltyNFT", async (accounts) => {
         })
     })
 
-    // describe("# Get Contract info", async () => {
-    //     it("should get timeLimitInDays", async () => {
-    //         await directSale.timeLimitInDays().then((res) => {
-    //             expect(res.toString()).to.eq("1")
-    //         })
-    //     })
-    //     it("should get minPoolStakeAmount", async () => {
-    //         await directSale.minPoolStakeAmount().then((res) => {
-    //             expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
-    //         })
-    //     })
-    //     it("should get timeLimit", async () => {
-    //         await directSale.timeLimit().then((res) => {
-    //             expect(res.toString()).to.eq("0")
-    //         })
-    //     })
-    //     it("should get depositToken", async () => {
-    //         await directSale.depositToken().then((res) => {
-    //             expect(res.toString()).to.eq(ido.address)
-    //         })
-    //     })
-    // })
+    describe("# RoyalsFeeBP", async () => {
+        it("should set royaltiesFee", async () => {
+            // setRoyaltiesFeeBP
+            await royaltyNFT.setRoyaltiesFeeBP(1, { from: owner })
+        })
+        describe("should revert if", async () => {
+            it("royalties > 1000", async () => {
+                // This test is compromised until the size of the variable 'royaltiesFeeBP' is corrected in the contract
+                await royaltyNFT.setRoyaltiesFeeBP(100, { from: owner })
+            })
+        })
+    })
 
     // describe("# Staking", async () => {
     //     before(async () => {
