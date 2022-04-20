@@ -54,7 +54,7 @@ contract("::RoyaltyNFT", async (accounts) => {
         describe("should revert if", async () => {
             it("royalties > 1000", async () => {
                 // This test is compromised until the size of the variable 'royaltiesFeeBP' is corrected in the contract
-                await royaltyNFT.setRoyaltiesFeeBP(100, { from: owner })
+                await expectRevert(royaltyNFT.setRoyaltiesFeeBP(1001, { from: owner }), "InvalidRoyaltiesFee()")
             })
         })
     })
