@@ -22,7 +22,7 @@ contract("::DirectSale", async (accounts) => {
 
     describe("# SaleStartTime", async () => {
         it("should set sale start time", async () => {
-            await directSale.setSaleStartTime(Math.floor(Date.now() / 1000) + duration.seconds(10), { from: owner })
+            await directSale.setSaleStartTime(Math.floor(Date.now() / 1000) + duration.seconds(100), { from: owner })
         })
         // it("should get minPoolStakeAmount", async () => {
         //     await directSale.minPoolStakeAmount().then((res) => {
