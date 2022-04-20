@@ -2,6 +2,7 @@ const { expect } = require("chai")
 const { duration } = require("./helpers/time")
 const timeTraveler = require("ganache-time-traveler")
 const { BN, expectEvent, expectRevert } = require("@openzeppelin/test-helpers")
+const { ZERO_ADDRESS } = require("@openzeppelin/test-helpers/src/constants")
 const RoyaltyNFT = artifacts.require("contracts/marketplace/direct/RoyaltyNFT.sol:RoyaltyNFT")
 
 contract("::RoyaltyNFT", async (accounts) => {
@@ -48,13 +49,24 @@ contract("::RoyaltyNFT", async (accounts) => {
 
     describe("# RoyalsFeeBP", async () => {
         it("should set royaltiesFee", async () => {
-            // setRoyaltiesFeeBP
             await royaltyNFT.setRoyaltiesFeeBP(1, { from: owner })
         })
         describe("should revert if", async () => {
             it("royalties > 1000", async () => {
                 // This test is compromised until the size of the variable 'royaltiesFeeBP' is corrected in the contract
+                // fixed to uint16
                 await expectRevert(royaltyNFT.setRoyaltiesFeeBP(1001, { from: owner }), "InvalidRoyaltiesFee()")
+            })
+        })
+    })
+
+    describe("# RoyaltiesCollector", async () => {
+        it("should set royaltiesCollector", async () => {
+            await royaltyNFT.setRoyaltiesCollector(bob, { from: owner })
+        })
+        describe("should revert if", async () => {
+            it("address Ox", async () => {
+                await expectRevert(royaltyNFT.setRoyaltiesCollector(ZERO_ADDRESS, { from: owner }), "InvalidAddress()")
             })
         })
     })
