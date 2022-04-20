@@ -77,6 +77,17 @@ contract("::RoyaltyNFT", async (accounts) => {
         })
     })
 
+    describe("# Mint and Burn", async () => {
+        it("should mint", async () => {
+            expectEvent(await royaltyNFT.mint(alice, "alice", { from: owner }), "LogMinted")
+        })
+        // describe("should revert if", async () => {
+        //     it("address Ox", async () => {
+        //         await expectRevert(royaltyNFT.setRoyaltiesCollector(ZERO_ADDRESS, { from: owner }), "InvalidAddress()")
+        //     })
+        // })
+    })
+
     // describe("# Staking", async () => {
     //     before(async () => {
     //         for (const user of [alice, bob, carol, darren]) {
