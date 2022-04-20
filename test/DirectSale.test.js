@@ -11,7 +11,7 @@ contract("::DirectSale", async (accounts) => {
     let directSale, royaltyNFT, nft, ido, usdt, usdc
     const [owner, alice, bob, carol, darren] = accounts
     const DOMAIN = "https://idexo.com/"
-    const startTime = Math.floor(Date.now() / 1000) + duration.seconds(10)
+    const startTime = Math.floor(Date.now() / 1000) + duration.seconds(100)
 
     before(async () => {
         ido = await ERC20.new("Idexo Community", "IDO", { from: owner })
@@ -29,14 +29,21 @@ contract("::DirectSale", async (accounts) => {
         //         expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
         //     })
         // })
-        // it("should get timeLimit", async () => {
-        //     await directSale.timeLimit().then((res) => {
-        //         expect(res.toString()).to.eq("0")
-        //     })
-        // })
-        // it("should get depositToken", async () => {
-        //     await directSale.depositToken().then((res) => {
-        //         expect(res.toString()).to.eq(ido.address)
+    })
+
+    describe("# Open For Sale", async () => {
+        it("should put an NFT for sale", async () => {
+            await royaltyNFT.mint(alice, "alice", { from: owner })
+            await nft.mintNFT(alice, "alice", { from: owner })
+            await timeTraveler.advanceTime(duration.seconds(200))
+
+            await directSale.openForSale(nft.address, 1, web3.utils.toWei(new BN(10000)).toString(), { from: alice })
+
+            // await directSale.openForSale(royaltyNFT.address, 1, web3.utils.toWei(new BN(10000)).toString(), { from: alice })
+        })
+        // it("should get minPoolStakeAmount", async () => {
+        //     await directSale.minPoolStakeAmount().then((res) => {
+        //         expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
         //     })
         // })
     })
