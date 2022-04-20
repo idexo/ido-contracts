@@ -37,9 +37,33 @@ contract("::DirectSale", async (accounts) => {
             await nft.mintNFT(alice, "alice", { from: owner })
             await timeTraveler.advanceTime(duration.seconds(200))
 
-            await directSale.openForSale(nft.address, 1, web3.utils.toWei(new BN(10000)).toString(), { from: alice })
+            // await directSale.openForSale(nft.address, 1, web3.utils.toWei(new BN(10000)).toString(), { from: alice })
+
+            await directSale.openForSale(royaltyNFT.address, 1, web3.utils.toWei(new BN(10000)).toString(), { from: alice })
+        })
+        // it("should get minPoolStakeAmount", async () => {
+        //     await directSale.minPoolStakeAmount().then((res) => {
+        //         expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
+        //     })
+        // })
+    })
+
+    describe("# Price", async () => {
+        it("should set new Price", async () => {
+            await directSale.setPrice(royaltyNFT.address, 1, web3.utils.toWei(new BN(20000)).toString(), { from: alice })
 
             // await directSale.openForSale(royaltyNFT.address, 1, web3.utils.toWei(new BN(10000)).toString(), { from: alice })
+        })
+        // it("should get minPoolStakeAmount", async () => {
+        //     await directSale.minPoolStakeAmount().then((res) => {
+        //         expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
+        //     })
+        // })
+    })
+
+    describe("# Close For Sale", async () => {
+        it("should remove an NFT for sale", async () => {
+            await directSale.closeForSale(royaltyNFT.address, 1, { from: alice })
         })
         // it("should get minPoolStakeAmount", async () => {
         //     await directSale.minPoolStakeAmount().then((res) => {
