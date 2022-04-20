@@ -2,22 +2,48 @@ const { expect } = require("chai")
 const { duration } = require("./helpers/time")
 const timeTraveler = require("ganache-time-traveler")
 const { BN, expectEvent, expectRevert } = require("@openzeppelin/test-helpers")
-const DirectSale = artifacts.require("contracts/marketplace/direct/DirectSale.sol:DirectSale")
-const ERC20 = artifacts.require("ERC20Mock")
-const CommunityNFT = artifacts.require("CommunityNFT")
 const RoyaltyNFT = artifacts.require("contracts/marketplace/direct/RoyaltyNFT.sol:RoyaltyNFT")
 
-contract("::DirectSale", async (accounts) => {
-    let directSale, royaltyNFT, nft, ido, usdt, usdc
+contract("::RoyaltyNFT", async (accounts) => {
+    let royaltyNFT
     const [owner, alice, bob, carol, darren] = accounts
     const DOMAIN = "https://idexo.com/"
     const startTime = Math.floor(Date.now() / 1000) + duration.days(1)
 
     before(async () => {
-        ido = await ERC20.new("Idexo Community", "IDO", { from: owner })
         royaltyNFT = await RoyaltyNFT.new("RoyaltyNFT", "RNFT", DOMAIN, owner, 1, { from: owner })
-        nft = await CommunityNFT.new("TEST", "T", DOMAIN, { from: owner })
-        directSale = await DirectSale.new(ido.address, startTime, { from: owner })
+    })
+
+    describe("#Role", async () => {
+        it("default operator", async () => {
+            expect(await royaltyNFT.checkOperator(owner)).to.eq(true)
+        })
+        it("should add operator", async () => {
+            await royaltyNFT.addOperator(bob, { from: owner })
+            expect(await royaltyNFT.checkOperator(bob)).to.eq(true)
+        })
+        it("should check operator", async () => {
+            await royaltyNFT.checkOperator(bob)
+            expect(await royaltyNFT.checkOperator(bob)).to.eq(true)
+        })
+        it("should remove operator", async () => {
+            await royaltyNFT.removeOperator(bob, { from: owner })
+            expect(await royaltyNFT.checkOperator(bob)).to.eq(false)
+        })
+        it("supportsInterface", async () => {
+            await royaltyNFT.supportsInterface(`0x00000000`).then((res) => {
+                expect(res).to.eq(false)
+            })
+        })
+        describe("reverts if", async () => {
+            it("add operator by non-admin", async () => {
+                await expectRevert(royaltyNFT.addOperator(bob, { from: bob }), "Ownable: CALLER_NO_OWNER")
+            })
+            it("remove operator by non-admin", async () => {
+                await royaltyNFT.addOperator(bob, { from: owner })
+                await expectRevert(royaltyNFT.removeOperator(bob, { from: carol }), "Ownable: CALLER_NO_OWNER")
+            })
+        })
     })
 
     // describe("# Get Contract info", async () => {
