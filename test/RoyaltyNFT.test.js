@@ -81,11 +81,36 @@ contract("::RoyaltyNFT", async (accounts) => {
         it("should mint", async () => {
             expectEvent(await royaltyNFT.mint(alice, "alice", { from: owner }), "LogMinted")
         })
+        it("should burn", async () => {
+            expectEvent(await royaltyNFT.burn(1, { from: owner }), "LogBurnt")
+        })
         // describe("should revert if", async () => {
         //     it("address Ox", async () => {
         //         await expectRevert(royaltyNFT.setRoyaltiesCollector(ZERO_ADDRESS, { from: owner }), "InvalidAddress()")
         //     })
         // })
+    })
+
+    describe("# TokenURI", async () => {
+        it("should mint", async () => {
+            expectEvent(await royaltyNFT.mint(alice, "alice", { from: owner }), "LogMinted")
+        })
+        it("should shows tokenURI", async () => {
+            royaltyNFT.tokenURI(2, { from: owner }).then((tokenURI) => {
+                expect(tokenURI).to.eq(DOMAIN + "alice")
+            })
+        })
+
+        // 'ERC721URIStorage: URI query for nonexistent token'
+
+        // it("should burn", async () => {
+        //     expectEvent(await royaltyNFT.burn(1, { from: owner }), "LogBurnt")
+        // })
+        describe("should revert if", async () => {
+            it("inexistent tokenId", async () => {
+                await expectRevert(royaltyNFT.tokenURI(1, { from: owner }), "ERC721URIStorage: URI query for nonexistent token")
+            })
+        })
     })
 
     // describe("# Staking", async () => {
