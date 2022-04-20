@@ -12,7 +12,7 @@ contract("::RoyaltyNFT", async (accounts) => {
     const startTime = Math.floor(Date.now() / 1000) + duration.days(1)
 
     before(async () => {
-        royaltyNFT = await RoyaltyNFT.new("RoyaltyNFT", "RNFT", DOMAIN, owner, 1, { from: owner })
+        royaltyNFT = await RoyaltyNFT.new("RoyaltyNFT", "RNFT", "", owner, 1, { from: owner })
     })
 
     describe("#Role", async () => {
@@ -44,6 +44,12 @@ contract("::RoyaltyNFT", async (accounts) => {
                 await royaltyNFT.addOperator(bob, { from: owner })
                 await expectRevert(royaltyNFT.removeOperator(bob, { from: carol }), "Ownable: CALLER_NO_OWNER")
             })
+        })
+    })
+
+    describe("# baseTokenURI", async () => {
+        it("should set baseTokenURI", async () => {
+            await royaltyNFT.setBaseTokenURI(DOMAIN, { from: owner })
         })
     })
 
