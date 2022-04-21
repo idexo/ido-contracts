@@ -10,7 +10,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
     let directSale, nft, ido, usdt, usdc
     const [owner, alice, bob, carol, darren] = accounts
     const DOMAIN = "https://idexo.com/"
-    const startTime = Math.floor(Date.now() / 1000) + duration.minutes(60)
+    const startTime = Math.floor(Date.now() / 1000) + duration.seconds(3600)
 
     before(async () => {
         ido = await ERC20.new("Idexo Community", "IDO", { from: owner })
@@ -20,7 +20,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
 
     describe("# SaleStartTime", async () => {
         it("should set sale start time", async () => {
-            await directSale.setSaleStartTime(Math.floor(Date.now() / 1000) + duration.seconds(60), { from: owner })
+            await directSale.setSaleStartTime(Math.floor(Date.now() / 1000) + duration.seconds(2400), { from: owner })
         })
         // it("should get minPoolStakeAmount", async () => {
         //     await directSale.minPoolStakeAmount().then((res) => {
