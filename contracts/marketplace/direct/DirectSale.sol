@@ -55,6 +55,10 @@ contract DirectSale is Ownable {
         saleStartTime = _saleStartTime;
     }
 
+    function currentOwner(address _nft, uint256 _tokenID) private view returns (address) {
+        return RoyaltyNFT(_nft).ownerOf(_tokenID);
+    }
+
     /**
      * @dev Open `_tokenID` for sale
      * Accessible by only nft owner
@@ -66,7 +70,7 @@ contract DirectSale is Ownable {
         uint256 _tokenID,
         uint256 _price
     ) external saleIsOpen {
-        require(msg.sender == RoyaltyNFT(_nft).ownerOf(_tokenID), "CALLER_NOT_NFT_OWNER");
+        require(msg.sender == currentOwner(_nft, _tokenID), "CALLER_NOT_NFT_OWNER");
 
         _setPrice(_nft, _tokenID, _price);
         nftSales[_nft][_tokenID].seller = msg.sender;
@@ -109,7 +113,7 @@ contract DirectSale is Ownable {
      * `_tokenID` must exist
      */
     function closeForSale(address _nft, uint256 _tokenID) external {
-        require(msg.sender == RoyaltyNFT(_nft).ownerOf(_tokenID), "CALLER_NOT_NFT_OWNER_OR_TOKEN_INVALID");
+        require(msg.sender == currentOwner(_nft, _tokenID), "CALLER_NOT_NFT_OWNER_OR_TOKEN_INVALID");
 
         nftSales[_nft][_tokenID].isOpenForSale = false;
 
@@ -123,7 +127,7 @@ contract DirectSale is Ownable {
      * `_tokenID` must be open for sale
      */
     function purchase(address _nft, uint256 _tokenID) external saleIsOpen {
-        address nftOwner = RoyaltyNFT(_nft).ownerOf(_tokenID);
+        address nftOwner = currentOwner(_nft, _tokenID);
         require(nftSales[_nft][_tokenID].isOpenForSale, "NFT_SALE_CLOSED");
         require(nftOwner != address(0), "INVALID_NFT");
         require(nftOwner != msg.sender, "SELF_PURCHASE");
