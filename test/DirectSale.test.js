@@ -41,6 +41,15 @@ contract("::DirectSale", async (accounts) => {
 
             await directSale.openForSale(royaltyNFT.address, 1, web3.utils.toWei(new BN(10000)).toString(), { from: alice })
         })
+        it("should put another NFT for sale", async () => {
+            await royaltyNFT.mint(bob, "alice", { from: owner })
+            await nft.mintNFT(bob, "alice", { from: owner })
+            await timeTraveler.advanceTime(duration.seconds(200))
+
+            // await directSale.openForSale(nft.address, 1, web3.utils.toWei(new BN(10000)).toString(), { from: alice })
+
+            await directSale.openForSale(royaltyNFT.address, 2, web3.utils.toWei(new BN(10000)).toString(), { from: bob })
+        })
         // it("should get minPoolStakeAmount", async () => {
         //     await directSale.minPoolStakeAmount().then((res) => {
         //         expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
@@ -64,6 +73,31 @@ contract("::DirectSale", async (accounts) => {
     describe("# Close For Sale", async () => {
         it("should remove an NFT for sale", async () => {
             await directSale.closeForSale(royaltyNFT.address, 1, { from: alice })
+        })
+        // it("should get minPoolStakeAmount", async () => {
+        //     await directSale.minPoolStakeAmount().then((res) => {
+        //         expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
+        //     })
+        // })
+    })
+
+    describe("# Purchase", async () => {
+        it("should bought the NFT #2", async () => {
+            await ido.mint(carol, web3.utils.toWei(new BN(500000)).toString(), { from: owner })
+            await ido.approve(directSale.address, web3.utils.toWei(new BN(500000)).toString(), { from: carol })
+            await royaltyNFT.approve(directSale.address, 2, { from: bob })
+            await directSale.purchase(royaltyNFT.address, 2, { from: carol })
+        })
+        // it("should get minPoolStakeAmount", async () => {
+        //     await directSale.minPoolStakeAmount().then((res) => {
+        //         expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
+        //     })
+        // })
+    })
+
+    describe("# Sweep", async () => {
+        it("should sweept balance to another wallet", async () => {
+            await directSale.sweep(ido.address, alice, { from: owner })
         })
         // it("should get minPoolStakeAmount", async () => {
         //     await directSale.minPoolStakeAmount().then((res) => {
