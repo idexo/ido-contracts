@@ -67,11 +67,10 @@ contract DirectSaleNFTs is Ownable {
         uint256 _price
     ) external saleIsOpen {
         require(msg.sender == IERC721(_nft).ownerOf(_tokenID), "DirectNFTs#openForSale: CALLER_NOT_NFT_OWNER");
-        NFTSaleInfo storage nftSale = nftSales[_nft][_tokenID];
 
         _setPrice(_nft, _tokenID, _price);
-        nftSale.seller = msg.sender;
-        nftSale.isOpenForSale = true;
+        nftSales[_nft][_tokenID].seller = msg.sender;
+        nftSales[_nft][_tokenID].isOpenForSale = true;
 
         emit LogOpenForSale(_tokenID);
     }
@@ -89,9 +88,7 @@ contract DirectSaleNFTs is Ownable {
     ) public saleIsOpen {
         require(_price != 0, "DirectNFTs#setPrice: INVALID_PRICE");
         require(msg.sender == IERC721(_nft).ownerOf(_tokenID), "DirectNFTs#setPrice: CALLER_NOT_NFT_OWNER_OR_TOKEN_INVALID");
-
-        NFTSaleInfo memory nftSale = nftSales[_nft][_tokenID];
-        require(msg.sender == nftSale.seller, "DirectNFTs#setPrice: OWNERSHIP_CHANGED");
+        require(msg.sender == nftSales[_nft][_tokenID].seller, "DirectNFTs#setPrice: OWNERSHIP_CHANGED");
 
         _setPrice(_nft, _tokenID, _price);
     }
@@ -101,8 +98,7 @@ contract DirectSaleNFTs is Ownable {
         uint256 _tokenID,
         uint256 _price
     ) private {
-        NFTSaleInfo storage nftSale = nftSales[_nft][_tokenID];
-        nftSale.price = _price;
+        nftSales[_nft][_tokenID].price = _price;
 
         emit LogPriceSet(_tokenID, _price);
     }
@@ -127,9 +123,8 @@ contract DirectSaleNFTs is Ownable {
      * `_tokenID` must be open for sale
      */
     function purchase(address _nft, uint256 _tokenID) external saleIsOpen {
-        NFTSaleInfo memory nftSale = nftSales[_nft][_tokenID];
         address nftOwner = IERC721(_nft).ownerOf(_tokenID);
-        require(nftSale.isOpenForSale, "DirectNFTs#purchase: NFT_SALE_CLOSED");
+        require(nftSales[_nft][_tokenID].isOpenForSale, "DirectNFTs#purchase: NFT_SALE_CLOSED");
         require(nftOwner != address(0), "DirectNFTs#purchase: INVALID_NFT");
         require(nftOwner != msg.sender, "DirectNFTs#purchase: SELF_PURCHASE");
 
@@ -137,7 +132,7 @@ contract DirectSaleNFTs is Ownable {
         An nft put up for sale, and later transferred by the owner to someone else, will remain in the contract state as available for sale.
         An alternative, perhaps, is to deposit the NFT in the contract
         */
-        require(nftOwner == nftSale.seller, "DirectNFTs#purchase: OWNERSHIP_CHANGED");
+        require(nftOwner == nftSales[_nft][_tokenID].seller, "DirectNFTs#purchase: OWNERSHIP_CHANGED");
 
         _purchase(_nft, nftOwner, msg.sender, _tokenID);
     }
@@ -148,13 +143,11 @@ contract DirectSaleNFTs is Ownable {
         address _buyer,
         uint256 _tokenID
     ) private {
-        NFTSaleInfo storage nftSale = nftSales[_nft][_tokenID];
+        require(nftSales[_nft][_tokenID].price != 0, "DirectNFTs#_purchase: INVALID_PRICE");
 
-        require(nftSale.price != 0, "DirectNFTs#_purchase: INVALID_PRICE");
-
-        IERC20(purchaseToken).safeTransferFrom(_buyer, _tokenOwner, nftSale.price);
+        IERC20(purchaseToken).safeTransferFrom(_buyer, _tokenOwner, nftSales[_nft][_tokenID].price);
         IERC721(_nft).safeTransferFrom(_tokenOwner, _buyer, _tokenID);
-        nftSale.isOpenForSale = false;
+        nftSales[_nft][_tokenID].isOpenForSale = false;
 
         emit LogPurchase(_tokenID, _tokenOwner, _buyer);
     }
