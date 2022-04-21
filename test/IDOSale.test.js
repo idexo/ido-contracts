@@ -40,8 +40,8 @@ contract("IDOSale", async (accounts) => {
         usdt.mint(bob, toUSDTWei(10000))
         usdt.mint(carol, toUSDTWei(10000))
 
-        const currentTime = Math.floor(Date.now() / 1000)
-        startTime = currentTime + duration.days(1)
+        const latestBlock = await hre.ethers.provider.getBlock("latest")
+        startTime = latestBlock.timestamp + duration.days(1)
         endTime = startTime + duration.days(7)
 
         saleContract = await IDOSale.new(ido.address, usdt.address, new BN(450000), web3.utils.toWei(new BN(11111)), startTime, endTime)
