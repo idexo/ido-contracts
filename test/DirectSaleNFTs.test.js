@@ -53,13 +53,20 @@ contract("::DirectSaleNFTs", async (accounts) => {
             await nft.balanceOf(bob, { from: owner }).then((balance) => {
                 expect(balance.toString()).to.eq("1")
             })
-            expectEvent(await directSale.openForSale(nft.address, 1, web3.utils.toWei(new BN(10000)).toString(), { from: alice }), "LogOpenForSale")
+            expectEvent(await directSale.openForSale(nft.address, 2, web3.utils.toWei(new BN(10000)).toString(), { from: bob }), "LogOpenForSale")
+        })
+        it("should put darren NFT for sale", async () => {
+            await nft.mintNFT(darren, `darren`, { from: owner })
+            await nft.balanceOf(darren, { from: owner }).then((balance) => {
+                expect(balance.toString()).to.eq("1")
+            })
+            expectEvent(await directSale.openForSale(nft.address, 3, web3.utils.toWei(new BN(10000)).toString(), { from: darren }), "LogOpenForSale")
         })
 
         describe("should revert if", async () => {
             it("token nonexistent", async () => {
                 await expectRevert(
-                    directSale.openForSale(nft.address, 3, web3.utils.toWei(new BN(10000)).toString(), { from: carol }),
+                    directSale.openForSale(nft.address, 4, web3.utils.toWei(new BN(10000)).toString(), { from: carol }),
                     "ERC721: owner query for nonexistent token"
                 )
             })
@@ -85,151 +92,51 @@ contract("::DirectSaleNFTs", async (accounts) => {
     })
 
     describe("# Close For Sale", async () => {
-        it("should remove an NFT for sale", async () => {
-            await directSale.closeForSale(nft.address, 1, { from: alice })
+        it("should close to sale", async () => {
+            expectEvent(await directSale.closeForSale(nft.address, 2, { from: bob }), "LogCloseForSale")
         })
-        // it("should get minPoolStakeAmount", async () => {
-        //     await directSale.minPoolStakeAmount().then((res) => {
-        //         expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
-        //     })
-        // })
+
+        describe("should revert if", async () => {
+            it("not owner or ownership changed", async () => {
+                await expectRevert(
+                    directSale.closeForSale(nft.address, 3, { from: alice }),
+                    "DirectNFTs#closeForSale: CALLER_NOT_NFT_OWNER_OR_TOKEN_INVALID"
+                )
+            })
+        })
     })
-    /*
-
-    //  const amount = web3.utils.toWei(new BN(20000))
-    //         await ido.mint(alice, amount)
-    //         await ido.approve(directSale.address, amount, { from: alice })
-
-    //         let idoBalance = await ido.balanceOf(alice, { from: owner })
-    //         console.log(idoBalance.toString())
 
     describe("# Purchase", async () => {
-        it("should bought the NFT #2", async () => {
-            await ido.mint(carol, web3.utils.toWei(new BN(500000)).toString(), { from: owner })
+        it("should bought the NFT #1", async () => {
+            await ido.mint(carol, web3.utils.toWei(new BN(50000)).toString(), { from: owner })
             await ido.approve(directSale.address, web3.utils.toWei(new BN(500000)).toString(), { from: carol })
-            await nft.approve(directSale.address, 2, { from: bob })
-            await directSale.purchase(nft.address, 2, { from: carol })
+            await nft.approve(directSale.address, 1, { from: alice })
+            await directSale.purchase(nft.address, 1, { from: carol })
         })
-        // it("should get minPoolStakeAmount", async () => {
-        //     await directSale.minPoolStakeAmount().then((res) => {
-        //         expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
-        //     })
-        // })
+
+        describe("should revert if", async () => {
+            it("#sale closed", async () => {
+                await expectRevert(directSale.purchase(nft.address, 2, { from: alice }), "DirectNFTs#purchase: NFT_SALE_CLOSED")
+            })
+            it("sef purchase", async () => {
+                await expectRevert(directSale.purchase(nft.address, 3, { from: darren }), "DirectNFTs#purchase: SELF_PURCHASE")
+            })
+            // we need transfer a nft after put for sale to test ownership changed
+            // it("#ownership changed", async () => {
+            //     await expectRevert(directSale.purchase(nft.address,1 , { from: darren }), "DirectNFTs#purchase: OWNERSHIP_CHANGED")
+            // })
+        })
     })
 
     describe("# Sweep", async () => {
         it("should sweept balance to another wallet", async () => {
             await directSale.sweep(ido.address, alice, { from: owner })
         })
-        // it("should get minPoolStakeAmount", async () => {
-        //     await directSale.minPoolStakeAmount().then((res) => {
-        //         expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
-        //     })
-        // })
+
+        describe("should revert if", async () => {
+            it("not owner", async () => {
+                await expectRevert(directSale.sweep(ido.address, alice, { from: bob }), "Ownable: caller is not the owner")
+            })
+        })
     })
-
-    // describe("# Staking", async () => {
-    //     before(async () => {
-    //         for (const user of [alice, bob, carol, darren]) {
-    //             await ido.mint(user, web3.utils.toWei(new BN(20000)))
-    //             await ido.approve(directSale.address, web3.utils.toWei(new BN(20000)), { from: user })
-    //         }
-    //     })
-
-    //     describe("staking", async () => {
-    //         it("should stake 1", async () => {
-    //             await directSale.getEligibleStakeAmount(0, { from: alice }).then((res) => {
-    //                 expect(res.toString()).to.eq("0")
-    //             })
-    //             await directSale.isHolder(alice).then((res) => {
-    //                 expect(res.toString()).to.eq("false")
-    //             })
-    //             expectEvent(await directSale.deposit(web3.utils.toWei(new BN(500)), 0, { from: alice }), "Deposited")
-    //             await ido.balanceOf(directSale.address).then((res) => {
-    //                 expect(res.toString()).to.eq("500000000000000000000")
-    //             })
-    //             await directSale.getStakeInfo(1).then((res) => {
-    //                 expect(res[0].toString()).to.eq("500000000000000000000")
-    //             })
-    //         })
-    //         it("should stake 2", async () => {
-    //             await directSale.getEligibleStakeAmount(0, { from: carol }).then((res) => {
-    //                 expect(res.toString()).to.eq("0")
-    //             })
-    //             let number = await ethers.provider.getBlockNumber()
-    //             let block = await ethers.provider.getBlock(number)
-    //             expectEvent(await directSale.deposit(web3.utils.toWei(new BN(5000)), 0, { from: carol }), "Deposited")
-    //             await directSale.getStakeInfo(2).then((res) => {
-    //                 expect(res[0].toString()).to.eq("5000000000000000000000")
-    //             })
-    //             await directSale.isHolder(carol).then((res) => {
-    //                 expect(res.toString()).to.eq("true")
-    //             })
-    //             await timeTraveler.advanceTime(duration.months(10))
-    //             await directSale.getEligibleStakeAmount(block.timestamp, { from: carol }).then((res) => {
-    //                 expect(res.toString()).to.not.eq("0")
-    //             })
-    //             await timeTraveler.advanceTime(duration.months(-10))
-    //         })
-    //         it("should stake 3", async () => {
-    //             await directSale.getEligibleStakeAmount(0, { from: carol }).then((res) => {
-    //                 expect(res.toString()).to.eq("0")
-    //             })
-    //             let number = await ethers.provider.getBlockNumber()
-    //             let block = await ethers.provider.getBlock(number)
-    //             expectEvent(await directSale.deposit(web3.utils.toWei(new BN(5000)), 0, { from: carol }), "Deposited")
-    //             await directSale.getStakeInfo(3).then((res) => {
-    //                 expect(res[0].toString()).to.eq("5000000000000000000000")
-    //             })
-    //             await directSale.isHolder(carol).then((res) => {
-    //                 expect(res.toString()).to.eq("true")
-    //             })
-    //             await timeTraveler.advanceTime(duration.months(10))
-    //             await directSale.getEligibleStakeAmount(block.timestamp, { from: carol }).then((res) => {
-    //                 expect(res.toString()).to.not.eq("0")
-    //             })
-    //             await timeTraveler.advanceTime(duration.months(-10))
-    //         })
-
-    //         describe("should withdraw before and after pool closed", async () => {
-    //             it("should withdraw stake 3 before", async () => {
-    //                 expectEvent(await directSale.withdraw(3, web3.utils.toWei(new BN(5000)), { from: carol }), "Withdrawn")
-    //                 await directSale.isHolder(carol).then((res) => {
-    //                     expect(res.toString()).to.eq("true")
-    //                 })
-    //                 await directSale.timeLimit().then((res) => {
-    //                     expect(res.toString()).to.eq("0")
-    //                 })
-    //             })
-    //             it("should stake 4", async () => {
-    //                 await directSale.deposit(web3.utils.toWei(new BN(600)), 0, { from: darren })
-    //             })
-    //             it("should withdraw stake 5 after pool closed", async () => {
-    //                 expectEvent(await directSale.deposit(web3.utils.toWei(new BN(5000)), 0, { from: carol }), "Deposited")
-    //                 await timeTraveler.advanceTimeAndBlock(duration.days(1))
-    //                 expectEvent(await directSale.withdraw(5, web3.utils.toWei(new BN(5000)), { from: carol }), "Withdrawn")
-    //                 await directSale.timeLimit().then((res) => {
-    //                     expect(res.toString()).to.not.eq("0")
-    //                 })
-    //                 await timeTraveler.advanceTimeAndBlock(duration.days(-1))
-    //             })
-    //         })
-
-    //         describe("should revert stake after pool closed", async () => {
-    //             it("should revert stake 5 if DEPOSIT_TIME_CLOSED", async () => {
-    //                 await ido.balanceOf(directSale.address).then((res) => {
-    //                     expect(res.toString()).to.eq("6100000000000000000000")
-    //                 })
-    //                 await timeTraveler.advanceTimeAndBlock(duration.days(1))
-    //                 await expectRevert(
-    //                     directSale.deposit(web3.utils.toWei(new BN(5000)), 0, { from: carol }),
-    //                     "DirectSale#_deposit: DEPOSIT_TIME_CLOSED"
-    //                 )
-    //                 await timeTraveler.advanceTimeAndBlock(duration.days(-1))
-    //             })
-    //         })
-    //     })
-    // })
-
-    */
 })

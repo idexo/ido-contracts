@@ -130,13 +130,11 @@ contract DirectSaleNFTs is Ownable, Pausable {
      */
     function purchase(address _nft, uint256 _tokenID) external saleIsOpen {
         NFTSaleInfo memory nftSale = nftSales[_nft][_tokenID];
-
         address nftOwner = IERC721(_nft).ownerOf(_tokenID);
+        require(nftSale.isOpenForSale, "DirectNFTs#purchase: NFT_SALE_CLOSED");
         require(nftOwner != address(0), "DirectNFTs#purchase: INVALID_NFT");
         require(nftOwner != msg.sender, "DirectNFTs#purchase: SELF_PURCHASE");
         require(nftOwner == nftSale.seller, "DirectNFTs#purchase: OWNERSHIP_CHANGED");
-
-        require(nftSale.isOpenForSale, "DirectNFTs#purchase: NFT_SALE_CLOSED");
 
         _purchase(_nft, nftOwner, msg.sender, _tokenID);
     }
