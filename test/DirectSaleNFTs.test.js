@@ -122,9 +122,11 @@ contract("::DirectSaleNFTs", async (accounts) => {
                 await expectRevert(directSale.purchase(nft.address, 3, { from: darren }), "DirectNFTs#purchase: SELF_PURCHASE")
             })
             // we need transfer a nft after put for sale to test ownership changed
-            // it("#ownership changed", async () => {
-            //     await expectRevert(directSale.purchase(nft.address,1 , { from: darren }), "DirectNFTs#purchase: OWNERSHIP_CHANGED")
-            // })
+
+            it("#ownership changed", async () => {
+                await nft.transferFrom(darren, alice, 3, { from: darren })
+                await expectRevert(directSale.purchase(nft.address, 3, { from: darren }), "DirectNFTs#purchase: OWNERSHIP_CHANGED")
+            })
         })
     })
 
