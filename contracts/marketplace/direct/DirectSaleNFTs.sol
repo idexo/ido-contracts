@@ -89,6 +89,7 @@ contract DirectSaleNFTs is Ownable, Pausable {
         uint256 _tokenID,
         uint256 _price
     ) public saleIsOpen {
+        require(_price != 0, "DirectNFTs#setPrice: INVALID_PRICE");
         require(msg.sender == IERC721(_nft).ownerOf(_tokenID), "DirectNFTs#setPrice: CALLER_NOT_NFT_OWNER_OR_TOKEN_INVALID");
 
         NFTSaleInfo memory nftSale = nftSales[_nft][_tokenID];
