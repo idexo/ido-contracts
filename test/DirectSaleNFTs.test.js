@@ -46,7 +46,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
             await nft.balanceOf(alice, { from: owner }).then((balance) => {
                 expect(balance.toString()).to.eq("1")
             })
-            expectEvent(await directSale.openForSale(nft.address, 1, web3.utils.toWei(new BN(10000)).toString(), { from: alice }), "LogOpenForSale")
+            expectEvent(await directSale.openForSale(nft.address, 1, web3.utils.toWei(new BN(10000)).toString(), { from: alice }), "SaleOpened")
             await nft.approve(directSale.address, 1, { from: alice })
         })
         it("should put bob NFT for sale", async () => {
@@ -54,7 +54,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
             await nft.balanceOf(bob, { from: owner }).then((balance) => {
                 expect(balance.toString()).to.eq("1")
             })
-            expectEvent(await directSale.openForSale(nft.address, 2, web3.utils.toWei(new BN(10000)).toString(), { from: bob }), "LogOpenForSale")
+            expectEvent(await directSale.openForSale(nft.address, 2, web3.utils.toWei(new BN(10000)).toString(), { from: bob }), "SaleOpened")
             await nft.approve(directSale.address, 2, { from: bob })
         })
         it("should put darren NFT for sale", async () => {
@@ -62,7 +62,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
             await nft.balanceOf(darren, { from: owner }).then((balance) => {
                 expect(balance.toString()).to.eq("1")
             })
-            expectEvent(await directSale.openForSale(nft.address, 3, web3.utils.toWei(new BN(10000)).toString(), { from: darren }), "LogOpenForSale")
+            expectEvent(await directSale.openForSale(nft.address, 3, web3.utils.toWei(new BN(10000)).toString(), { from: darren }), "SaleOpened")
             await nft.approve(directSale.address, 3, { from: darren })
         })
 
@@ -84,7 +84,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
 
     describe("# Price", async () => {
         it("should set new Price", async () => {
-            expectEvent(await directSale.setPrice(nft.address, 1, web3.utils.toWei(new BN(20000)).toString(), { from: alice }), "LogPriceSet")
+            expectEvent(await directSale.setPrice(nft.address, 1, web3.utils.toWei(new BN(20000)).toString(), { from: alice }), "PriceSet")
         })
 
         describe("should revert if", async () => {
@@ -96,7 +96,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
 
     describe("# Close For Sale", async () => {
         it("should close to sale", async () => {
-            expectEvent(await directSale.closeForSale(nft.address, 2, { from: bob }), "LogCloseForSale")
+            expectEvent(await directSale.closeForSale(nft.address, 2, { from: bob }), "SaleClosed")
         })
 
         describe("should revert if", async () => {
@@ -114,7 +114,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
             await ido.mint(carol, web3.utils.toWei(new BN(50000)).toString(), { from: owner })
             await ido.approve(directSale.address, web3.utils.toWei(new BN(500000)).toString(), { from: carol })
 
-            expectEvent(await directSale.purchase(nft.address, 1, { from: carol }), "LogPurchase")
+            expectEvent(await directSale.purchase(nft.address, 1, { from: carol }), "Purchased")
         })
 
         describe("should revert if", async () => {
@@ -127,7 +127,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
             it("#ownership changed", async () => {
                 expect((await directSale.nftSales(nft.address, 3)).isOpenForSale).to.eq(true)
                 await nft.transferFrom(darren, alice, 3, { from: darren })
-                expectEvent.notEmitted(await directSale.purchase(nft.address, 3, { from: darren }), "LogPurchase")
+                expectEvent.notEmitted(await directSale.purchase(nft.address, 3, { from: darren }), "Purchased")
                 expect((await directSale.nftSales(nft.address, 3)).isOpenForSale).to.eq(false)
                 await expectRevert(directSale.purchase(nft.address, 3, { from: darren }), "DirectNFTs#purchase: NFT_SALE_CLOSED")
             })
