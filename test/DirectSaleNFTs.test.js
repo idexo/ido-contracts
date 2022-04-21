@@ -121,8 +121,10 @@ contract("::DirectSaleNFTs", async (accounts) => {
             it("sef purchase", async () => {
                 await expectRevert(directSale.purchase(nft.address, 3, { from: darren }), "DirectNFTs#purchase: SELF_PURCHASE")
             })
-            // we need transfer a nft after put for sale to test ownership changed
-
+            /*
+            An nft put up for sale, and later transferred by the owner to someone else, will remain in the contract state as available for sale.
+            An alternative, perhaps, is to deposit the NFT in the contract
+            */
             it("#ownership changed", async () => {
                 await nft.transferFrom(darren, alice, 3, { from: darren })
                 await expectRevert(directSale.purchase(nft.address, 3, { from: darren }), "DirectNFTs#purchase: OWNERSHIP_CHANGED")

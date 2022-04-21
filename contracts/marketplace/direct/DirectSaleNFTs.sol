@@ -133,6 +133,11 @@ contract DirectSaleNFTs is Ownable {
         require(nftSale.isOpenForSale, "DirectNFTs#purchase: NFT_SALE_CLOSED");
         require(nftOwner != address(0), "DirectNFTs#purchase: INVALID_NFT");
         require(nftOwner != msg.sender, "DirectNFTs#purchase: SELF_PURCHASE");
+
+        /*
+        An nft put up for sale, and later transferred by the owner to someone else, will remain in the contract state as available for sale.
+        An alternative, perhaps, is to deposit the NFT in the contract
+        */
         require(nftOwner == nftSale.seller, "DirectNFTs#purchase: OWNERSHIP_CHANGED");
 
         _purchase(_nft, nftOwner, msg.sender, _tokenID);
