@@ -114,7 +114,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
             await ido.mint(carol, web3.utils.toWei(new BN(50000)).toString(), { from: owner })
             await ido.approve(directSale.address, web3.utils.toWei(new BN(500000)).toString(), { from: carol })
 
-            await directSale.purchase(nft.address, 1, { from: carol })
+            expectEvent(await directSale.purchase(nft.address, 1, { from: carol }), "LogPurchase")
         })
 
         describe("should revert if", async () => {
@@ -124,15 +124,12 @@ contract("::DirectSaleNFTs", async (accounts) => {
             it("sef purchase", async () => {
                 await expectRevert(directSale.purchase(nft.address, 3, { from: darren }), "DirectNFTs#purchase: SELF_PURCHASE")
             })
-            /*
-            An nft put up for sale, and later transferred by the owner to someone else, will remain in the contract state as available for sale.
-            An alternative, perhaps, is to deposit the NFT in the contract
-            */
             it("#ownership changed", async () => {
                 expect((await directSale.nftSales(nft.address, 3)).isOpenForSale).to.eq(true)
                 await nft.transferFrom(darren, alice, 3, { from: darren })
-                await expectRevert(directSale.purchase(nft.address, 3, { from: darren }), "DirectNFTs#purchase: NFT_SALE_CLOSED")
+                expectEvent.notEmitted(await directSale.purchase(nft.address, 3, { from: darren }), "LogPurchase")
                 expect((await directSale.nftSales(nft.address, 3)).isOpenForSale).to.eq(false)
+                await expectRevert(directSale.purchase(nft.address, 3, { from: darren }), "DirectNFTs#purchase: NFT_SALE_CLOSED")
             })
         })
     })
