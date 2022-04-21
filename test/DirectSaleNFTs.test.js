@@ -129,8 +129,10 @@ contract("::DirectSaleNFTs", async (accounts) => {
             An alternative, perhaps, is to deposit the NFT in the contract
             */
             it("#ownership changed", async () => {
+                expect((await directSale.nftSales(nft.address, 3)).isOpenForSale).to.eq(true)
                 await nft.transferFrom(darren, alice, 3, { from: darren })
                 await expectRevert(directSale.purchase(nft.address, 3, { from: darren }), "DirectNFTs#purchase: NFT_SALE_CLOSED")
+                expect((await directSale.nftSales(nft.address, 3)).isOpenForSale).to.eq(false)
             })
         })
     })
