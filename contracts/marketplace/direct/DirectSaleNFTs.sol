@@ -7,10 +7,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-import "../../lib/Error.sol";
-
-// import "./IERC721.sol";
-
 contract DirectSaleNFTs is Ownable, Pausable {
     using SafeERC20 for IERC20;
 
@@ -35,15 +31,16 @@ contract DirectSaleNFTs is Ownable, Pausable {
     event LogSweep(address token, address to);
 
     constructor(address _purchaseToken, uint256 _saleStartTime) {
-        if (_purchaseToken == address(0)) revert InvalidAddress();
-        if (_saleStartTime <= block.timestamp) revert InvalidSaleStartTime();
+        if (_saleStartTime == 0) _saleStartTime = block.timestamp;
+        require(_purchaseToken != address(0), "DirectNFTs#constructor: ADDRESS_ZERO");
+        require(_saleStartTime >= block.timestamp, "DirectNFTs#constructor: INVALID_SALE_START");
 
         purchaseToken = _purchaseToken;
         saleStartTime = _saleStartTime;
     }
 
     modifier saleIsOpen() {
-        if (paused() || block.timestamp < saleStartTime) revert SaleNotOpen();
+        require(!paused() || saleStartTime <= block.timestamp, "DirectNFTs#saleIsOpen: SALE_NOT_OPEN");
         _;
     }
 
@@ -53,8 +50,9 @@ contract DirectSaleNFTs is Ownable, Pausable {
      * `_saleStartTime` must be greater than current timestamp
      */
     function setSaleStartTime(uint256 _saleStartTime) external onlyOwner {
-        if (saleStartTime <= block.timestamp) revert SaleStarted();
-        if (_saleStartTime <= block.timestamp) revert InvalidSaleStartTime();
+        require(saleStartTime > block.timestamp, "DirectNFTs#setSaleStartTime: SALE_STARTED");
+        require(_saleStartTime > block.timestamp, "DirectNFTs#setSaleStartTime: INVALID_SALE_START");
+
         saleStartTime = _saleStartTime;
     }
 
@@ -69,7 +67,7 @@ contract DirectSaleNFTs is Ownable, Pausable {
         uint256 _tokenID,
         uint256 _price
     ) external saleIsOpen {
-        if (msg.sender != IERC721(_nft).ownerOf(_tokenID)) revert CallerNotNFTOwner();
+        require(msg.sender == IERC721(_nft).ownerOf(_tokenID), "DirectNFTs#openForSale: CALLER_NOT_NFT_OWNER");
 
         NFTSaleInfo storage nftSale = nftSales[_nft][_tokenID];
 
@@ -91,9 +89,11 @@ contract DirectSaleNFTs is Ownable, Pausable {
         uint256 _tokenID,
         uint256 _price
     ) public saleIsOpen {
-        if (msg.sender != IERC721(_nft).ownerOf(_tokenID)) revert CallerNotNFTOwnerOrTokenInvalid();
+        require(msg.sender == IERC721(_nft).ownerOf(_tokenID), "DirectNFTs#setPrice: CALLER_NOT_NFT_OWNER_OR_TOKEN_INVALID");
+
         NFTSaleInfo memory nftSale = nftSales[_nft][_tokenID];
-        if (msg.sender != nftSale.seller) revert OwnershipChanged();
+        require(msg.sender == nftSale.seller, "DirectNFTs#setPrice: OWNERSHIP_CHANGED");
+
         _setPrice(_nft, _tokenID, _price);
     }
 
@@ -114,7 +114,8 @@ contract DirectSaleNFTs is Ownable, Pausable {
      * `_tokenID` must exist
      */
     function closeForSale(address _nft, uint256 _tokenID) external {
-        if (msg.sender != IERC721(_nft).ownerOf(_tokenID)) revert CallerNotNFTOwnerOrTokenInvalid();
+        require(msg.sender == IERC721(_nft).ownerOf(_tokenID), "DirectNFTs#closeForSale: CALLER_NOT_NFT_OWNER_OR_TOKEN_INVALID");
+
         nftSales[_nft][_tokenID].isOpenForSale = false;
 
         emit LogCloseForSale(_tokenID);
@@ -130,12 +131,11 @@ contract DirectSaleNFTs is Ownable, Pausable {
         NFTSaleInfo memory nftSale = nftSales[_nft][_tokenID];
 
         address nftOwner = IERC721(_nft).ownerOf(_tokenID);
-        if (nftOwner == address(0)) revert InvalidNFTId();
-        if (nftOwner == msg.sender) revert SelfPurchase();
-        if (nftOwner != nftSale.seller) revert OwnershipChanged();
+        require(nftOwner != address(0), "DirectNFTs#purchase: INVALID_NFT");
+        require(nftOwner != msg.sender, "DirectNFTs#purchase: SELF_PURCHASE");
+        require(nftOwner == nftSale.seller, "DirectNFTs#purchase: OWNERSHIP_CHANGED");
 
-        bool isOpenForSale = nftSale.isOpenForSale;
-        if (!isOpenForSale) revert NFTClosedForSale();
+        require(nftSale.isOpenForSale, "DirectNFTs#purchase: NFT_SALE_CLOSED");
 
         _purchase(_nft, nftOwner, msg.sender, _tokenID);
     }
@@ -147,10 +147,10 @@ contract DirectSaleNFTs is Ownable, Pausable {
         uint256 _tokenID
     ) private {
         NFTSaleInfo storage nftSale = nftSales[_nft][_tokenID];
-        uint256 price = nftSale.price;
-        if (price == 0) revert InvalidPrice();
 
-        IERC20(purchaseToken).safeTransferFrom(_buyer, _tokenOwner, price);
+        require(nftSale.price != 0, "DirectNFTs#_purchase: INVALID_PRICE");
+
+        IERC20(purchaseToken).safeTransferFrom(_buyer, _tokenOwner, nftSale.price);
         IERC721(_nft).safeTransferFrom(_tokenOwner, _buyer, _tokenID);
         nftSale.isOpenForSale = false;
 
@@ -162,7 +162,7 @@ contract DirectSaleNFTs is Ownable, Pausable {
      * Accessible by only owner
      */
     function sweep(address _token, address _to) external onlyOwner {
-        if (_token == address(0)) revert InvalidAddress();
+        require(_token != address(0), "DirectNFTs#sweep: INVALID_ADDRESS");
         uint256 amount = IERC20(_token).balanceOf(address(this));
         IERC20(_token).safeTransfer(_to, amount);
 
