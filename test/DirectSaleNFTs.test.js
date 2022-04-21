@@ -130,7 +130,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
             */
             it("#ownership changed", async () => {
                 await nft.transferFrom(darren, alice, 3, { from: darren })
-                await expectRevert(directSale.purchase(nft.address, 3, { from: darren }), "DirectNFTs#purchase: OWNERSHIP_CHANGED")
+                await expectRevert(directSale.purchase(nft.address, 3, { from: darren }), "DirectNFTs#purchase: NFT_SALE_CLOSED")
             })
         })
     })

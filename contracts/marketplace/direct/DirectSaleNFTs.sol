@@ -124,6 +124,9 @@ contract DirectSaleNFTs is Ownable {
      */
     function purchase(address _nft, uint256 _tokenID) external saleIsOpen {
         address nftOwner = IERC721(_nft).ownerOf(_tokenID);
+        if ((nftOwner != nftSales[_nft][_tokenID].seller)) {
+            nftSales[_nft][_tokenID].isOpenForSale = false;
+        }
         require(nftSales[_nft][_tokenID].isOpenForSale, "DirectNFTs#purchase: NFT_SALE_CLOSED");
         require(nftOwner != address(0), "DirectNFTs#purchase: INVALID_NFT");
         require(nftOwner != msg.sender, "DirectNFTs#purchase: SELF_PURCHASE");
@@ -132,6 +135,7 @@ contract DirectSaleNFTs is Ownable {
         An nft put up for sale, and later transferred by the owner to someone else, will remain in the contract state as available for sale.
         An alternative, perhaps, is to deposit the NFT in the contract
         */
+
         require(nftOwner == nftSales[_nft][_tokenID].seller, "DirectNFTs#purchase: OWNERSHIP_CHANGED");
 
         _purchase(_nft, nftOwner, msg.sender, _tokenID);
