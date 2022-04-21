@@ -10,9 +10,9 @@ contract("::DirectSaleNFTs", async (accounts) => {
     let directSale, nft, ido, usdt, usdc
     const [owner, alice, bob, carol, darren] = accounts
     const DOMAIN = "https://idexo.com/"
-    const startTime = Math.floor(Date.now() / 1000) + duration.seconds(3600)
 
     before(async () => {
+        const startTime = Math.floor(Date.now() / 1000) + duration.seconds(3600)
         ido = await ERC20.new("Idexo Community", "IDO", { from: owner })
         nft = await CommunityNFT.new("TEST", "T", DOMAIN, { from: owner })
         directSale = await DirectSaleNFTs.new(ido.address, startTime, { from: owner })
@@ -21,6 +21,23 @@ contract("::DirectSaleNFTs", async (accounts) => {
     describe("# SaleStartTime", async () => {
         it("should set sale start time", async () => {
             await directSale.setSaleStartTime(Math.floor(Date.now() / 1000) + duration.seconds(2400), { from: owner })
+        })
+        describe("should revert if", async () => {
+            it("timestamp < block.timestamp", async () => {
+                await expectRevert(
+                    directSale.setSaleStartTime(Math.floor(Date.now() / 1000), { from: owner }),
+                    "DirectNFTs#setSaleStartTime: INVALID_SALE_START"
+                )
+                // await timeTraveler.advanceTimeAndBlock(duration.days(-1))
+            })
+            it("sale started", async () => {
+                await timeTraveler.advanceTimeAndBlock(duration.days(1))
+                await expectRevert(
+                    directSale.setSaleStartTime(Math.floor(Date.now() / 1000) + duration.seconds(2400), { from: owner }),
+                    "DirectNFTs#setSaleStartTime: SALE_STARTED"
+                )
+                // await timeTraveler.advanceTimeAndBlock(duration.days(-1))
+            })
         })
         // it("should get minPoolStakeAmount", async () => {
         //     await directSale.minPoolStakeAmount().then((res) => {
