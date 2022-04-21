@@ -136,7 +136,7 @@ contract DirectSaleNFTs is Ownable {
         An alternative, perhaps, is to deposit the NFT in the contract
         */
 
-        require(nftOwner == nftSales[_nft][_tokenID].seller, "DirectNFTs#purchase: OWNERSHIP_CHANGED");
+        // require(nftOwner == nftSales[_nft][_tokenID].seller, "DirectNFTs#purchase: OWNERSHIP_CHANGED");
 
         _purchase(_nft, nftOwner, msg.sender, _tokenID);
     }
