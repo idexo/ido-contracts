@@ -23,11 +23,12 @@ contract DirectSaleNFTs is Ownable {
     // nft address => nft id => nft sale info structure
     mapping(address => mapping(uint256 => NFTSaleInfo)) public nftSales;
 
-    event LogOpenForSale(uint256 indexed tokenID);
-    event LogCloseForSale(uint256 indexed tokenID);
-    event LogPriceSet(uint256 indexed tokenID, uint256 price);
-    event LogPurchase(uint256 indexed tokenID, address seller, address buyer);
-    event LogSweep(address token, address to);
+    event SaleOpened(uint256 indexed tokenID);
+    event SaleClosed(uint256 indexed tokenID);
+    event PriceSet(uint256 indexed tokenID, uint256 price);
+    event Purchased(uint256 indexed tokenID, address seller, address buyer);
+    event FalseSeller(address seller, address falseSeller);
+    event Swept(address token, address to);
 
     constructor(address _purchaseToken, uint256 _saleStartTime) {
         if (_saleStartTime == 0) _saleStartTime = block.timestamp;
@@ -72,7 +73,7 @@ contract DirectSaleNFTs is Ownable {
         nftSales[_nft][_tokenID].seller = msg.sender;
         nftSales[_nft][_tokenID].isOpenForSale = true;
 
-        emit LogOpenForSale(_tokenID);
+        emit SaleOpened(_tokenID);
     }
 
     /**
@@ -100,7 +101,7 @@ contract DirectSaleNFTs is Ownable {
     ) private {
         nftSales[_nft][_tokenID].price = _price;
 
-        emit LogPriceSet(_tokenID, _price);
+        emit PriceSet(_tokenID, _price);
     }
 
     /**
@@ -113,7 +114,7 @@ contract DirectSaleNFTs is Ownable {
 
         nftSales[_nft][_tokenID].isOpenForSale = false;
 
-        emit LogCloseForSale(_tokenID);
+        emit SaleClosed(_tokenID);
     }
 
     /**
@@ -130,6 +131,7 @@ contract DirectSaleNFTs is Ownable {
 
         if ((nftOwner != nftSales[_nft][_tokenID].seller)) {
             nftSales[_nft][_tokenID].isOpenForSale = false;
+            emit FalseSeller(nftOwner, nftSales[_nft][_tokenID].seller);
         } else {
             _purchase(_nft, nftOwner, msg.sender, _tokenID);
         }
@@ -147,7 +149,7 @@ contract DirectSaleNFTs is Ownable {
         IERC721(_nft).safeTransferFrom(_tokenOwner, _buyer, _tokenID);
         nftSales[_nft][_tokenID].isOpenForSale = false;
 
-        emit LogPurchase(_tokenID, _tokenOwner, _buyer);
+        emit Purchased(_tokenID, _tokenOwner, _buyer);
     }
 
     /**
@@ -159,6 +161,6 @@ contract DirectSaleNFTs is Ownable {
         uint256 amount = IERC20(_token).balanceOf(address(this));
         IERC20(_token).safeTransfer(_to, amount);
 
-        emit LogSweep(_token, _to);
+        emit Swept(_token, _to);
     }
 }

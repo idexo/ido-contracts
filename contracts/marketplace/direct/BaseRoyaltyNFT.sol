@@ -14,8 +14,8 @@ contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, Operatorable {
     // Royalties fee receiver address
     address public royaltiesCollector;
 
-    event LogMinted(uint256 indexed tokenId);
-    event LogBurnt(uint256 indexed tokenId);
+    event Minted(uint256 indexed tokenId);
+    event Burned(uint256 indexed tokenId);
 
     constructor(
         string memory _name,
@@ -57,7 +57,7 @@ contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, Operatorable {
         super._mint(_account, newTokenId);
         super._setTokenURI(newTokenId, _uri);
 
-        emit LogMinted(newTokenId);
+        emit Minted(newTokenId);
     }
 
     /**
@@ -98,7 +98,7 @@ contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, Operatorable {
     function _burn(uint256 _tokenId) internal override(ERC721, ERC721URIStorage) {
         ERC721URIStorage._burn(_tokenId);
 
-        emit LogBurnt(_tokenId);
+        emit Burned(_tokenId);
     }
 
     /**
