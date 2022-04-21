@@ -47,6 +47,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
                 expect(balance.toString()).to.eq("1")
             })
             expectEvent(await directSale.openForSale(nft.address, 1, web3.utils.toWei(new BN(10000)).toString(), { from: alice }), "LogOpenForSale")
+            await nft.approve(directSale.address, 1, { from: alice })
         })
         it("should put bob NFT for sale", async () => {
             await nft.mintNFT(bob, `bob`, { from: owner })
@@ -54,6 +55,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
                 expect(balance.toString()).to.eq("1")
             })
             expectEvent(await directSale.openForSale(nft.address, 2, web3.utils.toWei(new BN(10000)).toString(), { from: bob }), "LogOpenForSale")
+            await nft.approve(directSale.address, 2, { from: bob })
         })
         it("should put darren NFT for sale", async () => {
             await nft.mintNFT(darren, `darren`, { from: owner })
@@ -61,6 +63,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
                 expect(balance.toString()).to.eq("1")
             })
             expectEvent(await directSale.openForSale(nft.address, 3, web3.utils.toWei(new BN(10000)).toString(), { from: darren }), "LogOpenForSale")
+            await nft.approve(directSale.address, 3, { from: darren })
         })
 
         describe("should revert if", async () => {
@@ -110,7 +113,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
         it("should bought the NFT #1", async () => {
             await ido.mint(carol, web3.utils.toWei(new BN(50000)).toString(), { from: owner })
             await ido.approve(directSale.address, web3.utils.toWei(new BN(500000)).toString(), { from: carol })
-            await nft.approve(directSale.address, 1, { from: alice })
+
             await directSale.purchase(nft.address, 1, { from: carol })
         })
 

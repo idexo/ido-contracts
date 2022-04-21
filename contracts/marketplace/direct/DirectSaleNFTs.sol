@@ -67,7 +67,6 @@ contract DirectSaleNFTs is Ownable {
         uint256 _price
     ) external saleIsOpen {
         require(msg.sender == IERC721(_nft).ownerOf(_tokenID), "DirectNFTs#openForSale: CALLER_NOT_NFT_OWNER");
-
         NFTSaleInfo storage nftSale = nftSales[_nft][_tokenID];
 
         _setPrice(_nft, _tokenID, _price);
