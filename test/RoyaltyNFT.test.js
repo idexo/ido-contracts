@@ -79,16 +79,16 @@ contract("::RoyaltyNFT", async (accounts) => {
 
     describe("# Mint and Burn", async () => {
         it("should mint", async () => {
-            expectEvent(await royaltyNFT.mint(alice, "alice", { from: owner }), "LogMinted")
+            expectEvent(await royaltyNFT.mint(alice, "alice", { from: owner }), "Minted")
         })
         it("should burn", async () => {
-            expectEvent(await royaltyNFT.burn(1, { from: owner }), "LogBurnt")
+            expectEvent(await royaltyNFT.burn(1, { from: owner }), "Burned")
         })
     })
 
     describe("# TokenURI", async () => {
         it("should mint", async () => {
-            expectEvent(await royaltyNFT.mint(alice, "alice", { from: owner }), "LogMinted")
+            expectEvent(await royaltyNFT.mint(alice, "alice", { from: owner }), "Minted")
         })
         it("should shows tokenURI", async () => {
             royaltyNFT.tokenURI(2, { from: owner }).then((tokenURI) => {
