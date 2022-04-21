@@ -26,14 +26,14 @@ contract("::DirectSaleNFTs", async (accounts) => {
             it("timestamp < block.timestamp", async () => {
                 await expectRevert(
                     directSale.setSaleStartTime(Math.floor(Date.now() / 1000) - duration.seconds(2400), { from: owner }),
-                    "DirectNFTs#setSaleStartTime: INVALID_SALE_START"
+                    "INVALID_SALE_START"
                 )
             })
             it("sale started", async () => {
                 await timeTraveler.advanceTimeAndBlock(duration.days(1))
                 await expectRevert(
                     directSale.setSaleStartTime(Math.floor(Date.now() / 1000) + duration.seconds(2400), { from: owner }),
-                    "DirectNFTs#setSaleStartTime: SALE_STARTED"
+                    "SALE_STARTED"
                 )
                 // await timeTraveler.advanceTimeAndBlock(duration.days(-1))
             })
@@ -76,7 +76,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
             it("not owner", async () => {
                 await expectRevert(
                     directSale.openForSale(nft.address, 1, web3.utils.toWei(new BN(10000)).toString(), { from: carol }),
-                    "DirectNFTs#openForSale: CALLER_NOT_NFT_OWNER"
+                    "CALLER_NOT_NFT_OWNER"
                 )
             })
         })
@@ -89,7 +89,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
 
         describe("should revert if", async () => {
             it("price 0", async () => {
-                await expectRevert(directSale.setPrice(nft.address, 1, 0, { from: alice }), "DirectNFTs#setPrice: INVALID_PRICE")
+                await expectRevert(directSale.setPrice(nft.address, 1, 0, { from: alice }), "INVALID_PRICE")
             })
         })
     })
@@ -103,7 +103,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
             it("not owner or ownership changed", async () => {
                 await expectRevert(
                     directSale.closeForSale(nft.address, 3, { from: alice }),
-                    "DirectNFTs#closeForSale: CALLER_NOT_NFT_OWNER_OR_TOKEN_INVALID"
+                    "CALLER_NOT_NFT_OWNER_OR_TOKEN_INVALID"
                 )
             })
         })
@@ -119,17 +119,17 @@ contract("::DirectSaleNFTs", async (accounts) => {
 
         describe("should revert if", async () => {
             it("#sale closed", async () => {
-                await expectRevert(directSale.purchase(nft.address, 2, { from: alice }), "DirectNFTs#purchase: NFT_SALE_CLOSED")
+                await expectRevert(directSale.purchase(nft.address, 2, { from: alice }), "NFT_SALE_CLOSED")
             })
             it("sef purchase", async () => {
-                await expectRevert(directSale.purchase(nft.address, 3, { from: darren }), "DirectNFTs#purchase: SELF_PURCHASE")
+                await expectRevert(directSale.purchase(nft.address, 3, { from: darren }), "SELF_PURCHASE")
             })
             it("#ownership changed", async () => {
                 expect((await directSale.nftSales(nft.address, 3)).isOpenForSale).to.eq(true)
                 await nft.transferFrom(darren, alice, 3, { from: darren })
                 expectEvent.notEmitted(await directSale.purchase(nft.address, 3, { from: darren }), "Purchased")
                 expect((await directSale.nftSales(nft.address, 3)).isOpenForSale).to.eq(false)
-                await expectRevert(directSale.purchase(nft.address, 3, { from: darren }), "DirectNFTs#purchase: NFT_SALE_CLOSED")
+                await expectRevert(directSale.purchase(nft.address, 3, { from: darren }), "NFT_SALE_CLOSED")
             })
         })
     })
