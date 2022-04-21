@@ -56,7 +56,7 @@ contract DirectSaleNFTs is Ownable {
         saleStartTime = _saleStartTime;
     }
 
-    function currentOwner(address _nft, uint256 _tokenID) private view returns (address) {
+    function currentOwner(address _nft, uint256 _tokenID) internal virtual view returns (address) {
         return IERC721(_nft).ownerOf(_tokenID);
     }
 
@@ -146,7 +146,7 @@ contract DirectSaleNFTs is Ownable {
         address _tokenOwner,
         address _buyer,
         uint256 _tokenID
-    ) private {
+    ) internal virtual {
         require(nftSales[_nft][_tokenID].price != 0, "INVALID_PRICE");
 
         IERC20(purchaseToken).safeTransferFrom(_buyer, _tokenOwner, nftSales[_nft][_tokenID].price);
