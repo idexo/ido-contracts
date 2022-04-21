@@ -2,12 +2,11 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-contract DirectSaleNFTs is Ownable, Pausable {
+contract DirectSaleNFTs is Ownable {
     using SafeERC20 for IERC20;
 
     // ERC20 token
@@ -40,7 +39,7 @@ contract DirectSaleNFTs is Ownable, Pausable {
     }
 
     modifier saleIsOpen() {
-        require(!paused() || saleStartTime <= block.timestamp, "DirectNFTs#saleIsOpen: SALE_NOT_OPEN");
+        require(saleStartTime <= block.timestamp, "DirectNFTs#saleIsOpen: SALE_NOT_OPEN");
         _;
     }
 
