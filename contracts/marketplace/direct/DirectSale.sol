@@ -67,11 +67,9 @@ contract DirectSale is Ownable {
   ) external saleIsOpen {
     if (msg.sender != RoyaltyNFT(_nft).ownerOf(_tokenID)) revert CallerNotNFTOwner();
 
-    NFTSaleInfo storage nftSale = nftSales[_nft][_tokenID];
-
     _setPrice(_nft, _tokenID, _price);
-    nftSale.seller = msg.sender;
-    nftSale.isOpenForSale = true;
+    nftSales[_nft][_tokenID].seller = msg.sender;
+    nftSales[_nft][_tokenID].isOpenForSale = true;
 
     emit LogOpenForSale(_tokenID);
   }
@@ -88,8 +86,7 @@ contract DirectSale is Ownable {
     uint256 _price
   ) public saleIsOpen {
     if (msg.sender != RoyaltyNFT(_nft).ownerOf(_tokenID)) revert CallerNotNFTOwnerOrTokenInvalid();
-    NFTSaleInfo memory nftSale = nftSales[_nft][_tokenID];
-    if (msg.sender != nftSale.seller) revert OwnershipChanged();
+    if (msg.sender != nftSales[_nft][_tokenID].seller) revert OwnershipChanged();
     _setPrice(_nft, _tokenID, _price);
   }
 
@@ -98,8 +95,7 @@ contract DirectSale is Ownable {
     uint256 _tokenID,
     uint256 _price
   ) private {
-    NFTSaleInfo storage nftSale = nftSales[_nft][_tokenID];
-    nftSale.price = _price;
+    nftSales[_nft][_tokenID].price = _price;
 
     emit LogPriceSet(_tokenID, _price);
   }
@@ -129,14 +125,12 @@ contract DirectSale is Ownable {
     address _nft,
     uint256 _tokenID
   ) external saleIsOpen {
-    NFTSaleInfo memory nftSale = nftSales[_nft][_tokenID];
-
     address nftOwner = RoyaltyNFT(_nft).ownerOf(_tokenID);
     if (nftOwner == address(0)) revert InvalidNFTId();
     if (nftOwner == msg.sender) revert SelfPurchase();
-    if (nftOwner != nftSale.seller) revert OwnershipChanged();
+    if (nftOwner != nftSales[_nft][_tokenID].seller) revert OwnershipChanged();
 
-    bool isOpenForSale = nftSale.isOpenForSale;
+    bool isOpenForSale = nftSales[_nft][_tokenID].isOpenForSale;
     if (!isOpenForSale) revert NFTClosedForSale();
 
     _purchase(_nft, nftOwner, msg.sender, _tokenID);
@@ -148,15 +142,14 @@ contract DirectSale is Ownable {
     address _buyer,
     uint256 _tokenID
   ) private {
-    NFTSaleInfo storage nftSale = nftSales[_nft][_tokenID];
-    uint256 price = nftSale.price;
+    uint256 price = nftSales[_nft][_tokenID].price;
     if (price == 0) revert InvalidPrice();
 
     uint256 royaltyFee = price * RoyaltyNFT(_nft).royaltiesFeeBP() / 10000;
     IERC20(purchaseToken).safeTransferFrom(_buyer, RoyaltyNFT(_nft).royaltiesCollector(), royaltyFee);
     IERC20(purchaseToken).safeTransferFrom(_buyer, _tokenOwner, price - royaltyFee);
     RoyaltyNFT(_nft).safeTransferFrom(_tokenOwner, _buyer, _tokenID);
-    nftSale.isOpenForSale = false;
+    nftSales[_nft][_tokenID].isOpenForSale = false;
 
     emit LogPurchase(_tokenID, _tokenOwner, _buyer);
   }
