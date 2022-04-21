@@ -3,13 +3,10 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-// import "@openzeppelin/contracts/access/Ownable.sol";
-
 import "../../lib/Error.sol";
 import "../../lib/Operatorable.sol";
 
-contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, Operatorable, Pausable {
+contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, Operatorable {
     // Base token URI
     string public baseTokenURI;
     // Last token ID starting from 1
@@ -55,7 +52,7 @@ contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, Operatorable, Pau
      * `_account` must not be zero address
      * `_uri` can be empty
      */
-    function mint(address _account, string memory _uri) public onlyOperator whenNotPaused {
+    function mint(address _account, string memory _uri) public onlyOperator {
         uint256 newTokenId = ++tokenID;
         super._mint(_account, newTokenId);
         super._setTokenURI(newTokenId, _uri);
@@ -68,7 +65,7 @@ contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, Operatorable, Pau
      * Only `operator` can call
      * `_tokenId` must be valid
      */
-    function burn(uint256 _tokenId) external onlyOperator whenNotPaused {
+    function burn(uint256 _tokenId) external onlyOperator {
         _burn(_tokenId);
     }
 
@@ -91,7 +88,7 @@ contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, Operatorable, Pau
         address _from,
         address _to,
         uint256 _tokenId
-    ) internal override(ERC721, ERC721Enumerable) whenNotPaused {
+    ) internal override(ERC721, ERC721Enumerable) {
         ERC721Enumerable._beforeTokenTransfer(_from, _to, _tokenId);
     }
 
