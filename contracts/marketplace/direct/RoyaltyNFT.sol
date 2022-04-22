@@ -14,7 +14,7 @@ contract RoyaltyNFT is BaseRoyaltyNFT {
         address _royaltiesCollector,
         uint16 _royaltiesFeeBP
     ) BaseRoyaltyNFT(_name, _symbol, _baseTokenURI, _royaltiesCollector) {
-        if (_royaltiesFeeBP > 1000) revert InvalidRoyaltiesFee();
+        require(_royaltiesFeeBP <= 1000, "INVALID_ROYALTIES_FEE");
         royaltiesFeeBP = _royaltiesFeeBP;
     }
 
@@ -24,7 +24,7 @@ contract RoyaltyNFT is BaseRoyaltyNFT {
      * `_royaltiesFeeBP` must not be greater than 1000
      */
     function setRoyaltiesFeeBP(uint16 _royaltiesFeeBP) external onlyOwner {
-        if (_royaltiesFeeBP > 1000) revert InvalidRoyaltiesFee();
+        require(_royaltiesFeeBP <= 1000, "INVALID_ROYALTIES_FEE");
         royaltiesFeeBP = _royaltiesFeeBP;
     }
 }

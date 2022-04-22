@@ -3,7 +3,6 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "../../lib/Error.sol";
 import "../../lib/Operatorable.sol";
 
 contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, Operatorable {
@@ -23,7 +22,7 @@ contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, Operatorable {
         string memory _baseTokenURI,
         address _royaltiesCollector
     ) ERC721(_name, _symbol) {
-        if (_royaltiesCollector == address(0)) revert InvalidAddress();
+        require(_royaltiesCollector != address(0), "INVALID_ADDRESS");
         baseTokenURI = _baseTokenURI;
         royaltiesCollector = _royaltiesCollector;
     }
@@ -42,7 +41,7 @@ contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, Operatorable {
      * `_royaltiesCollector` must not be zero address
      */
     function setRoyaltiesCollector(address _royaltiesCollector) external onlyOwner {
-        if (_royaltiesCollector == address(0)) revert InvalidAddress();
+        require(_royaltiesCollector != address(0), "INVALID_ADDRESS");
         royaltiesCollector = _royaltiesCollector;
     }
 
