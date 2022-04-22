@@ -61,7 +61,7 @@ contract("::RoyaltyNFT", async (accounts) => {
             it("royalties > 1000", async () => {
                 // This test is compromised until the size of the variable 'royaltiesFeeBP' is corrected in the contract
                 // fixed to uint16
-                await expectRevert(royaltyNFT.setRoyaltiesFeeBP(1001, { from: owner }), "InvalidRoyaltiesFee()")
+                await expectRevert(royaltyNFT.setRoyaltiesFeeBP(1001, { from: owner }), "INVALID_ROYALTIES_FEE")
             })
         })
     })
@@ -72,7 +72,7 @@ contract("::RoyaltyNFT", async (accounts) => {
         })
         describe("should revert if", async () => {
             it("address Ox", async () => {
-                await expectRevert(royaltyNFT.setRoyaltiesCollector(ZERO_ADDRESS, { from: owner }), "InvalidAddress()")
+                await expectRevert(royaltyNFT.setRoyaltiesCollector(ZERO_ADDRESS, { from: owner }), "INVALID_ADDRESS")
             })
         })
     })
