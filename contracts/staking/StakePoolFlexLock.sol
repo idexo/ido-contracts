@@ -68,9 +68,9 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
      * - `amount` must not be zero
      * @param amount deposit amount.
      */
-    function deposit(uint256 amount, string memory depositType) external override {
+    function deposit(uint256 amount, string memory depositType, bool autoCompounding) external override {
         require(amount >= minStakeAmount, "StakePool#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
-        _deposit(msg.sender, amount, depositType);
+        _deposit(msg.sender, amount, depositType, autoCompounding);
     }
 
     /**
@@ -241,12 +241,13 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
     function _deposit(
         address account,
         uint256 amount,
-        string memory stakeType
+        string memory stakeType,
+        bool autoCompounding
     ) internal virtual nonReentrant {
         uint256 depositedAt = block.timestamp;
         uint256 inDays = _getLockDays(stakeType);
         uint256 lockedUntil = block.timestamp + (inDays * 1 days);
-        uint256 stakeId = _mint(account, amount, stakeType, depositedAt, lockedUntil);
+        uint256 stakeId = _mint(account, amount, stakeType, depositedAt, lockedUntil, autoCompounding);
         require(depositToken.transferFrom(account, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
 
         emit Deposited(account, stakeId, amount, lockedUntil);
