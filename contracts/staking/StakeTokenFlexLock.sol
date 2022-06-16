@@ -28,6 +28,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         string stakeType;
         uint256 depositedAt;
         uint256 lockedUntil;
+        bool compounding;
     }
 
     struct StakeType {
@@ -37,6 +38,8 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
 
     string[] public acceptedTypes;
 
+    uint256[] private _compoundIds;
+
     mapping(bytes32 => StakeType) private _stakeTypes;
 
     // stake id => stake info
@@ -45,6 +48,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
     mapping(address => uint256[]) public override stakerIds;
 
     event StakeAmountDecreased(uint256 stakeId, uint256 decreaseAmount);
+    event StakeAmountIncreased(uint256 stakeId, uint256 increaseAmount);
 
     constructor(
         string memory name_,
@@ -133,12 +137,21 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         returns (
             uint256,
             uint256,
+            string memory,
             uint256,
-            uint256
+            uint256,
+            bool
         )
     {
         require(_exists(stakeId), "StakeToken#getStakeInfo: STAKE_NOT_FOUND");
-        return (stakes[stakeId].amount, stakes[stakeId].multiplier, stakes[stakeId].depositedAt, stakes[stakeId].lockedUntil);
+        return (
+            stakes[stakeId].amount,
+            stakes[stakeId].multiplier,
+            stakes[stakeId].stakeType,
+            stakes[stakeId].depositedAt,
+            stakes[stakeId].lockedUntil,
+            stakes[stakeId].compounding
+        );
     }
 
     /**
@@ -193,12 +206,11 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
     }
 
     function _getLockDays(string memory stakeType) internal view returns (uint256) {
-                // keccak256() only accept bytes as arguments, so we need explicit conversion
+        // keccak256() only accept bytes as arguments, so we need explicit conversion
         bytes memory name = bytes(stakeType);
         bytes32 typeHash = keccak256(name);
 
         return _stakeTypes[typeHash].inDays;
-
     }
 
     /**
@@ -256,7 +268,8 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         uint256 amount,
         string memory stakeType,
         uint256 depositedAt,
-        uint256 lockedUntil
+        uint256 lockedUntil,
+        bool autoComponding
     ) internal virtual returns (uint256) {
         require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
         tokenIds++;
@@ -268,9 +281,36 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         newStake.stakeType = stakeType;
         newStake.depositedAt = depositedAt;
         newStake.lockedUntil = lockedUntil;
+        newStake.compounding = autoComponding;
         stakerIds[account].push(tokenIds);
 
+        if (autoComponding) _compoundIds.push(tokenIds);
+
         return tokenIds;
+    }
+
+    function _addStake(uint256 stakeId, uint256 amount) internal virtual {
+        require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
+        require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
+
+        stakes[stakeId].amount = stakes[stakeId].amount.add(amount);
+        emit StakeAmountIncreased(stakeId, amount);
+    }
+
+    function _setCompounding(uint256 stakeId, bool compounding) internal virtual {
+        // TODO: only token owner
+        stakes[stakeId].compounding = compounding;
+        if (!compounding) _popCompound(stakeId);
+        if (compounding) _compoundIds.push(tokenIds);
+    }
+
+    function isCompounding(uint256 stakeId) external view returns (bool) {
+        // TODO: check if exists
+        return stakes[stakeId].compounding;
+    }
+
+    function getCompoundingIds() external view returns (uint256[] memory) {
+        return _compoundIds;
     }
 
     /**
@@ -287,6 +327,25 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         delete stakes[stakeId];
         _currentSupply--;
         _popStake(stakeOwner, stakeId);
+        _popCompound(stakeId);
+    }
+
+    /**
+     * @dev Remove the given token from stakerIds.
+     *
+     * @param tokenId tokenId to remove
+     */
+    function _popCompound(uint256 tokenId) internal {
+        uint256[] storage compoundIds = _compoundIds;
+        for (uint256 i = 0; i < compoundIds.length; i++) {
+            if (compoundIds[i] == tokenId) {
+                if (i != compoundIds.length - 1) {
+                    compoundIds[i] = compoundIds[compoundIds.length - 1];
+                }
+                compoundIds.pop();
+                break;
+            }
+        }
     }
 
     /**

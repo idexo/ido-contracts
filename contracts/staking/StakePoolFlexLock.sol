@@ -86,9 +86,26 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
      * @param amount withdraw amount.
      */
     function withdraw(uint256 stakeId, uint256 amount) external override {
-        require(amount > 0, "StakePool#withdraw: UNDER_MINIMUM_WITHDRAW_AMOUNT");
         require(stakes[stakeId].lockedUntil < block.timestamp, "StakePool#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL");
+        require(amount > 0, "StakePool#withdraw: UNDER_MINIMUM_WITHDRAW_AMOUNT");
         _withdraw(msg.sender, stakeId, amount);
+    }
+
+    function getStakeType(uint256 stakeId) external view returns (string memory stakeType) {
+        require(_exists(stakeId), "StakeToken#getStakeType: STAKE_NOT_FOUND");
+
+        return stakes[stakeId].stakeType;
+    }
+
+    function addStake(uint256 stakeId, uint256 amount) external nonReentrant {
+        // ADD check to only operator and tokenId owner
+
+        _addStake(stakeId, amount);
+    }
+
+    function setCompounding(uint256 tokenId, bool compounding) external {
+        // ADD check to only tokenId owner
+        _setCompounding(tokenId, compounding);
     }
 
     /*************************|
