@@ -184,6 +184,13 @@ contract("::StakePoolFlexLock", async (accounts) => {
 
                     expectEvent(await stakePool.addStake(1, web3.utils.toWei(new BN(500)), { from: alice }), "StakeAmountIncreased")
 
+                    await stakePool.reLockStake(1, "MONTHLY", true, { from: alice })
+
+                    await expectRevert(
+                        stakePool.withdraw(1, web3.utils.toWei(new BN(1000)), { from: alice }),
+                        "StakePool#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL"
+                    )
+
                     await timeTraveler.revertToSnapshot(snapShot["result"])
 
                     // number = await ethers.provider.getBlockNumber()

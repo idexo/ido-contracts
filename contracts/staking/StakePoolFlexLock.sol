@@ -60,7 +60,29 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
     }
 
     /************************|
-    |          Stake         |
+    |    Deposit and Lock    |
+    |_______________________*/
+
+    function reLockStake(uint256 stakeId, string memory depositType, bool autoCompounding) external {
+        require(_exists(stakeId), "StakeToken#getStakeType: STAKE_NOT_FOUND");
+        require(msg.sender == ownerOf(stakeId), "CALLER_NOT_TOKEN_OWNER");
+        require(stakes[stakeId].lockedUntil < block.timestamp, "StakePool#reLockStakke: STAKE_ALREADY_LOCKED");
+        require(stakes[stakeId].amount >= minStakeAmount, "StakePool#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
+        _reLockStake(stakeId, depositType, autoCompounding);
+    }
+
+    function _reLockStake(uint256 stakeId, string memory depositType, bool autoCompounding) internal {
+        uint256 inDays = _getLockDays(depositType);
+
+        stakes[stakeId].depositedAt = block.timestamp;
+        stakes[stakeId].lockedUntil = block.timestamp + (inDays * 1 days);
+        stakes[stakeId].compounding = autoCompounding;
+// TODO: EMIT AN EVENT
+    }
+
+
+    /************************|
+    |    Deposit and Lock    |
     |_______________________*/
 
     /**
