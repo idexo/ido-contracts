@@ -197,16 +197,6 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         acceptedTypes.push(typeName);
     }
 
-    function getStakeType(string memory typeName) public view returns (StakeType memory stkType) {
-        // keccak256() only accept bytes as arguments, so we need explicit conversion
-        bytes memory name = bytes(typeName);
-        bytes32 typeHash = keccak256(name);
-
-        StakeType storage getType = _stakeTypes[typeHash];
-
-        return getType;
-    }
-
     /*************************|
     |   Private Functions     |
     |________________________*/

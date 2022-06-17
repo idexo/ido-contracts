@@ -40,6 +40,18 @@ contract("::StakePoolFlexLock", async (accounts) => {
             })
         })
     })
+
+    describe("# Reward Tokens", async () => {
+        it("should add USDC token reward", async () => {
+            await stakePool.addRewardToken(usdc.address, { from: owner })
+        })
+        describe("reverts if", async () => {
+            it("add reward token by NO-OPERATOR", async () => {
+                await expectRevert(stakePool.addRewardToken(usdc.address, { from: alice }), "Operatorable: CALLER_NO_OPERATOR_ROLE")
+            })
+        })
+    })
+
     describe("# StakeToken Types", async () => {
         // it("should get timeLimit", async () => {
         //     await stakePool.timeLimit().then((res) => {
@@ -48,12 +60,6 @@ contract("::StakePoolFlexLock", async (accounts) => {
         // })
         it("should add stakeType", async () => {
             await stakePool.addStakeType("MONTHLY", 31, { from: owner })
-        })
-
-        it("should get stakeType", async () => {
-            await stakePool.getStakeType("MONTHLy", { from: owner }).then((res) => {
-                console.log(res)
-            })
         })
     })
 
@@ -73,6 +79,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 await stakePool.isHolder(alice).then((res) => {
                     expect(res.toString()).to.eq("false")
                 })
+
                 expectEvent(await stakePool.deposit(web3.utils.toWei(new BN(500)), "MONTHLY", false, { from: alice }), "Deposited")
                 await ido.balanceOf(stakePool.address).then((res) => {
                     expect(res.toString()).to.eq("500000000000000000000")
@@ -80,6 +87,16 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 await stakePool.getStakeInfo(1).then((res) => {
                     expect(res[0].toString()).to.eq("500000000000000000000")
                 })
+
+                await stakePool.getStakeType(1).then((res) => {
+                    console.log(res)
+                })
+
+                await stakePool.currentSupply().then((res) => {
+                    console.log(res)
+                })
+
+                await stakePool.setCompounding(1, true)
             })
             it("should stake 2", async () => {
                 await stakePool.getEligibleStakeAmount(0, { from: carol }).then((res) => {
