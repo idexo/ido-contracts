@@ -269,4 +269,123 @@ contract("::StakePoolFlexLock", async (accounts) => {
             })
         })
     })
+
+    describe("# Rewards", async () => {
+        before(async () => {
+            for (const user of [owner, alice, bob]) {
+                await usdt.mint(user, web3.utils.toWei(new BN(100000)), { from: owner })
+                await usdt.approve(stakePool.address, web3.utils.toWei(new BN(100000)), { from: user })
+                await usdc.mint(user, web3.utils.toWei(new BN(100000)), { from: owner })
+                await usdc.approve(stakePool.address, web3.utils.toWei(new BN(100000)), { from: user })
+            }
+        })
+        describe("deposit rewards", async () => {
+            it("should deposit USDT reward", async () => {
+                expectEvent(await stakePool.depositReward(usdt.address, web3.utils.toWei(new BN(50000)), { from: owner }), "RewardDeposited")
+                await stakePool.getRewardDeposit(usdt.address, 0).then((res) => {
+                    expect(res[1].toString()).to.eq("50000000000000000000000")
+                })
+            })
+            it("should deposit USDC reward", async () => {
+                expectEvent(await stakePool.depositReward(usdc.address, web3.utils.toWei(new BN(20000)), { from: owner }), "RewardDeposited")
+                await stakePool.getRewardDeposit(usdc.address, 0).then((res) => {
+                    expect(res[1].toString()).to.eq("20000000000000000000000")
+                })
+            })
+        })
+        describe("claimable reward", async () => {
+            it("should add claimable USDT reward to 1", async () => {
+                await stakePool.addClaimableReward(usdt.address, 1, web3.utils.toWei(new BN(5000)), { from: owner })
+                await stakePool.getClaimableReward(usdt.address, 1).then((res) => {
+                    expect(res.toString()).to.eq("5000000000000000000000")
+                })
+            })
+            it("should add claimable USDC reward to 1", async () => {
+                await stakePool.addClaimableReward(usdc.address, 1, web3.utils.toWei(new BN(5000)), { from: owner })
+                await stakePool.getClaimableReward(usdc.address, 1).then((res) => {
+                    expect(res.toString()).to.eq("5000000000000000000000")
+                })
+            })
+        })
+        describe("claimable rewards", async () => {
+            const tokenIds = [1, 2]
+            const rewardsUSDT = [web3.utils.toWei(new BN(22500)), web3.utils.toWei(new BN(22500))]
+            const rewardsUSDC = [web3.utils.toWei(new BN(7500)), web3.utils.toWei(new BN(7500))]
+            it("should add claimable USDT rewards to 1 and 2", async () => {
+                await stakePool.addClaimableRewards(usdt.address, tokenIds, rewardsUSDT, {
+                    from: owner
+                })
+                await stakePool.getClaimableReward(usdt.address, 1).then((res) => {
+                    expect(res.toString()).to.eq("27500000000000000000000")
+                })
+                await stakePool.getClaimableReward(usdt.address, 2).then((res) => {
+                    expect(res.toString()).to.eq("22500000000000000000000")
+                })
+            })
+            it("should add claimable USDC rewards to 1 and 2", async () => {
+                await stakePool.addClaimableRewards(usdc.address, tokenIds, rewardsUSDC, {
+                    from: owner
+                })
+                await stakePool.getClaimableReward(usdc.address, 1).then((res) => {
+                    expect(res.toString()).to.eq("12500000000000000000000")
+                })
+                await stakePool.getClaimableReward(usdc.address, 2).then((res) => {
+                    expect(res.toString()).to.eq("7500000000000000000000")
+                })
+            })
+        })
+        describe("claim rewards", async () => {
+            it("should allow claim full USDT reward to 1", async () => {
+                expectEvent(await stakePool.claimReward(usdt.address, 1, web3.utils.toWei(new BN(27500)), { from: alice }), "RewardClaimed")
+                await stakePool.getClaimableReward(usdt.address, 1).then((res) => {
+                    expect(res.toString()).to.eq("0")
+                })
+            })
+            it("should allow claim full USDT reward to 2", async () => {
+                expectEvent(await stakePool.claimReward(usdt.address, 2, web3.utils.toWei(new BN(22500)), { from: carol }), "RewardClaimed")
+                await stakePool.getClaimableReward(usdt.address, 2).then((res) => {
+                    expect(res.toString()).to.eq("0")
+                })
+            })
+            it("should allow claim full USDC reward to 1", async () => {
+                expectEvent(await stakePool.claimReward(usdc.address, 1, web3.utils.toWei(new BN(12500)), { from: alice }), "RewardClaimed")
+                await stakePool.getClaimableReward(usdc.address, 1).then((res) => {
+                    expect(res.toString()).to.eq("0")
+                })
+            })
+            it("should allow claim partial USDC reward to 2", async () => {
+                expectEvent(await stakePool.claimReward(usdc.address, 2, web3.utils.toWei(new BN(5000)), { from: carol }), "RewardClaimed")
+                await stakePool.getClaimableReward(usdc.address, 2).then((res) => {
+                    expect(res.toString()).to.eq("2500000000000000000000")
+                })
+            })
+        })
+    })
+
+    describe("# Transfer", async () => {
+        describe("transfers", async () => {
+            it("should transfer", async () => {
+                await stakePool.deposit(web3.utils.toWei(new BN(600)), "MONTHLY", false, { from: darren })
+                await stakePool.currentSupply().then((res) => {
+                    expect(res.toString()).to.eq("4")
+                })
+                expectEvent(await stakePool.transferFrom(alice, carol, 1, { from: alice }), "Transfer")
+                await stakePool.getStakeInfo(1).then((res) => {
+                    expect(res[0].toString()).to.eq("500000000000000000000")
+                })
+                await stakePool.balanceOf(alice).then((res) => {
+                    expect(res.toString()).to.eq("0")
+                })
+                await stakePool.balanceOf(carol).then((res) => {
+                    expect(res.toString()).to.eq("3")
+                })
+                await stakePool.getStakeAmount(alice).then((res) => {
+                    expect(res.toString()).to.eq("0")
+                })
+                await stakePool.getStakeAmount(carol).then((res) => {
+                    expect(res.toString()).to.eq("10500000000000000000000")
+                })
+            })
+        })
+    })
 })
