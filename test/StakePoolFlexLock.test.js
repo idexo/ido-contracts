@@ -19,24 +19,40 @@ contract("::StakePoolFlexLock", async (accounts) => {
     })
 
     describe("# Get Contract info", async () => {
-        it("should get timeLimitInDays", async () => {
-            await stakePool.timeLimitInDays().then((res) => {
-                expect(res.toString()).to.eq("1")
-            })
-        })
-        it("should get minPoolStakeAmount", async () => {
-            await stakePool.minPoolStakeAmount().then((res) => {
-                expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
-            })
-        })
-        it("should get timeLimit", async () => {
-            await stakePool.timeLimit().then((res) => {
-                expect(res.toString()).to.eq("0")
-            })
-        })
+        // it("should get timeLimitInDays", async () => {
+        //     await stakePool.timeLimitInDays().then((res) => {
+        //         expect(res.toString()).to.eq("1")
+        //     })
+        // })
+        // it("should get minPoolStakeAmount", async () => {
+        //     await stakePool.minPoolStakeAmount().then((res) => {
+        //         expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
+        //     })
+        // })
+        // it("should get timeLimit", async () => {
+        //     await stakePool.timeLimit().then((res) => {
+        //         expect(res.toString()).to.eq("0")
+        //     })
+        // })
         it("should get depositToken", async () => {
             await stakePool.depositToken().then((res) => {
                 expect(res.toString()).to.eq(ido.address)
+            })
+        })
+    })
+    describe("# StakeToken Types", async () => {
+        // it("should get timeLimit", async () => {
+        //     await stakePool.timeLimit().then((res) => {
+        //         expect(res.toString()).to.eq("0")
+        //     })
+        // })
+        it("should add stakeType", async () => {
+            await stakePool.addStakeType("MONTHLY", 31, { from: owner })
+        })
+
+        it("should get stakeType", async () => {
+            await stakePool.getStakeType("MONTHLy", { from: owner }).then((res) => {
+                console.log(res)
             })
         })
     })
@@ -57,7 +73,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 await stakePool.isHolder(alice).then((res) => {
                     expect(res.toString()).to.eq("false")
                 })
-                expectEvent(await stakePool.deposit(web3.utils.toWei(new BN(500)), 0, { from: alice }), "Deposited")
+                expectEvent(await stakePool.deposit(web3.utils.toWei(new BN(500)), "MONTHLY", false, { from: alice }), "Deposited")
                 await ido.balanceOf(stakePool.address).then((res) => {
                     expect(res.toString()).to.eq("500000000000000000000")
                 })
@@ -71,7 +87,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 })
                 let number = await ethers.provider.getBlockNumber()
                 let block = await ethers.provider.getBlock(number)
-                expectEvent(await stakePool.deposit(web3.utils.toWei(new BN(5000)), 0, { from: carol }), "Deposited")
+                expectEvent(await stakePool.deposit(web3.utils.toWei(new BN(5000)), "MONTHLY", true, { from: carol }), "Deposited")
                 await stakePool.getStakeInfo(2).then((res) => {
                     expect(res[0].toString()).to.eq("5000000000000000000000")
                 })
@@ -90,7 +106,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 })
                 let number = await ethers.provider.getBlockNumber()
                 let block = await ethers.provider.getBlock(number)
-                expectEvent(await stakePool.deposit(web3.utils.toWei(new BN(5000)), 0, { from: carol }), "Deposited")
+                expectEvent(await stakePool.deposit(web3.utils.toWei(new BN(5000)), "MONTHLY", true, { from: carol }), "Deposited")
                 await stakePool.getStakeInfo(3).then((res) => {
                     expect(res[0].toString()).to.eq("5000000000000000000000")
                 })
@@ -104,43 +120,54 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 await timeTraveler.advanceTime(duration.months(-10))
             })
 
-            describe("should withdraw before and after pool closed", async () => {
-                it("should withdraw stake 3 before", async () => {
+            describe("# Withdraw", async () => {
+                it("should revert withdraw stake 3 if LOCKED_FOR_WITHDRAWN", async () => {
+                    await ido.balanceOf(stakePool.address).then((res) => {
+                        expect(res.toString()).to.eq("10500000000000000000000")
+                    })
+                    await timeTraveler.advanceTimeAndBlock(duration.days(29))
+                    await expectRevert(
+                        stakePool.withdraw(3, web3.utils.toWei(new BN(5000)), { from: carol }),
+                        "StakePool#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL"
+                    )
+                    await timeTraveler.advanceTimeAndBlock(duration.days(-29))
+                })
+
+                it("should withdraw stake 3 after unlocked", async () => {
+                    await timeTraveler.advanceTimeAndBlock(duration.days(31))
                     expectEvent(await stakePool.withdraw(3, web3.utils.toWei(new BN(5000)), { from: carol }), "Withdrawn")
                     await stakePool.isHolder(carol).then((res) => {
                         expect(res.toString()).to.eq("true")
                     })
-                    await stakePool.timeLimit().then((res) => {
-                        expect(res.toString()).to.eq("0")
-                    })
+                    await timeTraveler.advanceTimeAndBlock(duration.days(-31))
                 })
-                it("should stake 4", async () => {
-                    await stakePool.deposit(web3.utils.toWei(new BN(600)), 0, { from: darren })
-                })
-                it("should withdraw stake 5 after pool closed", async () => {
-                    expectEvent(await stakePool.deposit(web3.utils.toWei(new BN(5000)), 0, { from: carol }), "Deposited")
-                    await timeTraveler.advanceTimeAndBlock(duration.days(1))
-                    expectEvent(await stakePool.withdraw(5, web3.utils.toWei(new BN(5000)), { from: carol }), "Withdrawn")
-                    await stakePool.timeLimit().then((res) => {
-                        expect(res.toString()).to.not.eq("0")
-                    })
-                    await timeTraveler.advanceTimeAndBlock(duration.days(-1))
-                })
+                // it("should stake 4", async () => {
+                //     await stakePool.deposit(web3.utils.toWei(new BN(600)), "MONTHLY", false, { from: darren })
+                // })
+                // it("should withdraw stake 5 after pool closed", async () => {
+                //     expectEvent(await stakePool.deposit(web3.utils.toWei(new BN(5000)), 0, { from: carol }), "Deposited")
+                //     await timeTraveler.advanceTimeAndBlock(duration.days(1))
+                //     expectEvent(await stakePool.withdraw(5, web3.utils.toWei(new BN(5000)), { from: carol }), "Withdrawn")
+                //     await stakePool.timeLimit().then((res) => {
+                //         expect(res.toString()).to.not.eq("0")
+                //     })
+                //     await timeTraveler.advanceTimeAndBlock(duration.days(-1))
+                // })
             })
 
-            describe("should revert stake after pool closed", async () => {
-                it("should revert stake 5 if DEPOSIT_TIME_CLOSED", async () => {
-                    await ido.balanceOf(stakePool.address).then((res) => {
-                        expect(res.toString()).to.eq("6100000000000000000000")
-                    })
-                    await timeTraveler.advanceTimeAndBlock(duration.days(1))
-                    await expectRevert(
-                        stakePool.deposit(web3.utils.toWei(new BN(5000)), 0, { from: carol }),
-                        "StakePool#_deposit: DEPOSIT_TIME_CLOSED"
-                    )
-                    await timeTraveler.advanceTimeAndBlock(duration.days(-1))
-                })
-            })
+            // describe("should revert stake after pool closed", async () => {
+            //     it("should revert stake 5 if DEPOSIT_TIME_CLOSED", async () => {
+            //         await ido.balanceOf(stakePool.address).then((res) => {
+            //             expect(res.toString()).to.eq("6100000000000000000000")
+            //         })
+            //         await timeTraveler.advanceTimeAndBlock(duration.days(1))
+            //         await expectRevert(
+            //             stakePool.deposit(web3.utils.toWei(new BN(5000)), 0, { from: carol }),
+            //             "StakePool#_deposit: DEPOSIT_TIME_CLOSED"
+            //         )
+            //         await timeTraveler.advanceTimeAndBlock(duration.days(-1))
+            //     })
+            // })
         })
     })
 })

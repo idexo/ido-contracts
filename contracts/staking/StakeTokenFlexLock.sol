@@ -197,6 +197,16 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         acceptedTypes.push(typeName);
     }
 
+    function getStakeType(string memory typeName) public view returns (StakeType memory stkType) {
+        // keccak256() only accept bytes as arguments, so we need explicit conversion
+        bytes memory name = bytes(typeName);
+        bytes32 typeHash = keccak256(name);
+
+        StakeType storage getType = _stakeTypes[typeHash];
+
+        return getType;
+    }
+
     /*************************|
     |   Private Functions     |
     |________________________*/
@@ -253,6 +263,14 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         }
     }
 
+    function _validStakeType(string memory typeName) internal view returns (bool _validType) {
+        // keccak256() only accept bytes as arguments, so we need explicit conversion
+        bytes memory name = bytes(typeName);
+        bytes32 typeHash = keccak256(name);
+        if(_stakeTypes[typeHash].inDays != 0) return true;
+        return false;
+    }
+
     /**
      * @dev Mint a new StakeToken.
      * Requirements:
@@ -272,6 +290,9 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         bool autoComponding
     ) internal virtual returns (uint256) {
         require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
+
+        require(_validStakeType(stakeType), "STAKE_TYPE_NOT_FOUND");
+
         tokenIds++;
         _currentSupply++;
         super._mint(account, tokenIds);
