@@ -8,6 +8,8 @@ import "../interfaces/IStakePoolFlexLock.sol";
 
 contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, ReentrancyGuard {
     using SafeERC20 for IERC20;
+    using SafeMath for uint256;
+    using StakeMath for uint256;
 
     // Minimum stake amount
     uint256 public constant minStakeAmount = 500 * 1e18;
@@ -101,6 +103,17 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
         // ADD check to only operator and tokenId owner
 
         _addStake(stakeId, amount);
+    }
+
+    function _addStake(uint256 stakeId, uint256 amount) internal virtual {
+        // TODO: only contract owner or token owner can call this
+        require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
+        require(stakes[stakeId].lockedUntil < block.timestamp, "StakePool#addStake: STAKE_IS_LOCKED");
+        require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
+
+        require(depositToken.transferFrom(msg.sender, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
+        stakes[stakeId].amount = stakes[stakeId].amount.add(amount);
+        emit StakeAmountIncreased(stakeId, amount);
     }
 
     function setCompounding(uint256 tokenId, bool compounding) external {
