@@ -19,6 +19,11 @@ contract("::StakePoolFlexLock", async (accounts) => {
     })
 
     describe("# Get Contract info", async () => {
+        it("supportsInterface", async () => {
+            await stakePool.supportsInterface("0x00").then((res) => {
+                expect(res).to.eq(false)
+            })
+        })
         it("should get depositToken", async () => {
             await stakePool.depositToken().then((res) => {
                 expect(res.toString()).to.eq(ido.address)
@@ -70,7 +75,6 @@ contract("::StakePoolFlexLock", async (accounts) => {
 
                 await stakePool.getStakeType(1).then((res) => {
                     expect(res).to.eq("MONTHLY")
-                    console.log(res)
                 })
 
                 await stakePool.currentSupply().then((res) => {
@@ -93,7 +97,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 })
                 let number = await ethers.provider.getBlockNumber()
                 let block = await ethers.provider.getBlock(number)
-                expectEvent(await stakePool.deposit(web3.utils.toWei(new BN(5000)), "MONTHLY", true, { from: carol }), "Deposited")
+                expectEvent(await stakePool.deposit(web3.utils.toWei(new BN(5000)), "MONTHLY", false, { from: carol }), "Deposited")
                 await stakePool.getStakeInfo(2).then((res) => {
                     expect(res[0].toString()).to.eq("5000000000000000000000")
                 })
@@ -128,6 +132,25 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 await stakePool.getStakeTokenIds(carol).then((res) => {
                     expect(res[0].toString()).to.eq("2")
                     expect(res[1].toString()).to.eq("3")
+                })
+
+                await stakePool.getStakeAmount(carol).then((res) => {
+                    expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
+                })
+            })
+
+            describe("# Compounding Ids", async () => {
+                it("should returns all TRUE compounding Ids", async () => {
+                    await stakePool.getCompoundingIds().then((res) => {
+                        expect(res.length).to.eq(2)
+                    })
+                })
+
+                it("should returns all TRUE compounding Ids after change token 1 to false", async () => {
+                    await stakePool.setCompounding(1, false)
+                    await stakePool.getCompoundingIds().then((res) => {
+                        expect(res.length).to.eq(1)
+                    })
                 })
             })
 
