@@ -89,14 +89,19 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 })
 
                 await stakePool.getStakeType(1).then((res) => {
+                    expect(res).to.eq("MONTHLY")
                     console.log(res)
                 })
 
                 await stakePool.currentSupply().then((res) => {
-                    console.log(res)
+                    expect(res.toString()).to.eq("1")
                 })
 
                 await stakePool.setCompounding(1, true)
+
+                await stakePool.isCompounding(1).then((res) => {
+                    expect(res).to.eq(true)
+                })
             })
             it("should stake 2", async () => {
                 await stakePool.getEligibleStakeAmount(0, { from: carol }).then((res) => {
