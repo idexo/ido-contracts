@@ -141,6 +141,10 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 })
             })
 
+            it("should revert if stake type not exists", async () => {
+                await expectRevert(stakePool.deposit(web3.utils.toWei(new BN(5000)), "DAILY", true, { from: carol }), "STAKE_TYPE_NOT_EXIST")
+            })
+
             describe("# Compounding Ids", async () => {
                 it("should returns all TRUE compounding Ids", async () => {
                     await stakePool.getCompoundingIds().then((res) => {
@@ -201,32 +205,32 @@ contract("::StakePoolFlexLock", async (accounts) => {
             })
 
             describe("# Withdraw", async () => {
-                it("should revert withdraw stake 3 if LOCKED_FOR_WITHDRAWN", async () => {
+                it("should revert withdraw stake 2 if LOCKED_FOR_WITHDRAWN", async () => {
                     await ido.balanceOf(stakePool.address).then((res) => {
                         expect(res.toString()).to.eq("10500000000000000000000")
                     })
                     await expectRevert(
-                        stakePool.withdraw(3, web3.utils.toWei(new BN(5000)), { from: carol }),
+                        stakePool.withdraw(2, web3.utils.toWei(new BN(5000)), { from: carol }),
                         "StakePool#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL"
                     )
                 })
 
-                it("should partial withdraw stake 3 after unlocked", async () => {
+                it("should partial withdraw stake 2 after unlocked", async () => {
                     let snapShot = await timeTraveler.takeSnapshot()
 
                     await timeTraveler.advanceTimeAndBlock(duration.days(31))
-                    expectEvent(await stakePool.withdraw(3, web3.utils.toWei(new BN(2500)), { from: carol }), "Withdrawn")
+                    expectEvent(await stakePool.withdraw(2, web3.utils.toWei(new BN(2500)), { from: carol }), "Withdrawn")
                     await stakePool.isHolder(carol).then((res) => {
                         expect(res.toString()).to.eq("true")
                     })
                     await timeTraveler.revertToSnapshot(snapShot["result"])
                 })
 
-                it("should full withdraw stake 3 after unlocked", async () => {
+                it("should full withdraw stake 2 after unlocked", async () => {
                     let snapShot = await timeTraveler.takeSnapshot()
 
                     await timeTraveler.advanceTimeAndBlock(duration.days(31))
-                    expectEvent(await stakePool.withdraw(3, web3.utils.toWei(new BN(5000)), { from: carol }), "Withdrawn")
+                    expectEvent(await stakePool.withdraw(2, web3.utils.toWei(new BN(5000)), { from: carol }), "Withdrawn")
                     await stakePool.isHolder(carol).then((res) => {
                         expect(res.toString()).to.eq("true")
                     })

@@ -279,7 +279,7 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
         string memory stakeType,
         bool autoCompounding
     ) internal virtual nonReentrant {
-        require(_validStakeType(stakeType), "STAKE_TYPE_NOT_FOUND");
+        require(_validStakeType(stakeType), "STAKE_TYPE_NOT_EXIST");
         uint256 depositedAt = block.timestamp;
         uint256 inDays = _getLockDays(stakeType);
         uint256 lockedUntil = block.timestamp + (inDays * 1 days);
