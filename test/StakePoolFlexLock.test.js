@@ -104,11 +104,12 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 await stakePool.isHolder(carol).then((res) => {
                     expect(res.toString()).to.eq("true")
                 })
+                let snapShot = await timeTraveler.takeSnapshot()
                 await timeTraveler.advanceTime(duration.months(10))
                 await stakePool.getEligibleStakeAmount(block.timestamp, { from: carol }).then((res) => {
                     expect(res.toString()).to.not.eq("0")
                 })
-                await timeTraveler.advanceTime(duration.months(-10))
+                await timeTraveler.revertToSnapshot(snapShot["result"])
             })
             it("should stake 3", async () => {
                 await stakePool.getEligibleStakeAmount(0, { from: carol }).then((res) => {
@@ -123,11 +124,12 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 await stakePool.isHolder(carol).then((res) => {
                     expect(res.toString()).to.eq("true")
                 })
+                let snapShot = await timeTraveler.takeSnapshot()
                 await timeTraveler.advanceTime(duration.months(10))
                 await stakePool.getEligibleStakeAmount(block.timestamp, { from: carol }).then((res) => {
                     expect(res.toString()).to.not.eq("0")
                 })
-                await timeTraveler.advanceTime(duration.months(-10))
+                await timeTraveler.revertToSnapshot(snapShot["result"])
 
                 await stakePool.getStakeTokenIds(carol).then((res) => {
                     expect(res[0].toString()).to.eq("2")
@@ -154,26 +156,77 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 })
             })
 
+            describe("# addStake", async () => {
+                it("should revert if stakeToken is locked", async () => {
+                    await expectRevert(stakePool.addStake(1, web3.utils.toWei(new BN(500)), { from: alice }), "StakePool#addStake: STAKE_IS_LOCKED")
+                })
+
+                it("should add amount to unlocked stakeToken", async () => {
+                    // let number = await ethers.provider.getBlockNumber()
+                    // let block = await ethers.provider.getBlock(number)
+                    // let timestamp = block.timestamp
+                    // console.log(new Date(timestamp * 1000), timestamp)
+
+                    let snapShot = await timeTraveler.takeSnapshot()
+                    await timeTraveler.advanceTimeAndBlock(duration.days(31))
+
+                    // number = await ethers.provider.getBlockNumber()
+                    // block = await ethers.provider.getBlock(number)
+                    // timestamp = block.timestamp
+                    // console.log(new Date(timestamp * 1000), timestamp)
+
+                    expectEvent(await stakePool.addStake(1, web3.utils.toWei(new BN(500)), { from: carol }), "StakeAmountIncreased")
+
+                    await timeTraveler.revertToSnapshot(snapShot["result"])
+
+                    // number = await ethers.provider.getBlockNumber()
+                    // block = await ethers.provider.getBlock(number)
+                    // timestamp = block.timestamp
+                    // console.log(new Date(timestamp * 1000), timestamp)
+                })
+            })
+
             describe("# Withdraw", async () => {
                 it("should revert withdraw stake 3 if LOCKED_FOR_WITHDRAWN", async () => {
                     await ido.balanceOf(stakePool.address).then((res) => {
                         expect(res.toString()).to.eq("10500000000000000000000")
                     })
-                    await timeTraveler.advanceTimeAndBlock(duration.days(29))
                     await expectRevert(
                         stakePool.withdraw(3, web3.utils.toWei(new BN(5000)), { from: carol }),
                         "StakePool#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL"
                     )
-                    await timeTraveler.advanceTimeAndBlock(duration.days(-29))
                 })
 
-                it("should withdraw stake 3 after unlocked", async () => {
+                it("should partial withdraw stake 3 after unlocked", async () => {
+                    let snapShot = await timeTraveler.takeSnapshot()
+
+                    await timeTraveler.advanceTimeAndBlock(duration.days(31))
+                    expectEvent(await stakePool.withdraw(3, web3.utils.toWei(new BN(2500)), { from: carol }), "Withdrawn")
+                    await stakePool.isHolder(carol).then((res) => {
+                        expect(res.toString()).to.eq("true")
+                    })
+                    await timeTraveler.revertToSnapshot(snapShot["result"])
+                })
+
+                it("should full withdraw stake 3 after unlocked", async () => {
+                    let snapShot = await timeTraveler.takeSnapshot()
+
                     await timeTraveler.advanceTimeAndBlock(duration.days(31))
                     expectEvent(await stakePool.withdraw(3, web3.utils.toWei(new BN(5000)), { from: carol }), "Withdrawn")
                     await stakePool.isHolder(carol).then((res) => {
                         expect(res.toString()).to.eq("true")
                     })
-                    await timeTraveler.advanceTimeAndBlock(duration.days(-31))
+
+                    await stakePool.currentSupply().then((res) => {
+                        expect(res.toString()).to.eq("2")
+                    })
+                    await timeTraveler.revertToSnapshot(snapShot["result"])
+                })
+
+                it("should shows current total supply", async () => {
+                    await stakePool.currentSupply().then((res) => {
+                        expect(res.toString()).to.eq("3")
+                    })
                 })
             })
         })

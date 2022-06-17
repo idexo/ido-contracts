@@ -302,8 +302,10 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
 
     function _addStake(uint256 stakeId, uint256 amount) internal virtual {
         require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
+        require(stakes[stakeId].lockedUntil < block.timestamp, "StakePool#addStake: STAKE_IS_LOCKED");
         require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
 
+        // TODO: add transfer amount function
         stakes[stakeId].amount = stakes[stakeId].amount.add(amount);
         emit StakeAmountIncreased(stakeId, amount);
     }
