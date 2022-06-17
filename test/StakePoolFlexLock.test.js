@@ -388,4 +388,13 @@ contract("::StakePoolFlexLock", async (accounts) => {
             })
         })
     })
+
+    describe("# Sweep", async () => {
+        it("should sweep funds to another account", async () => {
+            let balance = await usdt.balanceOf(stakePool.address)
+            balance = await usdc.balanceOf(stakePool.address)
+            await stakePool.sweep(usdc.address, darren, web3.utils.toWei(new BN(2500)), { from: owner })
+            balance = await usdc.balanceOf(stakePool.address)
+        })
+    })
 })
