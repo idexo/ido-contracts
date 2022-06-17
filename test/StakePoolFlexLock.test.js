@@ -82,6 +82,10 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 await stakePool.isCompounding(1).then((res) => {
                     expect(res).to.eq(true)
                 })
+
+                await stakePool.getStakeTokenIds(alice).then((res) => {
+                    expect(res[0].toString()).to.eq("1")
+                })
             })
             it("should stake 2", async () => {
                 await stakePool.getEligibleStakeAmount(0, { from: carol }).then((res) => {
@@ -120,6 +124,11 @@ contract("::StakePoolFlexLock", async (accounts) => {
                     expect(res.toString()).to.not.eq("0")
                 })
                 await timeTraveler.advanceTime(duration.months(-10))
+
+                await stakePool.getStakeTokenIds(carol).then((res) => {
+                    expect(res[0].toString()).to.eq("2")
+                    expect(res[1].toString()).to.eq("3")
+                })
             })
 
             describe("# Withdraw", async () => {
