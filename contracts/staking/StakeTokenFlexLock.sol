@@ -95,6 +95,26 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         baseURI = baseURI_;
     }
 
+    /**********************|
+    |      StakeTypes      |
+    |_____________________*/
+
+    function addStakeType(string memory typeName, uint256 lockedInDays) public onlyOwner {
+        // keccak256() only accept bytes as arguments, so we need explicit conversion
+        bytes memory name = bytes(typeName);
+        bytes32 typeHash = keccak256(name);
+
+        StakeType storage newType = _stakeTypes[typeHash];
+        newType.name = typeName;
+        newType.inDays = lockedInDays;
+
+        acceptedTypes.push(typeName);
+    }
+
+    /**********************|
+    |       Stake Info     |
+    |_____________________*/
+
     /**
      * @dev Get stake token id array owned by wallet address.
      * @param account address
@@ -177,41 +197,30 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         return totalSAmount;
     }
 
-    function currentSupply() public view returns (uint256) {
-        return _currentSupply;
+    /**********************|
+    |      Compound        |
+    |_____________________*/
+
+    function isCompounding(uint256 stakeId) external view returns (bool) {
+        require(_exists(stakeId), "StakeToken#isCompounding: STAKE_NOT_FOUND");
+        return stakes[stakeId].compounding;
+    }
+
+    function getCompoundingIds() external view returns (uint256[] memory) {
+        return _compoundIds;
     }
 
     /**********************|
-    |      STAKETYPES      |
+    |       Supply         |
     |_____________________*/
 
-    function addStakeType(string memory typeName, uint256 lockedInDays) public onlyOwner {
-        // keccak256() only accept bytes as arguments, so we need explicit conversion
-        bytes memory name = bytes(typeName);
-        bytes32 typeHash = keccak256(name);
-
-        StakeType storage newType = _stakeTypes[typeHash];
-        newType.name = typeName;
-        newType.inDays = lockedInDays;
-
-        acceptedTypes.push(typeName);
+    function currentSupply() public view returns (uint256) {
+        return _currentSupply;
     }
 
     /*************************|
     |   Private Functions     |
     |________________________*/
-
-    // function _getHash(string memory string_to) internal returns (bytes32) {
-    //     // TODO: DRY
-    // }
-
-    function _getLockDays(string memory stakeType) internal view returns (uint256) {
-        // keccak256() only accept bytes as arguments, so we need explicit conversion
-        bytes memory name = bytes(stakeType);
-        bytes32 typeHash = keccak256(name);
-
-        return _stakeTypes[typeHash].inDays;
-    }
 
     /**
      * @dev Return base URI
@@ -244,8 +253,16 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         // keccak256() only accept bytes as arguments, so we need explicit conversion
         bytes memory name = bytes(typeName);
         bytes32 typeHash = keccak256(name);
-        if(_stakeTypes[typeHash].inDays != 0) return true;
+        if (_stakeTypes[typeHash].inDays != 0) return true;
         return false;
+    }
+
+    function _getLockDays(string memory stakeType) internal view returns (uint256) {
+        // keccak256() only accept bytes as arguments, so we need explicit conversion
+        bytes memory name = bytes(stakeType);
+        bytes32 typeHash = keccak256(name);
+
+        return _stakeTypes[typeHash].inDays;
     }
 
     /**
@@ -285,22 +302,12 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         return tokenIds;
     }
 
-
-
     function _setCompounding(uint256 stakeId, bool compounding) internal virtual {
-        // TODO: only token owner
-        stakes[stakeId].compounding = compounding;
-        if (!compounding) _popCompound(stakeId);
-        if (compounding) _compoundIds.push(tokenIds);
-    }
-
-    function isCompounding(uint256 stakeId) external view returns (bool) {
-        // TODO: check if exists
-        return stakes[stakeId].compounding;
-    }
-
-    function getCompoundingIds() external view returns (uint256[] memory) {
-        return _compoundIds;
+        if (stakes[stakeId].compounding != compounding) {
+            stakes[stakeId].compounding = compounding;
+            if (!compounding) _popCompound(stakeId);
+            if (compounding) _compoundIds.push(tokenIds);
+        }
     }
 
     /**

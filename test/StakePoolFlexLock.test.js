@@ -81,7 +81,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
                     expect(res.toString()).to.eq("1")
                 })
 
-                await stakePool.setCompounding(1, true)
+                await stakePool.setCompounding(1, true, { from: alice })
 
                 await stakePool.isCompounding(1).then((res) => {
                     expect(res).to.eq(true)
@@ -153,7 +153,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 })
 
                 it("should returns all TRUE compounding Ids after change token 1 to false", async () => {
-                    await stakePool.setCompounding(1, false)
+                    await stakePool.setCompounding(1, false, { from: alice })
                     await stakePool.getCompoundingIds().then((res) => {
                         expect(res.length).to.eq(1)
                     })

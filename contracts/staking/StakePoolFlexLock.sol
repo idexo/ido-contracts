@@ -46,6 +46,7 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
     event RewardDeposited(address indexed account, uint256 amount);
     event RewardClaimed(address indexed account, uint256 amount);
     event Swept(address indexed operator, address token, address indexed to, uint256 amount);
+    event Relocked(uint256 indexed stakeId, string stakeType, uint256 amount);
 
     constructor(
         string memory stakeTokenName_,
@@ -63,28 +64,6 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
     |    Deposit and Lock    |
     |_______________________*/
 
-    function reLockStake(uint256 stakeId, string memory depositType, bool autoCompounding) external {
-        require(_exists(stakeId), "StakeToken#getStakeType: STAKE_NOT_FOUND");
-        require(msg.sender == ownerOf(stakeId), "CALLER_NOT_TOKEN_OWNER");
-        require(stakes[stakeId].lockedUntil < block.timestamp, "StakePool#reLockStakke: STAKE_ALREADY_LOCKED");
-        require(stakes[stakeId].amount >= minStakeAmount, "StakePool#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
-        _reLockStake(stakeId, depositType, autoCompounding);
-    }
-
-    function _reLockStake(uint256 stakeId, string memory depositType, bool autoCompounding) internal {
-        uint256 inDays = _getLockDays(depositType);
-
-        stakes[stakeId].depositedAt = block.timestamp;
-        stakes[stakeId].lockedUntil = block.timestamp + (inDays * 1 days);
-        stakes[stakeId].compounding = autoCompounding;
-// TODO: EMIT AN EVENT
-    }
-
-
-    /************************|
-    |    Deposit and Lock    |
-    |_______________________*/
-
     /**
      * @dev Deposit stake to the pool.
      * Requirements:
@@ -92,10 +71,30 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
      * - `amount` must not be zero
      * @param amount deposit amount.
      */
-    function deposit(uint256 amount, string memory depositType, bool autoCompounding) external override {
+    function deposit(
+        uint256 amount,
+        string memory depositType,
+        bool autoCompounding
+    ) external override {
         require(amount >= minStakeAmount, "StakePool#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
         _deposit(msg.sender, amount, depositType, autoCompounding);
     }
+
+    function reLockStake(
+        uint256 stakeId,
+        string memory depositType,
+        bool autoCompounding
+    ) external {
+        require(_exists(stakeId), "StakeToken#getStakeType: STAKE_NOT_FOUND");
+        require(msg.sender == ownerOf(stakeId), "CALLER_NOT_TOKEN_OWNER");
+        require(stakes[stakeId].lockedUntil < block.timestamp, "StakePool#reLockStakke: STAKE_ALREADY_LOCKED");
+        require(stakes[stakeId].amount >= minStakeAmount, "StakePool#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
+        _reLockStake(stakeId, depositType, autoCompounding);
+    }
+
+    /************************|
+    |        Withdrawal      |
+    |_______________________*/
 
     /**
      * @dev Withdraw from the pool.
@@ -115,11 +114,9 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
         _withdraw(msg.sender, stakeId, amount);
     }
 
-    function getStakeType(uint256 stakeId) external view returns (string memory stakeType) {
-        require(_exists(stakeId), "StakeToken#getStakeType: STAKE_NOT_FOUND");
-
-        return stakes[stakeId].stakeType;
-    }
+    /**********************|
+    |      StakeTypes      |
+    |_____________________*/
 
     function addStake(uint256 stakeId, uint256 amount) external nonReentrant {
         require(msg.sender == ownerOf(stakeId) || msg.sender == owner, "StakePool#addStake: CALLER_NOT_TOKEN_OR_CONTRACT_OWNER");
@@ -127,19 +124,17 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
         _addStake(stakeId, amount);
     }
 
-    function _addStake(uint256 stakeId, uint256 amount) internal virtual {
-        // TODO: only contract owner or token owner can call this
-        require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
-        require(stakes[stakeId].lockedUntil < block.timestamp, "StakePool#addStake: STAKE_IS_LOCKED");
-        require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
-
-        require(depositToken.transferFrom(msg.sender, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
-        stakes[stakeId].amount = stakes[stakeId].amount.add(amount);
-        emit StakeAmountIncreased(stakeId, amount);
+    function getStakeType(uint256 stakeId) external view returns (string memory stakeType) {
+        require(_exists(stakeId), "StakeToken#getStakeType: STAKE_NOT_FOUND");
+        return stakes[stakeId].stakeType;
     }
 
+    /**********************|
+    |      Compound        |
+    |_____________________*/
+
     function setCompounding(uint256 tokenId, bool compounding) external {
-        // ADD check to only tokenId owner
+        require(msg.sender == ownerOf(tokenId), "CALLER_NOT_TOKEN_OWNER");
         _setCompounding(tokenId, compounding);
     }
 
@@ -235,6 +230,10 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
         rewardTokens[rewardTokenAddress].safeTransfer(msg.sender, amount);
         emit RewardClaimed(msg.sender, amount);
     }
+
+    /*************************|
+    |     Sweept Funds        |
+    |________________________*/
 
     /**
      * @dev Sweep funds
@@ -334,5 +333,30 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
      */
     function _addRewardToken(address rewardToken_) internal virtual {
         rewardTokens[rewardToken_] = IERC20(rewardToken_);
+    }
+
+    function _addStake(uint256 stakeId, uint256 amount) internal virtual {
+        // TODO: only contract owner or token owner can call this
+        require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
+        require(stakes[stakeId].lockedUntil < block.timestamp, "StakePool#addStake: STAKE_IS_LOCKED");
+        require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
+
+        require(depositToken.transferFrom(msg.sender, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
+        stakes[stakeId].amount = stakes[stakeId].amount.add(amount);
+        emit StakeAmountIncreased(stakeId, amount);
+    }
+
+    function _reLockStake(
+        uint256 stakeId,
+        string memory depositType,
+        bool autoCompounding
+    ) internal {
+        uint256 inDays = _getLockDays(depositType);
+
+        stakes[stakeId].depositedAt = block.timestamp;
+        stakes[stakeId].lockedUntil = block.timestamp + (inDays * 1 days);
+        stakes[stakeId].compounding = autoCompounding;
+
+        emit Relocked(stakeId, depositType, stakes[stakeId].amount);
     }
 }
