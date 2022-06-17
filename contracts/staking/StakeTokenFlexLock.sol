@@ -201,9 +201,9 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
     |   Private Functions     |
     |________________________*/
 
-    function _getHash(string memory string_to) internal returns (bytes32) {
-        // TODO: DRY
-    }
+    // function _getHash(string memory string_to) internal returns (bytes32) {
+    //     // TODO: DRY
+    // }
 
     function _getLockDays(string memory stakeType) internal view returns (uint256) {
         // keccak256() only accept bytes as arguments, so we need explicit conversion
