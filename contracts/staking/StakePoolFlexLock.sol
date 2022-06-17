@@ -100,7 +100,7 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
     }
 
     function addStake(uint256 stakeId, uint256 amount) external nonReentrant {
-        // ADD check to only operator and tokenId owner
+        require(msg.sender == ownerOf(stakeId) || msg.sender == owner, "StakePool#addStake: CALLER_NOT_TOKEN_OR_CONTRACT_OWNER");
 
         _addStake(stakeId, amount);
     }
@@ -257,6 +257,7 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
         string memory stakeType,
         bool autoCompounding
     ) internal virtual nonReentrant {
+        require(_validStakeType(stakeType), "STAKE_TYPE_NOT_FOUND");
         uint256 depositedAt = block.timestamp;
         uint256 inDays = _getLockDays(stakeType);
         uint256 lockedUntil = block.timestamp + (inDays * 1 days);

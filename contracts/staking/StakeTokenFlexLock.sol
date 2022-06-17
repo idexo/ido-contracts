@@ -135,12 +135,12 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         view
         override
         returns (
-            uint256,
-            uint256,
-            string memory,
-            uint256,
-            uint256,
-            bool
+            uint256 amount,
+            uint256 multiplier,
+            string memory stakeType,
+            uint256 depositedAt,
+            uint256 lockedUntil,
+            bool autoComp
         )
     {
         require(_exists(stakeId), "StakeToken#getStakeInfo: STAKE_NOT_FOUND");
@@ -222,19 +222,6 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
     }
 
     /**
-     * @dev Returns StakeToken multiplier.
-     *
-     * @param tokenId the tokenId to check
-     *
-     * 0 < `tokenId` <300: 120.
-     * 300 <= `tokenId` <4000: 110.
-     * 4000 <= `tokenId`: 100.
-     */
-    function getMultiplier(uint256 tokenId) public pure returns (uint256) {
-        return tokenId.multiplier();
-    }
-
-    /**
      * @dev Remove the given token from stakerIds.
      *
      * @param from address from
@@ -280,8 +267,6 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         bool autoComponding
     ) internal virtual returns (uint256) {
         require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
-
-        require(_validStakeType(stakeType), "STAKE_TYPE_NOT_FOUND");
 
         tokenIds++;
         _currentSupply++;

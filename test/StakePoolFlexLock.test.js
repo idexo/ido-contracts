@@ -161,6 +161,13 @@ contract("::StakePoolFlexLock", async (accounts) => {
                     await expectRevert(stakePool.addStake(1, web3.utils.toWei(new BN(500)), { from: alice }), "StakePool#addStake: STAKE_IS_LOCKED")
                 })
 
+                it("should revert if caller not token nor contract owner", async () => {
+                    await expectRevert(
+                        stakePool.addStake(1, web3.utils.toWei(new BN(500)), { from: carol }),
+                        "StakePool#addStake: CALLER_NOT_TOKEN_OR_CONTRACT_OWNER"
+                    )
+                })
+
                 it("should add amount to unlocked stakeToken", async () => {
                     // let number = await ethers.provider.getBlockNumber()
                     // let block = await ethers.provider.getBlock(number)
@@ -175,7 +182,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
                     // timestamp = block.timestamp
                     // console.log(new Date(timestamp * 1000), timestamp)
 
-                    expectEvent(await stakePool.addStake(1, web3.utils.toWei(new BN(500)), { from: carol }), "StakeAmountIncreased")
+                    expectEvent(await stakePool.addStake(1, web3.utils.toWei(new BN(500)), { from: alice }), "StakeAmountIncreased")
 
                     await timeTraveler.revertToSnapshot(snapShot["result"])
 
