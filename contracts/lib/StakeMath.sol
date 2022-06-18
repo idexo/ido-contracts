@@ -21,4 +21,14 @@ library StakeMath {
             return 100;
         }
     }
+
+    /**
+     * @dev Returns StakeToken boost.
+     *
+     * @param term months to lock the stake
+     */
+    function boost(uint256 term) internal pure returns (uint256) {
+        uint256 b = (term / 2) + 101;
+        return 120 < b ? 120 : b;
+    }
 }
