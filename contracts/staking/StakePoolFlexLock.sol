@@ -338,7 +338,6 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
     function _addStake(uint256 stakeId, uint256 amount) internal virtual {
         // TODO: only contract owner or token owner can call this
         require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
-        require(stakes[stakeId].lockedUntil < block.timestamp, "StakePool#addStake: STAKE_IS_LOCKED");
         require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
 
         require(depositToken.transferFrom(msg.sender, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");

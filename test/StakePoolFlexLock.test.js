@@ -161,9 +161,9 @@ contract("::StakePoolFlexLock", async (accounts) => {
             })
 
             describe("# addStake", async () => {
-                it("should revert if stakeToken is locked", async () => {
-                    await expectRevert(stakePool.addStake(1, web3.utils.toWei(new BN(500)), { from: alice }), "StakePool#addStake: STAKE_IS_LOCKED")
-                })
+                // it("should revert if stakeToken is locked", async () => {
+                //     await expectRevert(stakePool.addStake(1, web3.utils.toWei(new BN(500)), { from: alice }), "StakePool#addStake: STAKE_IS_LOCKED")
+                // })
 
                 it("should revert if caller not token nor contract owner", async () => {
                     await expectRevert(
