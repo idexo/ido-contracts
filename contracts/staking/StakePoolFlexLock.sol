@@ -70,26 +70,37 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
      *
      * - `amount` must not be zero
      * @param amount deposit amount.
+     * @param stakeType string valid stakeType.
+     * @param compounding bool is compounding.
      */
     function deposit(
         uint256 amount,
-        string memory depositType,
+        string memory stakeType,
         bool compounding
     ) external override {
         require(amount >= minStakeAmount, "StakePool#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
-        _deposit(msg.sender, amount, depositType, compounding);
+        _deposit(msg.sender, amount, stakeType, compounding);
     }
+
+    /**
+     * @dev Relock stakeToken.
+     * Requirements:
+     *
+     * @param stakeId deposit amount.
+     * @param stakeType string valid stakeType.
+     * @param compounding bool is compounding.
+     */
 
     function reLockStake(
         uint256 stakeId,
-        string memory depositType,
+        string memory stakeType,
         bool compounding
     ) external {
         require(_exists(stakeId), "StakeToken#getStakeType: STAKE_NOT_FOUND");
         require(msg.sender == ownerOf(stakeId), "CALLER_NOT_TOKEN_OWNER");
         require(stakes[stakeId].lockedUntil < block.timestamp, "StakePool#reLockStakke: STAKE_ALREADY_LOCKED");
         require(stakes[stakeId].amount >= minStakeAmount, "StakePool#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
-        _reLockStake(stakeId, depositType, compounding);
+        _reLockStake(stakeId, stakeType, compounding);
     }
 
     /************************|
@@ -118,16 +129,38 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
     |      StakeTypes      |
     |_____________________*/
 
+    /**
+     * @dev Add to stake.
+     * Requirements:
+     *
+     * - `amount` must not be zero
+     * @param stakeId stakeId
+     * @param amount amount to add
+     */
     function addStake(uint256 stakeId, uint256 amount) external nonReentrant {
         require(msg.sender == ownerOf(stakeId) || msg.sender == owner, "StakePool#addStake: CALLER_NOT_TOKEN_OR_CONTRACT_OWNER");
 
         _addStake(stakeId, amount);
     }
 
+    /**
+     * @dev Add to stakes in batch.
+     * Requirements:
+     *
+     * - `amount` must not be zero
+     * @param stakeIds uint256[].
+     * @param amounts uint256[].
+     */
     function addStakes(uint256[] calldata stakeIds, uint256[] calldata amounts) external onlyOperator nonReentrant {
         _addStakes(stakeIds, amounts);
     }
 
+    /**
+     * @dev Returns the stakeType of a stakeToken
+     * Requirements:
+     *
+     * @param stakeId uint256 stakeId.
+     */
     function getStakeType(uint256 stakeId) external view returns (string memory stakeType) {
         require(_exists(stakeId), "StakeToken#getStakeType: STAKE_NOT_FOUND");
         return stakes[stakeId].stakeType;
@@ -137,6 +170,13 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
     |      Compound        |
     |_____________________*/
 
+    /**
+     * @dev Sets the composite value of a token to true or false
+     * Requirements:
+     *
+     * @param tokenId uint256 stakeId.
+     * @param compounding bool isCompounding.
+     */
     function setCompounding(uint256 tokenId, bool compounding) external {
         require(msg.sender == ownerOf(tokenId), "CALLER_NOT_TOKEN_OWNER");
         _setCompounding(tokenId, compounding);
@@ -363,15 +403,15 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
 
     function _reLockStake(
         uint256 stakeId,
-        string memory depositType,
+        string memory stakeType,
         bool compounding
     ) internal {
-        uint256 inDays = _getLockDays(depositType);
+        uint256 inDays = _getLockDays(stakeType);
 
         stakes[stakeId].depositedAt = block.timestamp;
         stakes[stakeId].lockedUntil = block.timestamp + (inDays * 1 days);
         stakes[stakeId].isCompounding = compounding;
 
-        emit Relocked(stakeId, depositType, stakes[stakeId].amount);
+        emit Relocked(stakeId, stakeType, stakes[stakeId].amount);
     }
 }
