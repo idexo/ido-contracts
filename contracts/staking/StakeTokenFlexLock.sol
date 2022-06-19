@@ -12,10 +12,11 @@ import "../lib/StakeMath.sol";
 contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorable {
     using SafeMath for uint256;
     using StakeMath for uint256;
+    using Counters for Counters.Counter;
     // Last stake token id, start from 1
-    uint256 private tokenIds;
+    Counters.Counter private _tokenIds;
     // current supply
-    uint256 private _currentSupply;
+    Counters.Counter private _currentSupply;
 
     // Base NFT URI
     string public baseURI;
@@ -25,7 +26,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         string stakeType;
         uint256 depositedAt;
         uint256 lockedUntil;
-        bool compounding;
+        bool isCompounding;
     }
 
     struct StakeType {
@@ -35,10 +36,10 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
 
     uint256[] private _compoundIds;
 
-    StakeType[] public stakeTypesArray;
+    StakeType[] private _stakeTypes;
 
     // typeName => stake type index
-    mapping(bytes32 => uint256) private _stakeTypes;
+    mapping(bytes32 => uint256) private _stakeTypesIndex;
 
     // stake id => stake info
     mapping(uint256 => Stake) public override stakes;
@@ -47,6 +48,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
 
     event StakeAmountDecreased(uint256 stakeId, uint256 decreaseAmount);
     event StakeAmountIncreased(uint256 stakeId, uint256 increaseAmount);
+    event StakeAmountIncreased(uint256[] stakeId, uint256[] increaseAmount);
 
     constructor(
         string memory name_,
@@ -98,18 +100,18 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
     |_____________________*/
 
     function addStakeType(string memory typeName, uint256 lockedInDays) public onlyOwner {
-        if (stakeTypesArray.length == 0) stakeTypesArray.push(StakeType("", 0));
+        if (_stakeTypes.length == 0) _stakeTypes.push(StakeType("", 0));
 
-        stakeTypesArray.push(StakeType(typeName, lockedInDays));
-        _stakeTypes[_getHash(typeName)] = stakeTypesArray.length - 1;
+        _stakeTypes.push(StakeType(typeName, lockedInDays));
+        _stakeTypesIndex[_getHash(typeName)] = _stakeTypes.length - 1;
     }
 
     function getStakeTypes() public view returns (StakeType[] memory) {
-        return stakeTypesArray;
+        return _stakeTypes;
     }
 
     function getStakeTypeInfo(string memory typeName) public view returns (StakeType memory) {
-        return stakeTypesArray[_stakeTypes[_getHash(typeName)]];
+        return _stakeTypes[_stakeTypesIndex[_getHash(typeName)]];
     }
 
     /**********************|
@@ -160,7 +162,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
             string memory stakeType,
             uint256 depositedAt,
             uint256 lockedUntil,
-            bool autoComp
+            bool compounding
         )
     {
         require(_exists(stakeId), "StakeToken#getStakeInfo: STAKE_NOT_FOUND");
@@ -169,7 +171,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
             stakes[stakeId].stakeType,
             stakes[stakeId].depositedAt,
             stakes[stakeId].lockedUntil,
-            stakes[stakeId].compounding
+            stakes[stakeId].isCompounding
         );
     }
 
@@ -183,7 +185,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         require(fromDate <= block.timestamp, "StakeToken#getEligibleStakeAmount: NO_PAST_DATE");
         uint256 totalSAmount;
 
-        for (uint256 i = 1; i <= tokenIds; i++) {
+        for (uint256 i = 1; i <= _tokenIds.current(); i++) {
             if (_exists(i)) {
                 Stake memory stake = stakes[i];
                 if (stake.depositedAt > fromDate) {
@@ -202,7 +204,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
 
     function isCompounding(uint256 stakeId) external view returns (bool) {
         require(_exists(stakeId), "StakeToken#isCompounding: STAKE_NOT_FOUND");
-        return stakes[stakeId].compounding;
+        return stakes[stakeId].isCompounding;
     }
 
     function getCompoundingIds() external view returns (uint256[] memory) {
@@ -214,7 +216,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
     |_____________________*/
 
     function currentSupply() public view returns (uint256) {
-        return _currentSupply;
+        return _currentSupply.current();
     }
 
     /*************************|
@@ -256,15 +258,15 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         return typeHash;
     }
 
-    function _validStakeType(string memory typeName) internal view returns (bool _validType, StakeType memory) {
-        uint256 typeId = _stakeTypes[_getHash(typeName)];
-        if (stakeTypesArray[typeId].inDays != 0) return (true, stakeTypesArray[typeId]);
-        return (false, stakeTypesArray[typeId]);
+    function _validStakeType(string memory typeName) internal view returns (bool _validType) {
+        uint256 typeId = _stakeTypesIndex[_getHash(typeName)];
+        if (_stakeTypes[typeId].inDays != 0) return true;
+        return false;
     }
 
     function _getLockDays(string memory typeName) internal view returns (uint256) {
-        uint256 typeId = _stakeTypes[_getHash(typeName)];
-        return stakeTypesArray[typeId].inDays;
+        uint256 typeId = _stakeTypesIndex[_getHash(typeName)];
+        return _stakeTypes[typeId].inDays;
     }
 
     /**
@@ -287,27 +289,28 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
     ) internal virtual returns (uint256) {
         require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
 
-        tokenIds++;
-        _currentSupply++;
-        super._mint(account, tokenIds);
-        Stake storage newStake = stakes[tokenIds];
+        _tokenIds.increment();
+        _currentSupply.increment();
+        super._mint(account, _tokenIds.current());
+        Stake storage newStake = stakes[_tokenIds.current()];
         newStake.amount = amount;
         newStake.stakeType = stakeType;
         newStake.depositedAt = depositedAt;
         newStake.lockedUntil = lockedUntil;
-        newStake.compounding = autoComponding;
-        stakerIds[account].push(tokenIds);
+        newStake.isCompounding = autoComponding;
 
-        if (autoComponding) _compoundIds.push(tokenIds);
+        stakerIds[account].push(_tokenIds.current());
 
-        return tokenIds;
+        if (autoComponding) _compoundIds.push(_tokenIds.current());
+
+        return _tokenIds.current();
     }
 
     function _setCompounding(uint256 stakeId, bool compounding) internal virtual {
-        if (stakes[stakeId].compounding != compounding) {
-            stakes[stakeId].compounding = compounding;
+        if (stakes[stakeId].isCompounding != compounding) {
+            stakes[stakeId].isCompounding = compounding;
             if (!compounding) _popCompound(stakeId);
-            if (compounding) _compoundIds.push(tokenIds);
+            if (compounding) _compoundIds.push(_tokenIds.current());
         }
     }
 
@@ -323,7 +326,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         address stakeOwner = ownerOf(stakeId);
         super._burn(stakeId);
         delete stakes[stakeId];
-        _currentSupply--;
+        _currentSupply.decrement();
         _popStake(stakeOwner, stakeId);
         _popCompound(stakeId);
     }

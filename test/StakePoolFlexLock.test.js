@@ -53,7 +53,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
 
     describe("# Staking", async () => {
         before(async () => {
-            for (const user of [alice, bob, carol, darren]) {
+            for (const user of [owner, alice, bob, carol, darren]) {
                 await ido.mint(user, web3.utils.toWei(new BN(20000)))
                 await ido.approve(stakePool.address, web3.utils.toWei(new BN(20000)), { from: user })
             }
@@ -176,6 +176,19 @@ contract("::StakePoolFlexLock", async (accounts) => {
                         stakePool.addStake(1, web3.utils.toWei(new BN(500)), { from: carol }),
                         "StakePool#addStake: CALLER_NOT_TOKEN_OR_CONTRACT_OWNER"
                     )
+                })
+
+                it("should add multiple stakes", async () => {
+                    let snapShot = await timeTraveler.takeSnapshot()
+                    await timeTraveler.advanceTimeAndBlock(duration.days(31))
+
+                    const amount = web3.utils.toWei(new BN(500))
+                    const stakeIds = [1, 2, 3]
+                    const amounts = [amount, amount, amount]
+
+                    expectEvent(await stakePool.addStakes(stakeIds, amounts, { from: owner }), "StakeAmountIncreased")
+
+                    await timeTraveler.revertToSnapshot(snapShot["result"])
                 })
 
                 it("should add amount to unlocked stakeToken", async () => {

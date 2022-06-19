@@ -74,22 +74,22 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
     function deposit(
         uint256 amount,
         string memory depositType,
-        bool autoCompounding
+        bool compounding
     ) external override {
         require(amount >= minStakeAmount, "StakePool#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
-        _deposit(msg.sender, amount, depositType, autoCompounding);
+        _deposit(msg.sender, amount, depositType, compounding);
     }
 
     function reLockStake(
         uint256 stakeId,
         string memory depositType,
-        bool autoCompounding
+        bool compounding
     ) external {
         require(_exists(stakeId), "StakeToken#getStakeType: STAKE_NOT_FOUND");
         require(msg.sender == ownerOf(stakeId), "CALLER_NOT_TOKEN_OWNER");
         require(stakes[stakeId].lockedUntil < block.timestamp, "StakePool#reLockStakke: STAKE_ALREADY_LOCKED");
         require(stakes[stakeId].amount >= minStakeAmount, "StakePool#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
-        _reLockStake(stakeId, depositType, autoCompounding);
+        _reLockStake(stakeId, depositType, compounding);
     }
 
     /************************|
@@ -122,6 +122,10 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
         require(msg.sender == ownerOf(stakeId) || msg.sender == owner, "StakePool#addStake: CALLER_NOT_TOKEN_OR_CONTRACT_OWNER");
 
         _addStake(stakeId, amount);
+    }
+
+    function addStakes(uint256[] calldata stakeIds, uint256[] calldata amounts) external onlyOperator nonReentrant {
+        _addStakes(stakeIds, amounts);
     }
 
     function getStakeType(uint256 stakeId) external view returns (string memory stakeType) {
@@ -276,14 +280,13 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
         address account,
         uint256 amount,
         string memory stakeType,
-        bool autoCompounding
+        bool compounding
     ) internal virtual nonReentrant {
-        (bool valid, StakeType memory stakeTypeName) = _validStakeType(stakeType);
-        require(valid, "STAKE_TYPE_NOT_EXIST");
+        require(_validStakeType(stakeType), "STAKE_TYPE_NOT_EXIST");
         uint256 depositedAt = block.timestamp;
         uint256 inDays = _getLockDays(stakeType);
         uint256 lockedUntil = block.timestamp + (inDays * 1 days);
-        uint256 stakeId = _mint(account, amount, stakeType, depositedAt, lockedUntil, autoCompounding);
+        uint256 stakeId = _mint(account, amount, stakeType, depositedAt, lockedUntil, compounding);
         require(depositToken.transferFrom(account, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
 
         emit Deposited(account, stakeId, amount, lockedUntil);
@@ -337,7 +340,6 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
     }
 
     function _addStake(uint256 stakeId, uint256 amount) internal virtual {
-        // TODO: only contract owner or token owner can call this
         require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
         require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
 
@@ -346,16 +348,29 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
         emit StakeAmountIncreased(stakeId, amount);
     }
 
+    function _addStakes(uint256[] calldata stakeIds, uint256[] calldata amounts) internal virtual {
+        require(stakeIds.length == amounts.length, "DIFFERENT_LENGTHS");
+        for (uint256 i = 0; i < stakeIds.length; i++) {
+            require(_exists(stakeIds[i]), "StakeToken#_burn: STAKE_NOT_FOUND");
+            require(amounts[i] > 0, "StakeToken#_mint: INVALID_AMOUNT");
+
+            require(depositToken.transferFrom(msg.sender, address(this), amounts[i]), "StakePool#_deposit: TRANSFER_FAILED");
+            stakes[stakeIds[i]].amount = stakes[stakeIds[i]].amount.add(amounts[i]);
+        }
+
+        emit StakeAmountIncreased(stakeIds, amounts);
+    }
+
     function _reLockStake(
         uint256 stakeId,
         string memory depositType,
-        bool autoCompounding
+        bool compounding
     ) internal {
         uint256 inDays = _getLockDays(depositType);
 
         stakes[stakeId].depositedAt = block.timestamp;
         stakes[stakeId].lockedUntil = block.timestamp + (inDays * 1 days);
-        stakes[stakeId].compounding = autoCompounding;
+        stakes[stakeId].isCompounding = compounding;
 
         emit Relocked(stakeId, depositType, stakes[stakeId].amount);
     }
