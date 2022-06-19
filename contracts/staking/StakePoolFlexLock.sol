@@ -126,7 +126,7 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
     }
 
     /**********************|
-    |      StakeTypes      |
+    |       Add Stakes     |
     |_____________________*/
 
     /**
@@ -154,6 +154,10 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
     function addStakes(uint256[] calldata stakeIds, uint256[] calldata amounts) external onlyOperator nonReentrant {
         _addStakes(stakeIds, amounts);
     }
+
+    /**********************|
+    |   Token StakeType    |
+    |_____________________*/
 
     /**
      * @dev Returns the stakeType of a stakeToken
