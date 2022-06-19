@@ -167,9 +167,9 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
         external
         view
         returns (
-            address,
-            uint256,
-            uint256
+            address operator,
+            uint256 amount,
+            uint256 depositedAt
         )
     {
         return (

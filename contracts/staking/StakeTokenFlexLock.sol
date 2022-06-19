@@ -100,6 +100,9 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
     |_____________________*/
 
     function addStakeType(string memory typeName, uint256 lockedInDays) public onlyOwner {
+        require(bytes(typeName).length != 0, "INVALID_TYPE_NAME");
+        require(lockedInDays > 0, "MUST_BE_BIGGER_THAN_ZERO");
+        // index 0 must be an empty stakeType
         if (_stakeTypes.length == 0) _stakeTypes.push(StakeType("", 0));
 
         _stakeTypes.push(StakeType(typeName, lockedInDays));
@@ -111,6 +114,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
     }
 
     function getStakeTypeInfo(string memory typeName) public view returns (StakeType memory) {
+        require(bytes(typeName).length != 0, "INVALID_TYPE_NAME");
         return _stakeTypes[_stakeTypesIndex[_getHash(typeName)]];
     }
 
@@ -128,6 +132,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
 
     /**
      * @dev Return total stake amount of `account`
+     * @param account address
      */
     function getStakeAmount(address account) external view returns (uint256) {
         uint256[] memory stakeIds = stakerIds[account];
@@ -180,6 +185,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
      * Requirements:
      *
      * - `fromDate` must be past date
+     * @param fromDate uint256
      */
     function getEligibleStakeAmount(uint256 fromDate) public view override returns (uint256) {
         require(fromDate <= block.timestamp, "StakeToken#getEligibleStakeAmount: NO_PAST_DATE");
@@ -202,12 +208,23 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
     |      Compound        |
     |_____________________*/
 
+    /**
+     * @dev Returns true or false if the stake is compounding
+     * Requirements:
+     *
+     * @param stakeId uint256
+     */
     function isCompounding(uint256 stakeId) external view returns (bool) {
         require(_exists(stakeId), "StakeToken#isCompounding: STAKE_NOT_FOUND");
         return stakes[stakeId].isCompounding;
     }
 
-    function getCompoundingIds() external view returns (uint256[] memory) {
+    /**
+     * @dev Returns the array of tokens that are composing
+     * Requirements:
+     *
+     */
+    function compoundingIds() external view returns (uint256[] memory) {
         return _compoundIds;
     }
 
@@ -215,6 +232,11 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
     |       Supply         |
     |_____________________*/
 
+    /**
+     * @dev Returns current supply
+     * Requirements:
+     *
+     */
     function currentSupply() public view returns (uint256) {
         return _currentSupply.current();
     }
@@ -250,20 +272,39 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         }
     }
 
+    /**
+     * @dev Returns the has for the passed string
+     * Requirements:
+     * keccak256() only accept bytes as arguments, so we need explicit conversion
+     *
+     * @param typeName string
+     */
     function _getHash(string memory typeName) internal pure returns (bytes32) {
-        // keccak256() only accept bytes as arguments, so we need explicit conversion
+        // 
         bytes memory name = bytes(typeName);
         bytes32 typeHash = keccak256(name);
 
         return typeHash;
     }
 
+    /**
+     * @dev Returns true or false if the stake type is valid
+     * Requirements:
+     *
+     * @param typeName string
+     */
     function _validStakeType(string memory typeName) internal view returns (bool _validType) {
         uint256 typeId = _stakeTypesIndex[_getHash(typeName)];
         if (_stakeTypes[typeId].inDays != 0) return true;
         return false;
     }
 
+    /**
+     * @dev Returns the number of blocking days for the informed stake type
+     * Requirements:
+     *
+     * @param typeName string
+     */
     function _getLockDays(string memory typeName) internal view returns (uint256) {
         uint256 typeId = _stakeTypesIndex[_getHash(typeName)];
         return _stakeTypes[typeId].inDays;
