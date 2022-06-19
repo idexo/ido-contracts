@@ -33,11 +33,12 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         uint256 inDays;
     }
 
-    string[] public acceptedTypes;
-
     uint256[] private _compoundIds;
 
-    mapping(bytes32 => StakeType) private _stakeTypes;
+    StakeType[] public stakeTypesArray;
+
+    // typeName => stake type index
+    mapping(bytes32 => uint256) private _stakeTypes;
 
     // stake id => stake info
     mapping(uint256 => Stake) public override stakes;
@@ -97,15 +98,18 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
     |_____________________*/
 
     function addStakeType(string memory typeName, uint256 lockedInDays) public onlyOwner {
-        // keccak256() only accept bytes as arguments, so we need explicit conversion
-        bytes memory name = bytes(typeName);
-        bytes32 typeHash = keccak256(name);
+        if (stakeTypesArray.length == 0) stakeTypesArray.push(StakeType("", 0));
 
-        StakeType storage newType = _stakeTypes[typeHash];
-        newType.name = typeName;
-        newType.inDays = lockedInDays;
+        stakeTypesArray.push(StakeType(typeName, lockedInDays));
+        _stakeTypes[_getHash(typeName)] = stakeTypesArray.length - 1;
+    }
 
-        acceptedTypes.push(typeName);
+    function getStakeTypes() public view returns (StakeType[] memory) {
+        return stakeTypesArray;
+    }
+
+    function getStakeTypeInfo(string memory typeName) public view returns (StakeType memory) {
+        return stakeTypesArray[_stakeTypes[_getHash(typeName)]];
     }
 
     /**********************|
@@ -244,20 +248,23 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         }
     }
 
-    function _validStakeType(string memory typeName) internal view returns (bool _validType) {
+    function _getHash(string memory typeName) internal pure returns (bytes32) {
         // keccak256() only accept bytes as arguments, so we need explicit conversion
         bytes memory name = bytes(typeName);
         bytes32 typeHash = keccak256(name);
-        if (_stakeTypes[typeHash].inDays != 0) return true;
-        return false;
+
+        return typeHash;
     }
 
-    function _getLockDays(string memory stakeType) internal view returns (uint256) {
-        // keccak256() only accept bytes as arguments, so we need explicit conversion
-        bytes memory name = bytes(stakeType);
-        bytes32 typeHash = keccak256(name);
+    function _validStakeType(string memory typeName) internal view returns (bool _validType, StakeType memory) {
+        uint256 typeId = _stakeTypes[_getHash(typeName)];
+        if (stakeTypesArray[typeId].inDays != 0) return (true, stakeTypesArray[typeId]);
+        return (false, stakeTypesArray[typeId]);
+    }
 
-        return _stakeTypes[typeHash].inDays;
+    function _getLockDays(string memory typeName) internal view returns (uint256) {
+        uint256 typeId = _stakeTypes[_getHash(typeName)];
+        return stakeTypesArray[typeId].inDays;
     }
 
     /**

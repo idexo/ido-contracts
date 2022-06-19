@@ -46,6 +46,9 @@ contract("::StakePoolFlexLock", async (accounts) => {
         it("should add stakeType", async () => {
             await stakePool.addStakeType("MONTHLY", 31, { from: owner })
         })
+        it("should add stakeType", async () => {
+            await stakePool.addStakeType("QUARTERLY", 91, { from: owner })
+        })
     })
 
     describe("# Staking", async () => {
@@ -143,6 +146,9 @@ contract("::StakePoolFlexLock", async (accounts) => {
 
             it("should revert if stake type not exists", async () => {
                 await expectRevert(stakePool.deposit(web3.utils.toWei(new BN(5000)), "DAILY", true, { from: carol }), "STAKE_TYPE_NOT_EXIST")
+            })
+            it("should revert if stake type not exists", async () => {
+                await expectRevert(stakePool.deposit(web3.utils.toWei(new BN(5000)), "", true, { from: carol }), "STAKE_TYPE_NOT_EXIST")
             })
 
             describe("# Compounding Ids", async () => {
@@ -395,6 +401,24 @@ contract("::StakePoolFlexLock", async (accounts) => {
             balance = await usdc.balanceOf(stakePool.address)
             await stakePool.sweep(usdc.address, darren, web3.utils.toWei(new BN(2500)), { from: owner })
             balance = await usdc.balanceOf(stakePool.address)
+        })
+    })
+
+    describe("# Stake Types", async () => {
+        it("should an array of valid stake types", async () => {
+            stakePool.getStakeTypes().then((res) => {
+                console.log(res)
+            })
+        })
+        it("should a stake type info", async () => {
+            stakePool.getStakeTypeInfo("MONTHLY").then((res) => {
+                console.log(res)
+            })
+        })
+        it("should a stake type info", async () => {
+            stakePool.getStakeTypeInfo("QUARTERLY").then((res) => {
+                console.log(res)
+            })
         })
     })
 })
