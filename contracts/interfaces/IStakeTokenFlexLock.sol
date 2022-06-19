@@ -13,7 +13,6 @@ interface IStakeTokenFlexLock is IERC721 {
         external
         returns (
             uint256,
-            uint256,
             string memory,
             uint256,
             uint256,
@@ -27,7 +26,6 @@ interface IStakeTokenFlexLock is IERC721 {
         view
         returns (
             uint256 amount,
-            uint256 multiplier,
             string memory stakeType,
             uint256 depositedAt,
             uint256 blockedUntil,

@@ -17,14 +17,11 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
     // current supply
     uint256 private _currentSupply;
 
-    uint256 public constant multiplierDenominator = 100;
-
     // Base NFT URI
     string public baseURI;
 
     struct Stake {
         uint256 amount;
-        uint256 multiplier;
         string stakeType;
         uint256 depositedAt;
         uint256 lockedUntil;
@@ -156,7 +153,6 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         override
         returns (
             uint256 amount,
-            uint256 multiplier,
             string memory stakeType,
             uint256 depositedAt,
             uint256 lockedUntil,
@@ -166,7 +162,6 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         require(_exists(stakeId), "StakeToken#getStakeInfo: STAKE_NOT_FOUND");
         return (
             stakes[stakeId].amount,
-            stakes[stakeId].multiplier,
             stakes[stakeId].stakeType,
             stakes[stakeId].depositedAt,
             stakes[stakeId].lockedUntil,
@@ -190,7 +185,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
                 if (stake.depositedAt > fromDate) {
                     break;
                 }
-                totalSAmount += (stake.amount * stake.multiplier) / multiplierDenominator;
+                totalSAmount += stake.amount;
             }
         }
 
@@ -290,7 +285,6 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         super._mint(account, tokenIds);
         Stake storage newStake = stakes[tokenIds];
         newStake.amount = amount;
-        newStake.multiplier = tokenIds.multiplier();
         newStake.stakeType = stakeType;
         newStake.depositedAt = depositedAt;
         newStake.lockedUntil = lockedUntil;
