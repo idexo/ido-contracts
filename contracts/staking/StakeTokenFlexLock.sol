@@ -99,6 +99,12 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
     |      StakeTypes      |
     |_____________________*/
 
+    /**
+     * @dev Add a new stakeType
+     * @param typeName string
+     * @param lockedInDays uint256
+     *
+     */
     function addStakeType(string memory typeName, uint256 lockedInDays) public onlyOwner {
         require(bytes(typeName).length != 0, "INVALID_TYPE_NAME");
         require(lockedInDays > 0, "MUST_BE_BIGGER_THAN_ZERO");
@@ -109,10 +115,18 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         _stakeTypesIndex[_getHash(typeName)] = _stakeTypes.length - 1;
     }
 
+    /**
+     * @dev Returns an array with valid stakeTypes
+     * 
+     */
     function getStakeTypes() public view returns (StakeType[] memory) {
         return _stakeTypes;
     }
 
+    /**
+     * @dev Returns information for a specific stakeType
+     * @param typeName string
+     */
     function getStakeTypeInfo(string memory typeName) public view returns (StakeType memory) {
         require(bytes(typeName).length != 0, "INVALID_TYPE_NAME");
         return _stakeTypes[_stakeTypesIndex[_getHash(typeName)]];
