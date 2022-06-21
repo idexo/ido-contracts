@@ -12,7 +12,7 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
     using StakeMath for uint256;
 
     // Minimum stake amount
-    uint256 public constant minStakeAmount = 500 * 1e18;
+    uint256 public minStakeAmount;
 
     // Address of deposit token.
     IERC20 public depositToken;
@@ -52,9 +52,11 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
         string memory stakeTokenName_,
         string memory stakeTokenSymbol_,
         string memory stakeTokenBASEUri_,
+        uint256 minStakeAmount_,
         IERC20 depositToken_,
         address rewardToken_
     ) StakeTokenFlexLock(stakeTokenName_, stakeTokenSymbol_, stakeTokenBASEUri_) {
+        minStakeAmount = minStakeAmount_;
         depositToken = depositToken_;
         rewardTokens[rewardToken_] = IERC20(rewardToken_);
         deployedAt = block.timestamp;

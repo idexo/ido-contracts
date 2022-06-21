@@ -11,11 +11,11 @@ contract("::StakePoolFlexLock", async (accounts) => {
     const DOMAIN = "https://idexo.com/"
 
     before(async () => {
-        const minPoolStakeAmount = web3.utils.toWei(new BN(10000))
+        const minPoolStakeAmount = web3.utils.toWei(new BN(500))
         ido = await ERC20.new("Idexo Community", "IDO", { from: owner })
         usdt = await ERC20.new("USD Tether", "USDT", { from: owner })
         usdc = await ERC20.new("USDC Coin", "USDC", { from: owner })
-        stakePool = await StakePool.new("Idexo Stake Token", "IDS", DOMAIN, ido.address, usdt.address, { from: owner })
+        stakePool = await StakePool.new("Idexo Stake Token", "IDS", DOMAIN, minPoolStakeAmount, ido.address, usdt.address, { from: owner })
     })
 
     describe("# Get Contract info", async () => {
@@ -169,10 +169,6 @@ contract("::StakePoolFlexLock", async (accounts) => {
         })
 
         describe("# addStake", async () => {
-            // it("should revert if stakeToken is locked", async () => {
-            //     await expectRevert(stakePool.addStake(1, web3.utils.toWei(new BN(500)), { from: alice }), "StakePool#addStake: STAKE_IS_LOCKED")
-            // })
-
             it("should revert if caller not token nor contract owner", async () => {
                 await expectRevert(
                     stakePool.addStake(1, web3.utils.toWei(new BN(500)), { from: carol }),
@@ -193,19 +189,9 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 await timeTraveler.revertToSnapshot(snapShot["result"])
             })
 
-            it("should add amount to unlocked stakeToken", async () => {
-                // let number = await ethers.provider.getBlockNumber()
-                // let block = await ethers.provider.getBlock(number)
-                // let timestamp = block.timestamp
-                // console.log(new Date(timestamp * 1000), timestamp)
-
+            it("should add amount to stakeToken", async () => {
                 let snapShot = await timeTraveler.takeSnapshot()
                 await timeTraveler.advanceTimeAndBlock(duration.days(31))
-
-                // number = await ethers.provider.getBlockNumber()
-                // block = await ethers.provider.getBlock(number)
-                // timestamp = block.timestamp
-                // console.log(new Date(timestamp * 1000), timestamp)
 
                 expectEvent(await stakePool.addStake(1, web3.utils.toWei(new BN(500)), { from: alice }), "StakeAmountIncreased")
 
@@ -217,11 +203,6 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 )
 
                 await timeTraveler.revertToSnapshot(snapShot["result"])
-
-                // number = await ethers.provider.getBlockNumber()
-                // block = await ethers.provider.getBlock(number)
-                // timestamp = block.timestamp
-                // console.log(new Date(timestamp * 1000), timestamp)
             })
         })
 
