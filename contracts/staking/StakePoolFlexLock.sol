@@ -67,6 +67,23 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
     |_______________________*/
 
     /**
+     * @dev Set minStakeAmount.
+     * Requirements:
+     *
+     * - `amount` must not be zero
+     * @param minStakeAmount_ minStakeAmount
+     */
+
+    function setMinStakeAmount(uint256 minStakeAmount_) external onlyOperator {
+        require(minStakeAmount_ > 0, "StakePoolFlex#: INVALID_AMOUNT");
+        minStakeAmount = minStakeAmount_;
+    }
+
+    /************************|
+    |    Deposit and Lock    |
+    |_______________________*/
+
+    /**
      * @dev Deposit stake to the pool.
      * Requirements:
      *

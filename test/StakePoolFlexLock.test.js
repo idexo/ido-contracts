@@ -18,6 +18,27 @@ contract("::StakePoolFlexLock", async (accounts) => {
         stakePool = await StakePool.new("Idexo Stake Token", "IDS", DOMAIN, minPoolStakeAmount, ido.address, usdt.address, { from: owner })
     })
 
+    describe("# Role", async () => {
+        it("should add operator", async () => {
+            await stakePool.addOperator(alice, { from: owner })
+            expect(await stakePool.checkOperator(alice)).to.eq(true)
+        })
+        it("should remove operator", async () => {
+            await stakePool.removeOperator(alice, { from: owner })
+            expect(await stakePool.checkOperator(alice)).to.eq(false)
+        })
+
+        describe("reverts if", async () => {
+            it("add operator by NO-OWNER", async () => {
+                await expectRevert(stakePool.addOperator(bob, { from: alice }), "Ownable: CALLER_NO_OWNER")
+            })
+            it("remove operator by NO-OWNER", async () => {
+                await stakePool.addOperator(bob, { from: owner })
+                await expectRevert(stakePool.removeOperator(bob, { from: alice }), "Ownable: CALLER_NO_OWNER")
+            })
+        })
+    })
+
     describe("# Get Contract info", async () => {
         it("supportsInterface", async () => {
             await stakePool.supportsInterface("0x00").then((res) => {
@@ -27,6 +48,36 @@ contract("::StakePoolFlexLock", async (accounts) => {
         it("should get depositToken", async () => {
             await stakePool.depositToken().then((res) => {
                 expect(res.toString()).to.eq(ido.address)
+            })
+        })
+    })
+
+    describe("# Set minStakeAmount", async () => {
+        it("should set minStakeAmount", async () => {
+            await stakePool.minStakeAmount().then((res) => {
+                expect(res.toString()).to.eq(web3.utils.toWei(new BN(500)).toString())
+            })
+            let snapShot = await timeTraveler.takeSnapshot()
+
+            await stakePool.addOperator(alice, { from: owner })
+
+            await stakePool.setMinStakeAmount(web3.utils.toWei(new BN(5000)), { from: alice })
+
+            await stakePool.minStakeAmount().then((res) => {
+                expect(res.toString()).to.eq(web3.utils.toWei(new BN(5000)).toString())
+            })
+
+            await timeTraveler.revertToSnapshot(snapShot["result"])
+        })
+        describe("reverts if", async () => {
+            it("NO-OPERATOR", async () => {
+                await expectRevert(
+                    stakePool.setMinStakeAmount(web3.utils.toWei(new BN(5000)), { from: alice }),
+                    "Operatorable: CALLER_NO_OPERATOR_ROLE"
+                )
+            })
+            it("INVALID_AMOUNT", async () => {
+                await expectRevert(stakePool.setMinStakeAmount(web3.utils.toWei(new BN(0)), { from: owner }), "StakePoolFlex#: INVALID_AMOUNT")
             })
         })
     })
