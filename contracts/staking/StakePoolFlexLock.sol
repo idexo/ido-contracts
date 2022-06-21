@@ -75,7 +75,7 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
      */
 
     function setMinStakeAmount(uint256 minStakeAmount_) external onlyOperator {
-        require(minStakeAmount_ > 0, "StakePoolFlex#: INVALID_AMOUNT");
+        require(minStakeAmount_ > 0, "StakePoolFlexFlex#setMinStakeAmount: ZERO_AMOUNT");
         minStakeAmount = minStakeAmount_;
     }
 
@@ -97,7 +97,7 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
         string memory stakeType,
         bool compounding
     ) external override {
-        require(amount >= minStakeAmount, "StakePool#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
+        require(amount >= minStakeAmount, "StakePoolFlex#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
         _deposit(msg.sender, amount, stakeType, compounding);
     }
 
@@ -115,10 +115,10 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
         string memory stakeType,
         bool compounding
     ) external {
-        require(_exists(stakeId), "StakeToken#getStakeType: STAKE_NOT_FOUND");
-        require(msg.sender == ownerOf(stakeId), "CALLER_NOT_TOKEN_OWNER");
-        require(stakes[stakeId].lockedUntil < block.timestamp, "StakePool#reLockStakke: STAKE_ALREADY_LOCKED");
-        require(stakes[stakeId].amount >= minStakeAmount, "StakePool#deposit: UNDER_MINIMUM_STAKE_AMOUNT");
+        require(_exists(stakeId), "StakePoolFlex#reLockStake: STAKE_NOT_FOUND");
+        require(msg.sender == ownerOf(stakeId), "StakePoolFlex#reLockStake: CALLER_NOT_TOKEN_OWNER");
+        require(stakes[stakeId].lockedUntil < block.timestamp, "StakePoolFlex#reLockStake: STAKE_ALREADY_LOCKED");
+        require(stakes[stakeId].amount >= minStakeAmount, "StakePoolFlex#reLockStake: UNDER_MINIMUM_STAKE_AMOUNT");
         _reLockStake(stakeId, stakeType, compounding);
     }
 
@@ -139,8 +139,8 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
      * @param amount withdraw amount.
      */
     function withdraw(uint256 stakeId, uint256 amount) external override {
-        require(stakes[stakeId].lockedUntil < block.timestamp, "StakePool#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL");
-        require(amount > 0, "StakePool#withdraw: UNDER_MINIMUM_WITHDRAW_AMOUNT");
+        require(stakes[stakeId].lockedUntil < block.timestamp, "StakePoolFlex#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL");
+        require(amount > 0, "StakePoolFlex#withdraw: UNDER_MINIMUM_WITHDRAW_AMOUNT");
         _withdraw(msg.sender, stakeId, amount);
     }
 
@@ -157,7 +157,7 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
      * @param amount amount to add
      */
     function addStake(uint256 stakeId, uint256 amount) external nonReentrant {
-        require(msg.sender == ownerOf(stakeId) || msg.sender == owner, "StakePool#addStake: CALLER_NOT_TOKEN_OR_CONTRACT_OWNER");
+        require(msg.sender == ownerOf(stakeId) || msg.sender == owner, "StakePoolFlex#addStake: CALLER_NOT_TOKEN_OR_CONTRACT_OWNER");
 
         _addStake(stakeId, amount);
     }
@@ -185,7 +185,7 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
      * @param stakeId uint256 stakeId.
      */
     function getStakeType(uint256 stakeId) external view returns (string memory stakeType) {
-        require(_exists(stakeId), "StakeToken#getStakeType: STAKE_NOT_FOUND");
+        require(_exists(stakeId), "StakePoolFlex#getStakeType: STAKE_NOT_FOUND");
         return stakes[stakeId].stakeType;
     }
 
@@ -201,7 +201,7 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
      * @param compounding bool isCompounding.
      */
     function setCompounding(uint256 tokenId, bool compounding) external {
-        require(msg.sender == ownerOf(tokenId), "CALLER_NOT_TOKEN_OWNER");
+        require(msg.sender == ownerOf(tokenId), "StakePoolFlex#setCompounding: CALLER_NOT_TOKEN_OWNER");
         _setCompounding(tokenId, compounding);
     }
 
@@ -218,7 +218,7 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
      * @param rewardTokenAddress reward token address
      */
     function depositReward(address rewardTokenAddress, uint256 amount) external override onlyOperator {
-        require(amount > 0, "StakePool#depositReward: ZERO_AMOUNT");
+        require(amount > 0, "StakePoolFlex#depositReward: ZERO_AMOUNT");
         _depositReward(msg.sender, rewardTokenAddress, amount);
     }
 
@@ -291,8 +291,8 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
         uint256 tokenId,
         uint256 amount
     ) external nonReentrant {
-        require((ownerOf(tokenId) == msg.sender), "StakePool#claimReward: CALLER_NO_TOKEN_OWNER");
-        require(claimableRewards[rewardTokenAddress][tokenId] >= amount, "StakePool#claimReward: INSUFFICIENT_FUNDS");
+        require((ownerOf(tokenId) == msg.sender), "StakePoolFlex#claimReward: CALLER_NOT_TOKEN_OWNER");
+        require(claimableRewards[rewardTokenAddress][tokenId] >= amount, "StakePoolFlex#claimReward: INSUFFICIENT_FUNDS");
         claimableRewards[rewardTokenAddress][tokenId] -= amount;
         rewardTokens[rewardTokenAddress].safeTransfer(msg.sender, amount);
         emit RewardClaimed(msg.sender, amount);
@@ -326,7 +326,7 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
      * @param rewardToken_ reward token address.
      */
     function addRewardToken(address rewardToken_) public onlyOperator {
-        require(rewardToken_ != address(0), "StakePool#_deposit: ZERO_ADDRESS");
+        require(rewardToken_ != address(0), "StakePoolFlex#_deposit: ZERO_ADDRESS");
         _addRewardToken(rewardToken_);
     }
 
@@ -345,12 +345,12 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
         string memory stakeType,
         bool compounding
     ) internal virtual nonReentrant {
-        require(_validStakeType(stakeType), "STAKE_TYPE_NOT_EXIST");
+        require(_validStakeType(stakeType), "StakePoolFlex#_deposit: STAKE_TYPE_NOT_EXIST");
         uint256 depositedAt = block.timestamp;
         uint256 inDays = _getLockDays(stakeType);
         uint256 lockedUntil = block.timestamp + (inDays * 1 days);
         uint256 stakeId = _mint(account, amount, stakeType, depositedAt, lockedUntil, compounding);
-        require(depositToken.transferFrom(account, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
+        require(depositToken.transferFrom(account, address(this), amount), "StakePoolFlex#_deposit: TRANSFER_FAILED");
 
         emit Deposited(account, stakeId, amount, lockedUntil);
     }
@@ -371,9 +371,9 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
         uint256 stakeId,
         uint256 withdrawAmount
     ) internal virtual nonReentrant {
-        require(ownerOf(stakeId) == account, "StakePool#_withdraw: NO_STAKE_OWNER");
+        require(ownerOf(stakeId) == account, "StakePoolFlex#_withdraw: NO_STAKE_OWNER");
         _decreaseStakeAmount(stakeId, withdrawAmount);
-        require(depositToken.transfer(account, withdrawAmount), "StakePool#_withdraw: TRANSFER_FAILED");
+        require(depositToken.transfer(account, withdrawAmount), "StakePoolFlex#_withdraw: TRANSFER_FAILED");
 
         emit Withdrawn(account, stakeId, withdrawAmount);
     }
@@ -403,21 +403,21 @@ contract StakePoolFlexLock is IStakePoolFlexLock, StakeTokenFlexLock, Reentrancy
     }
 
     function _addStake(uint256 stakeId, uint256 amount) internal virtual {
-        require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
-        require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
+        require(_exists(stakeId), "StakePoolFlex#_addStake: STAKE_NOT_FOUND");
+        require(amount > 0, "StakePoolFlex#_addStake: INVALID_AMOUNT");
 
-        require(depositToken.transferFrom(msg.sender, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
+        require(depositToken.transferFrom(msg.sender, address(this), amount), "StakePoolFlex#_addStake: TRANSFER_FAILED");
         stakes[stakeId].amount = stakes[stakeId].amount.add(amount);
         emit StakeAmountIncreased(stakeId, amount);
     }
 
     function _addStakes(uint256[] calldata stakeIds, uint256[] calldata amounts) internal virtual {
-        require(stakeIds.length == amounts.length, "DIFFERENT_LENGTHS");
+        require(stakeIds.length == amounts.length, "StakePoolFlex#_addStakes: DIFFERENT_LENGTHS");
         for (uint256 i = 0; i < stakeIds.length; i++) {
-            require(_exists(stakeIds[i]), "StakeToken#_burn: STAKE_NOT_FOUND");
-            require(amounts[i] > 0, "StakeToken#_mint: INVALID_AMOUNT");
+            require(_exists(stakeIds[i]), "StakePoolFlex#_addStakes: STAKE_NOT_FOUND");
+            require(amounts[i] > 0, "StakePoolFlex#_addStakes: INVALID_AMOUNT");
 
-            require(depositToken.transferFrom(msg.sender, address(this), amounts[i]), "StakePool#_deposit: TRANSFER_FAILED");
+            require(depositToken.transferFrom(msg.sender, address(this), amounts[i]), "StakePoolFlex#_addStakes: TRANSFER_FAILED");
             stakes[stakeIds[i]].amount = stakes[stakeIds[i]].amount.add(amounts[i]);
         }
 

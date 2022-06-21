@@ -77,7 +77,10 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 )
             })
             it("INVALID_AMOUNT", async () => {
-                await expectRevert(stakePool.setMinStakeAmount(web3.utils.toWei(new BN(0)), { from: owner }), "StakePoolFlex#: INVALID_AMOUNT")
+                await expectRevert(
+                    stakePool.setMinStakeAmount(web3.utils.toWei(new BN(0)), { from: owner }),
+                    "StakePoolFlexFlex#setMinStakeAmount: ZERO_AMOUNT"
+                )
             })
         })
     })
@@ -223,7 +226,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
             it("should revert if caller not token nor contract owner", async () => {
                 await expectRevert(
                     stakePool.addStake(1, web3.utils.toWei(new BN(500)), { from: carol }),
-                    "StakePool#addStake: CALLER_NOT_TOKEN_OR_CONTRACT_OWNER"
+                    "StakePoolFlex#addStake: CALLER_NOT_TOKEN_OR_CONTRACT_OWNER"
                 )
             })
 
@@ -250,7 +253,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
 
                 await expectRevert(
                     stakePool.withdraw(1, web3.utils.toWei(new BN(1000)), { from: alice }),
-                    "StakePool#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL"
+                    "StakePoolFlex#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL"
                 )
 
                 await timeTraveler.revertToSnapshot(snapShot["result"])
@@ -264,7 +267,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 })
                 await expectRevert(
                     stakePool.withdraw(2, web3.utils.toWei(new BN(5000)), { from: carol }),
-                    "StakePool#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL"
+                    "StakePoolFlex#withdraw: STAKE_STILL_LOCKED_FOR_WITHDRAWAL"
                 )
             })
 
