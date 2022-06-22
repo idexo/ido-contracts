@@ -182,7 +182,7 @@ contract StakePoolFlexLock is StakeTokenFlexLock, ReentrancyGuard {
      *
      * @param stakeId uint256 stakeId.
      */
-    function getStakeType(uint256 stakeId) external view returns (string memory stakeType) {
+    function getStakeType(uint256 stakeId) external view returns (string memory) {
         require(_exists(stakeId), "StakePoolFlex: STAKE_NOT_FOUND");
         return stakes[stakeId].stakeType;
     }
@@ -224,20 +224,8 @@ contract StakePoolFlexLock is StakeTokenFlexLock, ReentrancyGuard {
      * @dev Return reward deposit info by id.
      * @param rewardTokenAddress reward token address
      */
-    function getRewardDeposit(address rewardTokenAddress, uint256 id)
-        external
-        view
-        returns (
-            address operator,
-            uint256 amount,
-            uint256 depositedAt
-        )
-    {
-        return (
-            rewardDeposits[rewardTokenAddress][id].operator,
-            rewardDeposits[rewardTokenAddress][id].amount,
-            rewardDeposits[rewardTokenAddress][id].depositedAt
-        );
+    function getRewardDeposit(address rewardTokenAddress, uint256 id) external view returns (RewardDeposit memory) {
+        return (rewardDeposits[rewardTokenAddress][id]);
     }
 
     /**

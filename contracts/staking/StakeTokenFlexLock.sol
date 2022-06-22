@@ -164,25 +164,9 @@ contract StakeTokenFlexLock is ERC721URIStorage, Operatorable {
      * - `stakeId` must exist in stake pool
      * @param stakeId uint256
      */
-    function getStakeInfo(uint256 stakeId)
-        public
-        view
-        returns (
-            uint256 amount,
-            string memory stakeType,
-            uint256 depositedAt,
-            uint256 lockedUntil,
-            bool compounding
-        )
-    {
+    function getStakeInfo(uint256 stakeId) public view returns (Stake memory) {
         require(_exists(stakeId), "StakeToken: STAKE_NOT_FOUND");
-        return (
-            stakes[stakeId].amount,
-            stakes[stakeId].stakeType,
-            stakes[stakeId].depositedAt,
-            stakes[stakeId].lockedUntil,
-            stakes[stakeId].isCompounding
-        );
+        return (stakes[stakeId]);
     }
 
     /**
