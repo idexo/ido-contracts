@@ -6,11 +6,9 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../lib/Operatorable.sol";
-import "../lib/StakeMath.sol";
 
 contract StakeTokenFlexLock is ERC721URIStorage, Operatorable {
     using SafeMath for uint256;
-    using StakeMath for uint256;
     using Counters for Counters.Counter;
     // Last stake token id, start from 1
     Counters.Counter private _tokenIds;
@@ -292,11 +290,7 @@ contract StakeTokenFlexLock is ERC721URIStorage, Operatorable {
      * @param typeName string
      */
     function _getHash(string memory typeName) internal pure returns (bytes32) {
-        //
-        bytes memory name = bytes(typeName);
-        bytes32 typeHash = keccak256(name);
-
-        return typeHash;
+        return keccak256(bytes(typeName));
     }
 
     /**

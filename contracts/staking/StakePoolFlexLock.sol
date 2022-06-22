@@ -8,7 +8,6 @@ import "./StakeTokenFlexLock.sol";
 contract StakePoolFlexLock is StakeTokenFlexLock, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
-    using StakeMath for uint256;
 
     // Minimum stake amount
     uint256 public minStakeAmount;
