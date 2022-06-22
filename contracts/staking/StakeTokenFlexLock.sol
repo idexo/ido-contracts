@@ -292,11 +292,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
      * @param typeName string
      */
     function _getHash(string memory typeName) internal pure returns (bytes32) {
-        // 
-        bytes memory name = bytes(typeName);
-        bytes32 typeHash = keccak256(name);
-
-        return typeHash;
+        return keccak256(bytes(typeName));
     }
 
     /**
