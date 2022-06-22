@@ -7,11 +7,9 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../interfaces/IStakeTokenFlexLock.sol";
 import "../lib/Operatorable.sol";
-import "../lib/StakeMath.sol";
 
 contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorable {
     using SafeMath for uint256;
-    using StakeMath for uint256;
     using Counters for Counters.Counter;
     // Last stake token id, start from 1
     Counters.Counter private _tokenIds;
