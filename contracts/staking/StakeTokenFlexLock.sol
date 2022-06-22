@@ -31,8 +31,6 @@ contract StakeTokenFlexLock is ERC721URIStorage, Operatorable {
         uint256 inDays;
     }
 
-    uint256[] private _compoundIds;
-
     StakeType[] private _stakeTypes;
 
     // typeName => stake type index
@@ -229,15 +227,6 @@ contract StakeTokenFlexLock is ERC721URIStorage, Operatorable {
         return stakes[stakeId].isCompounding;
     }
 
-    /**
-     * @dev Returns the array of tokens that are composing
-     * Requirements:
-     *
-     */
-    function compoundingIds() external view returns (uint256[] memory) {
-        return _compoundIds;
-    }
-
     /**********************|
     |       Supply         |
     |_____________________*/
@@ -347,17 +336,12 @@ contract StakeTokenFlexLock is ERC721URIStorage, Operatorable {
         newStake.isCompounding = autoComponding;
 
         stakerIds[account].push(_tokenIds.current());
-
-        if (autoComponding) _compoundIds.push(_tokenIds.current());
-
         return _tokenIds.current();
     }
 
     function _setCompounding(uint256 stakeId, bool compounding) internal virtual {
         if (stakes[stakeId].isCompounding != compounding) {
             stakes[stakeId].isCompounding = compounding;
-            if (!compounding) _popCompound(stakeId);
-            if (compounding) _compoundIds.push(_tokenIds.current());
         }
     }
 
@@ -375,25 +359,6 @@ contract StakeTokenFlexLock is ERC721URIStorage, Operatorable {
         delete stakes[stakeId];
         _currentSupply.decrement();
         _popStake(stakeOwner, stakeId);
-        _popCompound(stakeId);
-    }
-
-    /**
-     * @dev Remove the given token from stakerIds.
-     *
-     * @param tokenId tokenId to remove
-     */
-    function _popCompound(uint256 tokenId) internal {
-        uint256[] storage compoundIds = _compoundIds;
-        for (uint256 i = 0; i < compoundIds.length; i++) {
-            if (compoundIds[i] == tokenId) {
-                if (i != compoundIds.length - 1) {
-                    compoundIds[i] = compoundIds[compoundIds.length - 1];
-                }
-                compoundIds.pop();
-                break;
-            }
-        }
     }
 
     /**
