@@ -207,20 +207,6 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 await expectRevert(stakePool.deposit(web3.utils.toWei(new BN(5000)), "", true, { from: carol }), "STAKE_TYPE_NOT_EXIST")
             })
         })
-        describe("# Compounding Ids", async () => {
-            it("should returns all TRUE compounding Ids", async () => {
-                await stakePool.compoundingIds().then((res) => {
-                    expect(res.length).to.eq(2)
-                })
-            })
-
-            it("should returns all TRUE compounding Ids after change token 1 to false", async () => {
-                await stakePool.setCompounding(1, false, { from: alice })
-                await stakePool.compoundingIds().then((res) => {
-                    expect(res.length).to.eq(1)
-                })
-            })
-        })
 
         describe("# addStake", async () => {
             it("should revert if caller not token nor contract owner", async () => {
