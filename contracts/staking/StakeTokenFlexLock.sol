@@ -5,11 +5,10 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "../interfaces/IStakeTokenFlexLock.sol";
 import "../lib/Operatorable.sol";
 import "../lib/StakeMath.sol";
 
-contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorable {
+contract StakeTokenFlexLock is ERC721URIStorage, Operatorable {
     using SafeMath for uint256;
     using StakeMath for uint256;
     using Counters for Counters.Counter;
@@ -42,9 +41,9 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
     mapping(bytes32 => uint256) private _stakeTypesIndex;
 
     // stake id => stake info
-    mapping(uint256 => Stake) public override stakes;
+    mapping(uint256 => Stake) public stakes;
     // staker wallet => stake id array
-    mapping(address => uint256[]) public override stakerIds;
+    mapping(address => uint256[]) public stakerIds;
 
     event StakeAmountDecreased(uint256 stakeId, uint256 decreaseAmount);
     event StakeAmountIncreased(uint256 stakeId, uint256 increaseAmount);
@@ -61,7 +60,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
     /**
      * @dev Override supportInterface.
      */
-    function supportsInterface(bytes4 interfaceId) public view virtual override(IERC165, ERC721, AccessControl) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 
@@ -117,7 +116,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
 
     /**
      * @dev Returns an array with valid stakeTypes
-     * 
+     *
      */
     function getStakeTypes() public view returns (StakeType[] memory) {
         return _stakeTypes;
@@ -140,7 +139,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
      * @dev Get stake token id array owned by wallet address.
      * @param account address
      */
-    function getStakeTokenIds(address account) public view override returns (uint256[] memory) {
+    function getStakeTokenIds(address account) public view returns (uint256[] memory) {
         return stakerIds[account];
     }
 
@@ -161,7 +160,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
      * @dev Check if wallet address owns any stake tokens.
      * @param account address
      */
-    function isHolder(address account) public view override returns (bool) {
+    function isHolder(address account) public view returns (bool) {
         return balanceOf(account) > 0;
     }
 
@@ -175,7 +174,6 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
     function getStakeInfo(uint256 stakeId)
         public
         view
-        override
         returns (
             uint256 amount,
             string memory stakeType,
@@ -184,7 +182,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
             bool compounding
         )
     {
-        require(_exists(stakeId), "StakeToken#getStakeInfo: STAKE_NOT_FOUND");
+        require(_exists(stakeId), "StakeToken: STAKE_NOT_FOUND");
         return (
             stakes[stakeId].amount,
             stakes[stakeId].stakeType,
@@ -201,8 +199,8 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
      * - `fromDate` must be past date
      * @param fromDate uint256
      */
-    function getEligibleStakeAmount(uint256 fromDate) public view override returns (uint256) {
-        require(fromDate <= block.timestamp, "StakeToken#getEligibleStakeAmount: NO_PAST_DATE");
+    function getEligibleStakeAmount(uint256 fromDate) public view returns (uint256) {
+        require(fromDate <= block.timestamp, "StakeToken: NO_PAST_DATE");
         uint256 totalSAmount;
 
         for (uint256 i = 1; i <= _tokenIds.current(); i++) {
@@ -229,7 +227,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
      * @param stakeId uint256
      */
     function isCompounding(uint256 stakeId) external view returns (bool) {
-        require(_exists(stakeId), "StakeToken#isCompounding: STAKE_NOT_FOUND");
+        require(_exists(stakeId), "StakeToken: STAKE_NOT_FOUND");
         return stakes[stakeId].isCompounding;
     }
 
@@ -294,7 +292,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
      * @param typeName string
      */
     function _getHash(string memory typeName) internal pure returns (bytes32) {
-        // 
+        //
         bytes memory name = bytes(typeName);
         bytes32 typeHash = keccak256(name);
 
@@ -342,7 +340,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
         uint256 lockedUntil,
         bool autoComponding
     ) internal virtual returns (uint256) {
-        require(amount > 0, "StakeToken#_mint: INVALID_AMOUNT");
+        require(amount > 0, "StakeToken: INVALID_AMOUNT");
 
         _tokenIds.increment();
         _currentSupply.increment();
@@ -377,7 +375,7 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
      * @param stakeId id of buring token.
      */
     function _burn(uint256 stakeId) internal override(ERC721URIStorage) {
-        require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
+        require(_exists(stakeId), "StakeToken: STAKE_NOT_FOUND");
         address stakeOwner = ownerOf(stakeId);
         super._burn(stakeId);
         delete stakes[stakeId];
@@ -414,8 +412,8 @@ contract StakeTokenFlexLock is IStakeTokenFlexLock, ERC721URIStorage, Operatorab
      * @param amount to withdraw.
      */
     function _decreaseStakeAmount(uint256 stakeId, uint256 amount) internal virtual {
-        require(_exists(stakeId), "StakeToken#_decreaseStakeAmount: STAKE_NOT_FOUND");
-        require(amount <= stakes[stakeId].amount, "StakeToken#_decreaseStakeAmount: INSUFFICIENT_STAKE_AMOUNT");
+        require(_exists(stakeId), "StakeToken: STAKE_NOT_FOUND");
+        require(amount <= stakes[stakeId].amount, "StakeToken: INSUFFICIENT_STAKE_AMOUNT");
         if (amount == stakes[stakeId].amount) {
             _burn(stakeId);
         } else {
