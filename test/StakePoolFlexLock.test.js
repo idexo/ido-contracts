@@ -463,4 +463,15 @@ contract("::StakePoolFlexLock", async (accounts) => {
             })
         })
     })
+
+    describe("# Loop over Stakes", async () => {
+        it("should not raise errors", async () => {
+            const tokens = await stakePool.tokenIds()
+            for (let i = 1; i <= tokens; i++) {
+                const info = await stakePool.getStakeInfo(i)
+                console.log(i, info.compounding)
+            }
+            expect(1 == 1)
+        })
+    })
 })
