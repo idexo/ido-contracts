@@ -40,7 +40,7 @@ contract StakeTokenFlexLock is ERC721URIStorage, Operatorable {
 
     event StakeAmountDecreased(uint256 stakeId, uint256 decreaseAmount);
     event StakeAmountIncreased(uint256 stakeId, uint256 increaseAmount);
-    event StakeAmountIncreased(uint256[] stakeId, uint256[] increaseAmount);
+    event StakesAmountIncreased(uint256[] stakeIds, uint256[] increaseAmounts);
 
     constructor(
         string memory name_,
