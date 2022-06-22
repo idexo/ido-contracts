@@ -221,7 +221,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 const stakeIds = [1, 2, 3]
                 const amounts = [amount, amount, amount]
 
-                expectEvent(await stakePool.addStakes(stakeIds, amounts, { from: owner }), "StakeAmountIncreased")
+                expectEvent(await stakePool.addStakes(stakeIds, amounts, { from: owner }), "StakesAmountIncreased")
 
                 await timeTraveler.revertToSnapshot(snapShot["result"])
             })
@@ -470,7 +470,9 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 console.log(i, info.compounding, String(info.amount))
                 try {
                     await stakePool.withdraw(i, String(info.amount), { from: carol })
-                } catch {}
+                } catch (e) {
+                    console.log(i, e.message)
+                }
             }
             console.log("----")
             for (let i = 1; i <= tokens; i++) {

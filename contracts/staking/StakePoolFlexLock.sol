@@ -419,7 +419,7 @@ contract StakePoolFlexLock is StakeTokenFlexLock, ReentrancyGuard {
             stakes[stakeIds[i]].amount = stakes[stakeIds[i]].amount.add(amounts[i]);
         }
 
-        emit StakeAmountIncreased(stakeIds, amounts);
+        emit StakesAmountIncreased(stakeIds, amounts);
     }
 
     function _reLockStake(
