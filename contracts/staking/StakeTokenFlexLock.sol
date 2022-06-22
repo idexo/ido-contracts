@@ -10,7 +10,7 @@ contract StakeTokenFlexLock is ERC721URIStorage, Operatorable {
     using SafeMath for uint256;
     // Last stake token id, start from 1
     uint256 public tokenIds;
-    uint256 private currentSupply;
+    uint256 public currentSupply;
 
     // Base NFT URI
     string public baseURI;
