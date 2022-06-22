@@ -463,19 +463,25 @@ contract("::StakePoolFlexLock", async (accounts) => {
 
     describe("# Loop over Stakes", async () => {
         it("should not raise errors", async () => {
-            // let snapShot = await timeTraveler.takeSnapshot()
-
-            await timeTraveler.advanceTimeAndBlock(duration.days(31))
-            expectEvent(await stakePool.withdraw(1, web3.utils.toWei(new BN(500)), { from: carol }), "Withdrawn")
-            await stakePool.isHolder(carol).then((res) => {
-                expect(res.toString()).to.eq("true")
-            })
-
+            await timeTraveler.advanceTime(duration.months(100))
             const tokens = await stakePool.tokenIds()
             for (let i = 1; i <= tokens; i++) {
                 const info = await stakePool.getStakeInfo(i)
-                console.log(i, info.compounding)
+                console.log(i, info.compounding, String(info.amount))
+                try {
+                    await stakePool.withdraw(i, String(info.amount), { from: carol })
+                } catch {}
             }
+            console.log("----")
+            for (let i = 1; i <= tokens; i++) {
+                try {
+                    const info = await stakePool.getStakeInfo(i)
+                    console.log(i, info.compounding, String(info.amount))
+                } catch (e){
+                    console.log(i, e.message)
+                }
+            }
+            await timeTraveler.advanceTime(duration.months(-100))
             expect(1 == 1)
         })
     })
