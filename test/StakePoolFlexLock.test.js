@@ -77,10 +77,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 )
             })
             it("INVALID_AMOUNT", async () => {
-                await expectRevert(
-                    stakePool.setMinStakeAmount(web3.utils.toWei(new BN(0)), { from: owner }),
-                    "StakePoolFlex: ZERO_AMOUNT"
-                )
+                await expectRevert(stakePool.setMinStakeAmount(web3.utils.toWei(new BN(0)), { from: owner }), "StakePoolFlex: ZERO_AMOUNT")
             })
         })
     })
@@ -466,6 +463,14 @@ contract("::StakePoolFlexLock", async (accounts) => {
 
     describe("# Loop over Stakes", async () => {
         it("should not raise errors", async () => {
+            // let snapShot = await timeTraveler.takeSnapshot()
+
+            await timeTraveler.advanceTimeAndBlock(duration.days(31))
+            expectEvent(await stakePool.withdraw(1, web3.utils.toWei(new BN(500)), { from: carol }), "Withdrawn")
+            await stakePool.isHolder(carol).then((res) => {
+                expect(res.toString()).to.eq("true")
+            })
+
             const tokens = await stakePool.tokenIds()
             for (let i = 1; i <= tokens; i++) {
                 const info = await stakePool.getStakeInfo(i)
