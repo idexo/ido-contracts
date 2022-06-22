@@ -3,17 +3,14 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../lib/Operatorable.sol";
 
 contract StakeTokenFlexLock is ERC721URIStorage, Operatorable {
     using SafeMath for uint256;
-    using Counters for Counters.Counter;
     // Last stake token id, start from 1
-    Counters.Counter private _tokenIds;
-    // current supply
-    Counters.Counter private _currentSupply;
+    uint256 public tokenIds;
+    uint256 private currentSupply;
 
     // Base NFT URI
     string public baseURI;
@@ -199,7 +196,7 @@ contract StakeTokenFlexLock is ERC721URIStorage, Operatorable {
         require(fromDate <= block.timestamp, "StakeToken: NO_PAST_DATE");
         uint256 totalSAmount;
 
-        for (uint256 i = 1; i <= _tokenIds.current(); i++) {
+        for (uint256 i = 1; i <= tokenIds; i++) {
             if (_exists(i)) {
                 Stake memory stake = stakes[i];
                 if (stake.depositedAt > fromDate) {
@@ -225,19 +222,6 @@ contract StakeTokenFlexLock is ERC721URIStorage, Operatorable {
     function isCompounding(uint256 stakeId) external view returns (bool) {
         require(_exists(stakeId), "StakeToken: STAKE_NOT_FOUND");
         return stakes[stakeId].isCompounding;
-    }
-
-    /**********************|
-    |       Supply         |
-    |_____________________*/
-
-    /**
-     * @dev Returns current supply
-     * Requirements:
-     *
-     */
-    function currentSupply() public view returns (uint256) {
-        return _currentSupply.current();
     }
 
     /*************************|
@@ -325,18 +309,18 @@ contract StakeTokenFlexLock is ERC721URIStorage, Operatorable {
     ) internal virtual returns (uint256) {
         require(amount > 0, "StakeToken: INVALID_AMOUNT");
 
-        _tokenIds.increment();
-        _currentSupply.increment();
-        super._mint(account, _tokenIds.current());
-        Stake storage newStake = stakes[_tokenIds.current()];
+        tokenIds += 1;
+        currentSupply += 1;
+        super._mint(account, tokenIds);
+        Stake storage newStake = stakes[tokenIds];
         newStake.amount = amount;
         newStake.stakeType = stakeType;
         newStake.depositedAt = depositedAt;
         newStake.lockedUntil = lockedUntil;
         newStake.isCompounding = autoComponding;
 
-        stakerIds[account].push(_tokenIds.current());
-        return _tokenIds.current();
+        stakerIds[account].push(tokenIds);
+        return tokenIds;
     }
 
     function _setCompounding(uint256 stakeId, bool compounding) internal virtual {
@@ -357,7 +341,7 @@ contract StakeTokenFlexLock is ERC721URIStorage, Operatorable {
         address stakeOwner = ownerOf(stakeId);
         super._burn(stakeId);
         delete stakes[stakeId];
-        _currentSupply.decrement();
+        currentSupply -= 1;
         _popStake(stakeOwner, stakeId);
     }
 
