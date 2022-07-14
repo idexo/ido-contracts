@@ -95,10 +95,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
 
     describe("# StakeToken Types", async () => {
         it("should add stakeType", async () => {
-            await stakePool.addStakeType("MONTHLY", 31, { from: owner })
-        })
-        it("should add stakeType", async () => {
-            await stakePool.addStakeType("QUARTERLY", 91, { from: owner })
+            await stakePool.addStakeTypes(["MONTHLY", "QUARTERLY"], [31, 91], { from: owner })
         })
     })
 
@@ -467,7 +464,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
             const tokens = await stakePool.tokenIds()
             for (let i = 1; i <= tokens; i++) {
                 const info = await stakePool.getStakeInfo(i)
-                console.log(i, info.compounding, String(info.amount))
+                console.log(i, info.isCompounding, String(info.amount))
                 try {
                     await stakePool.withdraw(i, String(info.amount), { from: carol })
                 } catch (e) {
@@ -478,8 +475,8 @@ contract("::StakePoolFlexLock", async (accounts) => {
             for (let i = 1; i <= tokens; i++) {
                 try {
                     const info = await stakePool.getStakeInfo(i)
-                    console.log(i, info.compounding, String(info.amount))
-                } catch (e){
+                    console.log(i, info.isCompounding, String(info.amount))
+                } catch (e) {
                     console.log(i, e.message)
                 }
             }
