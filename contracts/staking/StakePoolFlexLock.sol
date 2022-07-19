@@ -249,7 +249,7 @@ contract StakePoolFlexLock is StakeTokenFlexLock, ReentrancyGuard {
         uint256 amount
     ) external onlyOperator {
         claimableRewards[rewardTokenAddress][tokenId] += amount;
-        rewardClaims[tokenId].push(ClaimableRewardAddition({ operator: account, amount: amount, depositedAt: block.timestamp, rewardToken: rewardTokenAddress }));
+        rewardClaims[tokenId].push(ClaimableRewardAddition({ operator: msg.sender, amount: amount, depositedAt: block.timestamp, rewardToken: rewardTokenAddress }));
 
     }
 
@@ -263,7 +263,7 @@ contract StakePoolFlexLock is StakeTokenFlexLock, ReentrancyGuard {
     ) external onlyOperator {
         for (uint256 i = 0; i < tokenIds.length; i++) {
             claimableRewards[rewardTokenAddress][tokenIds[i]] += amounts[i];
-            rewardClaims[tokenIds[i]].push(ClaimableRewardAddition({ operator: account, amount: amounts[i], depositedAt: block.timestamp, rewardToken: rewardTokenAddress }));
+            rewardClaims[tokenIds[i]].push(ClaimableRewardAddition({ operator: msg.sender, amount: amounts[i], depositedAt: block.timestamp, rewardToken: rewardTokenAddress }));
         }
     }
 
