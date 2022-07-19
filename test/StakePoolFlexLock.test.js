@@ -333,7 +333,11 @@ contract("::StakePoolFlexLock", async (accounts) => {
         })
         describe("claimable reward", async () => {
             it("should add claimable USDT reward to 1", async () => {
-                await stakePool.addClaimableReward(usdt.address, 1, web3.utils.toWei(new BN(5000)), { from: owner })
+                expectEvent(
+                    await stakePool.addClaimableReward(usdt.address, 1, web3.utils.toWei(new BN(5000)), { from: owner }),
+                    "ClaimableRewardAdded"
+                )
+
                 await stakePool.getClaimableReward(usdt.address, 1).then((res) => {
                     expect(res.toString()).to.eq("5000000000000000000000")
                 })
@@ -350,9 +354,13 @@ contract("::StakePoolFlexLock", async (accounts) => {
             const rewardsUSDT = [web3.utils.toWei(new BN(22500)), web3.utils.toWei(new BN(22500))]
             const rewardsUSDC = [web3.utils.toWei(new BN(7500)), web3.utils.toWei(new BN(7500))]
             it("should add claimable USDT rewards to 1 and 2", async () => {
-                await stakePool.addClaimableRewards(usdt.address, tokenIds, rewardsUSDT, {
-                    from: owner
-                })
+                expectEvent(
+                    await stakePool.addClaimableRewards(usdt.address, tokenIds, rewardsUSDT, {
+                        from: owner
+                    }),
+                    "ClaimableRewardAdded"
+                )
+
                 await stakePool.getClaimableReward(usdt.address, 1).then((res) => {
                     expect(res.toString()).to.eq("27500000000000000000000")
                 })
@@ -479,7 +487,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
                 try {
                     const info = await stakePool.getStakeInfo(i)
                     console.log(i, info.compounding, String(info.amount))
-                } catch (e){
+                } catch (e) {
                     console.log(i, e.message)
                 }
             }
