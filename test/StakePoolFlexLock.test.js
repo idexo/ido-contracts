@@ -93,6 +93,12 @@ contract("::StakePoolFlexLock", async (accounts) => {
         })
     })
 
+    describe("# reverts if", async () => {
+        it("stakeType mismatch lengths", async () => {
+            await expectRevert(stakePool.addStakeTypes(["MONTHLY", "QUARTERLY"], [31], { from: owner }), "STAKETYPE_LENGTH_MISMATCH")
+        })
+    })
+
     describe("# StakeToken Types", async () => {
         it("should add stakeType", async () => {
             await stakePool.addStakeTypes(["MONTHLY", "QUARTERLY"], [31, 91], { from: owner })
