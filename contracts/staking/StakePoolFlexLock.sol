@@ -19,11 +19,11 @@ contract StakePoolFlexLock is StakeTokenFlexLock, ReentrancyGuard {
     // Timestamp when stake pool was deployed to mainnet.
     uint256 public deployedAt;
 
-    struct ClaimableRewardDeposit {
+    struct ClaimableRewardAddition {
         address operator;
         uint256 amount;
-        uint256 tokenId;
         uint256 depositedAt;
+        address rewardToken;
     }
 
     struct RewardDeposit {
@@ -35,14 +35,17 @@ contract StakePoolFlexLock is StakeTokenFlexLock, ReentrancyGuard {
     // Reward deposit history
     mapping(address => RewardDeposit[]) public rewardDeposits;
 
+    // Reward claim addition history
+    mapping(uint256 => ClaimableRewardAddition[]) public rewardClaims;
+
     // tokenId => available reward amount that tokenId can claim.
     mapping(address => mapping(uint256 => uint256)) public claimableRewards;
 
     event Deposited(address indexed account, uint256 indexed stakeId, uint256 amount, uint256 lockedUntil);
     event Withdrawn(address indexed account, uint256 indexed stakeId, uint256 amount);
-    event ClaimableRewardDeposited(address indexed account, uint256 amount);
-    event RewardDeposited(address indexed account, uint256 amount);
-    event RewardClaimed(address indexed account, uint256 amount);
+    event ClaimableRewardAdded(uint256 indexed stakeId, address indexed rewardTokenAddress, uint256 amount);
+    event RewardDeposited(address indexed account, address indexed rewardTokenAddress, uint256 amount);
+    event RewardClaimed(address indexed account, address indexed rewardTokenAddress, uint256 amount);
     event Swept(address indexed operator, address token, address indexed to, uint256 amount);
     event Relocked(uint256 indexed stakeId, string stakeType, uint256 amount);
 
@@ -246,6 +249,10 @@ contract StakePoolFlexLock is StakeTokenFlexLock, ReentrancyGuard {
         uint256 amount
     ) external onlyOperator {
         claimableRewards[rewardTokenAddress][tokenId] += amount;
+        rewardClaims[tokenId].push(
+            ClaimableRewardAddition({ operator: msg.sender, amount: amount, depositedAt: block.timestamp, rewardToken: rewardTokenAddress })
+        );
+        emit ClaimableRewardAdded(tokenId, rewardTokenAddress, amount);
     }
 
     /**
@@ -258,6 +265,10 @@ contract StakePoolFlexLock is StakeTokenFlexLock, ReentrancyGuard {
     ) external onlyOperator {
         for (uint256 i = 0; i < tokenIds.length; i++) {
             claimableRewards[rewardTokenAddress][tokenIds[i]] += amounts[i];
+            rewardClaims[tokenIds[i]].push(
+                ClaimableRewardAddition({ operator: msg.sender, amount: amounts[i], depositedAt: block.timestamp, rewardToken: rewardTokenAddress })
+            );
+            emit ClaimableRewardAdded(tokenIds[i], rewardTokenAddress, amounts[i]);
         }
     }
 
@@ -281,7 +292,7 @@ contract StakePoolFlexLock is StakeTokenFlexLock, ReentrancyGuard {
         require(claimableRewards[rewardTokenAddress][tokenId] >= amount, "StakePoolFlex: INSUFFICIENT_FUNDS");
         claimableRewards[rewardTokenAddress][tokenId] -= amount;
         rewardTokens[rewardTokenAddress].safeTransfer(msg.sender, amount);
-        emit RewardClaimed(msg.sender, amount);
+        emit RewardClaimed(msg.sender, rewardTokenAddress, amount);
     }
 
     /*************************|
@@ -377,7 +388,7 @@ contract StakePoolFlexLock is StakeTokenFlexLock, ReentrancyGuard {
         rewardTokens[rewardTokenAddress].safeTransferFrom(account, address(this), amount);
         rewardDeposits[rewardTokenAddress].push(RewardDeposit({ operator: account, amount: amount, depositedAt: block.timestamp }));
 
-        emit RewardDeposited(account, amount);
+        emit RewardDeposited(account, rewardTokenAddress, amount);
     }
 
     /**
