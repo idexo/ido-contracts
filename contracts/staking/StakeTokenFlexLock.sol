@@ -92,19 +92,22 @@ contract StakeTokenFlexLock is ERC721URIStorage, Operatorable {
     |_____________________*/
 
     /**
-     * @dev Add a new stakeType
+     * @dev Add a new stakeTypes
      * @param typeName string
      * @param lockedInDays uint256
      *
      */
-    function addStakeType(string memory typeName, uint256 lockedInDays) public onlyOwner {
-        require(bytes(typeName).length != 0, "INVALID_TYPE_NAME");
-        require(lockedInDays > 0, "MUST_BE_BIGGER_THAN_ZERO");
+    function addStakeTypes(string[] calldata typeName, uint256[] calldata lockedInDays) public onlyOwner {
+        require(typeName.length == lockedInDays.length, "STAKETYPE_LENGTH_MISMATCH");
         // index 0 must be an empty stakeType
         if (_stakeTypes.length == 0) _stakeTypes.push(StakeType("", 0));
+        for (uint256 i = 0; i < typeName.length; i++) {
+            require(bytes(typeName[i]).length != 0, "INVALID_TYPE_NAME");
+            require(lockedInDays[i] > 0, "MUST_BE_BIGGER_THAN_ZERO");
 
-        _stakeTypes.push(StakeType(typeName, lockedInDays));
-        _stakeTypesIndex[_getHash(typeName)] = _stakeTypes.length - 1;
+            _stakeTypes.push(StakeType(typeName[i], lockedInDays[i]));
+            _stakeTypesIndex[_getHash(typeName[i])] = _stakeTypes.length - 1;
+        }
     }
 
     /**
