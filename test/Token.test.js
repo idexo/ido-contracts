@@ -35,6 +35,16 @@ contract("::Token", async (accounts) => {
         })
     })
 
+    describe("# Ownership", async () => {
+        it("should transferOwnership", async () => {
+            await token.transferOwnership(alice, { from: deployer })
+            expect(await token.owner()).to.eq(alice)
+        })
+        it("should renounceOwnership", async () => {
+            await token.renounceOwnership({ from: alice })
+        })
+    })
+
     describe("# Contract", async () => {
         describe("info", async () => {
             it("should get name, symbol and cap", async () => {

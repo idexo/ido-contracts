@@ -56,8 +56,6 @@ contract Token is ERC20Capped, AccessControl {
     function transferOwnership(address _newOwner) external onlyOwner {
         require(_newOwner != address(0), "INVALID_ADDRESS");
         require(_newOwner != owner, "OWNERSHIP_SELF_TRANSFER");
-        _setupRole(DEFAULT_ADMIN_ROLE, _newOwner);
-        _setupRole(OPERATOR_ROLE, _newOwner);
         owner = _newOwner;
         emit OwnershipTransferred(owner, _newOwner);
     }
@@ -127,15 +125,5 @@ contract Token is ERC20Capped, AccessControl {
     ) internal override(ERC20) {
         require(from != to, "SELF_TRANSFER");
         super._beforeTokenTransfer(from, to, amount);
-    }
-
-    /**
-     * @dev `_mint` hook override.
-     * @param account address
-     * @param amount uint256
-     * `Owner` can only transfer when paused
-     */
-    function _mint(address account, uint256 amount) internal override(ERC20Capped) {
-        super._mint(account, amount);
     }
 }
