@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { duration, increase } = require("./helpers/time");
 const { BN, expectEvent, expectRevert } = require("@openzeppelin/test-helpers");
-const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
+// const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 
 const contractName = "SpendableVotingByNFTHolder";
 const nftContractName = "ERC721Mock";
