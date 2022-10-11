@@ -1,5 +1,5 @@
 # Idexo Open Source Smart Contracts
-This repository contains open source smart contracts written and published by idexo. 
+This repository contains open source smart contracts written and published by [idexo](https://idexo.com). 
 
 These contracts are either used in idexo’s token and community systems and/or used in the idexo [low code SDK / API](https://npmjs.com/idexo-sdk), [Zapier Integration to Web2 Apps](https://zapier.com/apps/idexo/integrations), or [no code SaaS application](https://app.idexo.com/register). 
 
@@ -57,10 +57,26 @@ truffle migrate --network mainnet
 ### Staking
 - StakePoolCombined
 - StakeMirrorNFT
+- StakePoolFlexLock
+- StakePoolMultipleRewards
+- StakePoolMultipleRewardsTimeLimited
 
-### Bridging
-- LiquidityPoolManager
+### Soulbound Tokens
+- UncappedLinkedSoulbound
+- UncappedSBTCommunityRecovery
 
-### Voting
+### Consumable NFT Coupons
+- Payments
+- ReceiptToken
+
+### Voting With NFTs
 - Voting
 - MultipleVoting
+
+### Marketplaces
+- BaseRoyaltyNFT
+- RoyaltyNFT
+- DirectSale
+
+### Bridging
+- RelayManager
