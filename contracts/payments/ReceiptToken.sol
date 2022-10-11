@@ -3,13 +3,12 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../interfaces/IReceiptToken.sol";
 import "../lib/Operatorable.sol";
 import "../lib/StakeMath.sol";
 
-contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
+contract ReceiptToken is IReceiptToken, ERC721URIStorage, Operatorable {
     using SafeMath for uint256;
     using StakeMath for uint256;
     // Last stake token id, start from 1
@@ -24,6 +23,8 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
     mapping(uint256 => Receipt) public override receipts;
     // receipt wallet => receipt id array
     mapping(address => uint256[]) public override payerIds;
+
+    event ReceiptUsed(uint256 receitpId, string hashOfUse);
 
     constructor(
         string memory name_,
@@ -48,7 +49,7 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
      * @dev Return token URI
      * Override {ERC721URIStorage:tokenURI}
      */
-    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+    function tokenURI(uint256 tokenId) public view override(ERC721URIStorage) returns (string memory) {
         return ERC721URIStorage.tokenURI(tokenId);
     }
 
@@ -92,7 +93,23 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
      */
     function getReceiptInfo(uint256 receiptId) public view override returns (Receipt memory) {
         require(_exists(receiptId), "ReceiptToken#getReceiptInfo: RECEIPT_NOT_FOUND");
-        return Receipt(receipts[receiptId].productId, receipts[receiptId].paidAmount, receipts[receiptId].paidAt);
+        Receipt memory rcpt = receipts[receiptId];
+        return Receipt(rcpt.productId, rcpt.paidAmount, rcpt.paidAt, rcpt.hasUsed, rcpt.hashOfUse);
+    }
+
+    /**
+     * @dev Make a receipt as used.
+     * Requirements:
+     * - `receiptId` must be exists
+     * @param receiptId productId.
+     */
+    function useReceipt(uint256 receiptId, string memory hashOfUse) external override onlyOperator {
+        require(_exists(receiptId), "ReceiptToken#getReceiptInfo: RECEIPT_NOT_FOUND");
+
+        receipts[receiptId].hasUsed = true;
+        receipts[receiptId].hashOfUse = hashOfUse;
+
+        emit ReceiptUsed(receiptId, hashOfUse);
     }
 
     /*************************|
@@ -174,7 +191,7 @@ contract ReceiptToken is IReceiptToken, ERC721, ERC721URIStorage, Operatorable {
      * - `receiptId` must exist in stake pool
      * @param receiptId id of buring token.
      */
-    function _burn(uint256 receiptId) internal override(ERC721, ERC721URIStorage) {
+    function _burn(uint256 receiptId) internal override(ERC721URIStorage) {
         require(_exists(receiptId), "ReceiptToken#_burn: RECEIPT_NOT_FOUND");
         address receiptOwner = ownerOf(receiptId);
         super._burn(receiptId);

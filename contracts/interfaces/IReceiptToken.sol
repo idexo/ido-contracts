@@ -8,6 +8,8 @@ struct Receipt {
     string productId;
     uint256 paidAmount;
     uint256 paidAt;
+    bool hasUsed;
+    string hashOfUse;
 }
 
 interface IReceiptToken is IERC721 {
@@ -21,8 +23,12 @@ interface IReceiptToken is IERC721 {
         returns (
             string memory productId,
             uint256 amount,
-            uint256 paidAt
+            uint256 paidAt,
+            bool hasUsed,
+            string memory hashOfUse
         );
 
     function payerIds(address account, uint256 id) external view returns (uint256);
+
+    function useReceipt(uint256 receiptId, string memory hasOfUse) external;
 }
