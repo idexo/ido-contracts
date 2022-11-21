@@ -10,26 +10,72 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../interfaces/IStakeToken.sol";
 import "../lib/StakeMath.sol";
 
-contract StakeToken is IStakeToken, ERC721, Ownable2Step {
+contract StakeToken is IStakeToken, ERC721, ERC721URIStorage, Ownable2Step {
     using SafeMath for uint256;
     using StakeMath for uint256;
     // Last stake token id, start from 1
     uint256 public tokenIds;
     uint256 public constant multiplierDenominator = 100;
 
+    // Base NFT URI
+    string public baseURI;
     struct Stake {
         uint256 amount;
         uint256 multiplier;
         uint256 depositedAt;
     }
     // stake id => stake info
-    mapping(uint256 => Stake) public stakes;
+    mapping(uint256 => Stake) public override stakes;
     // staker wallet => stake id array
-    mapping(address => uint256[]) public stakerIds;
+    mapping(address => uint256[]) public override stakerIds;
 
     event StakeAmountDecreased(uint256 stakeId, uint256 decreaseAmount);
 
-    constructor(string memory name_, string memory symbol_) ERC721(name_, symbol_) {}
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        string memory baseURI_
+    ) ERC721(name_, symbol_) {
+        baseURI = baseURI_;
+    }
+
+    /**********************|
+    |          URI         |
+    |_____________________*/
+
+    /**
+     * @dev Return token URI
+     * Override {ERC721URIStorage:tokenURI}
+     */
+    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+        return ERC721URIStorage.tokenURI(tokenId);
+    }
+
+    /**
+     * @dev Set token URI
+     * Only `operator` can call
+     *
+     * - `tokenId` must exist, see {ERC721URIStorage:_setTokenURI}
+     */
+    function setTokenURI(uint256 tokenId, string memory _tokenURI) public onlyOwner {
+        super._setTokenURI(tokenId, _tokenURI);
+    }
+
+    /**
+     * @dev Set `baseURI`
+     * Only `operator` can call
+     */
+    function setBaseURI(string memory baseURI_) public onlyOwner {
+        baseURI = baseURI_;
+    }
+
+    /**
+     * @dev Return base URI
+     * Override {ERC721:_baseURI}
+     */
+    function _baseURI() internal view override returns (string memory) {
+        return baseURI;
+    }
 
     /**
      * @dev Get stake token id array owned by wallet address.
@@ -49,6 +95,25 @@ contract StakeToken is IStakeToken, ERC721, Ownable2Step {
             totalStakeAmount += stakes[stakeIds[i]].amount;
         }
         return totalStakeAmount;
+    }
+
+    /**
+     * @dev Remove the given token from stakerIds.
+     *
+     * @param from address from
+     * @param tokenId tokenId to remove
+     */
+    function _popStake(address from, uint256 tokenId) internal {
+        uint256[] storage stakeIds = stakerIds[from];
+        for (uint256 i = 0; i < stakeIds.length; i++) {
+            if (stakeIds[i] == tokenId) {
+                if (i != stakeIds.length - 1) {
+                    stakeIds[i] = stakeIds[stakeIds.length - 1];
+                }
+                stakeIds.pop();
+                break;
+            }
+        }
     }
 
     /**
@@ -137,21 +202,12 @@ contract StakeToken is IStakeToken, ERC721, Ownable2Step {
      * - `stakeId` must exist in stake pool
      * @param stakeId id of buring token.
      */
-    function _burn(uint256 stakeId) internal override {
+    function _burn(uint256 stakeId) internal override(ERC721, ERC721URIStorage) {
         require(_exists(stakeId), "StakeToken#_burn: STAKE_NOT_FOUND");
         address stakeOwner = ownerOf(stakeId);
         super._burn(stakeId);
         delete stakes[stakeId];
-        uint256[] storage stakeIds = stakerIds[stakeOwner];
-        for (uint256 i = 0; i < stakeIds.length; i++) {
-            if (stakeIds[i] == stakeId) {
-                if (i != stakeIds.length - 1) {
-                    stakeIds[i] = stakeIds[stakeIds.length - 1];
-                }
-                stakeIds.pop();
-                break;
-            }
-        }
+        _popStake(stakeOwner, stakeId);
     }
 
     /**
@@ -172,5 +228,28 @@ contract StakeToken is IStakeToken, ERC721, Ownable2Step {
             stakes[stakeId].amount = stakes[stakeId].amount.sub(amount);
             emit StakeAmountDecreased(stakeId, amount);
         }
+    }
+
+    /**
+     * @dev Transfers `tokenId` from `from` to `to`.
+     *  As opposed to {transferFrom}, this imposes no restrictions on msg.sender.
+     *
+     * Requirements:
+     *
+     * - `to` cannot be the zero address.
+     * - `tokenId` token must be owned by `from`.
+     *
+     * @param from address from
+     * @param to address to
+     * @param tokenId tokenId to transfer
+     */
+    function _transfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal override {
+        super._transfer(from, to, tokenId);
+        _popStake(from, tokenId);
+        stakerIds[to].push(tokenId);
     }
 }
