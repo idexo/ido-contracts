@@ -2,15 +2,11 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract Token is ERC20Capped, AccessControl {
-    // Contract owner address
-    address public owner;
-
+contract Token is ERC20Capped, AccessControl, Ownable2Step {
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     constructor(
         string memory tokenName_,
@@ -20,44 +16,6 @@ contract Token is ERC20Capped, AccessControl {
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(OPERATOR_ROLE, _msgSender());
 
-        owner = _msgSender();
-        emit OwnershipTransferred(address(0), _msgSender());
-    }
-
-    /****************************|
-    |          Ownership         |
-    |___________________________*/
-
-    /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        require(owner == _msgSender(), "CALLER_NO_OWNER");
-        _;
-    }
-
-    /**
-     * @dev Leaves the contract without owner. It will not be possible to call
-     * `onlyOwner` functions anymore. Can only be called by the current owner.
-     * `owner` should first call {removeOperator} for himself.
-     */
-    function renounceOwnership() external onlyOwner {
-        owner = address(0);
-        emit OwnershipTransferred(owner, address(0));
-    }
-
-    /**
-     * @dev Transfer the contract ownership.
-     * The new owner still needs to accept the transfer.
-     * can only be called by the contract owner.
-     *
-     * @param _newOwner new contract owner.
-     */
-    function transferOwnership(address _newOwner) external onlyOwner {
-        require(_newOwner != address(0), "INVALID_ADDRESS");
-        require(_newOwner != owner, "OWNERSHIP_SELF_TRANSFER");
-        owner = _newOwner;
-        emit OwnershipTransferred(owner, _newOwner);
     }
 
     /***********************|
