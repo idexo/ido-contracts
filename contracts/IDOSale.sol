@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
@@ -12,14 +13,10 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
  * Users can purchase tokens after sale started and claim after sale ended
  */
 
-contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
+contract IDOSale is AccessControl, Pausable, ReentrancyGuard, Ownable2Step {
     using SafeERC20 for IERC20;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-    // Contract owner address
-    address public owner;
-    // Proposed new contract owner address
-    address public newOwner;
     // user address => whitelisted status
     mapping(address => bool) public whitelist;
     // user address => purchased token amount
@@ -58,7 +55,6 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
         bytes32 s;
     }
 
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event IdoPriceChanged(uint256 idoPrice);
     event PurchaseCapChanged(uint256 purchaseCap);
     event WhitelistAdded(address indexed account);
@@ -87,13 +83,10 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
 
         ido = _ido;
         purchaseToken = _purchaseToken;
-        owner = _msgSender();
         idoPrice = _idoPrice;
         purchaseCap = _purchaseCap;
         startTime = _startTime;
         endTime = _endTime;
-
-        emit OwnershipTransferred(address(0), _msgSender());
     }
 
     /**************************|
@@ -116,53 +109,6 @@ contract IDOSale is AccessControl, Pausable, ReentrancyGuard {
         purchaseCap = _purchaseCap;
 
         emit PurchaseCapChanged(_purchaseCap);
-    }
-
-    /****************************|
-    |          Ownership         |
-    |___________________________*/
-
-    /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        require(owner == _msgSender(), "IDOSale: CALLER_NO_OWNER");
-        _;
-    }
-
-    /**
-     * @dev Leaves the contract without owner. It will not be possible to call
-     * `onlyOwner` functions anymore. Can only be called by the current owner.
-     *
-     * NOTE: Renouncing ownership will leave the contract without an owner,
-     * thereby removing any functionality that is only available to the owner.
-     */
-    function renounceOwnership() external onlyOwner {
-        emit OwnershipTransferred(owner, address(0));
-        owner = address(0);
-    }
-
-    /**
-     * @dev Transfer the contract ownership.
-     * The new owner still needs to accept the transfer.
-     * can only be called by the contract owner.
-     *
-     * @param _newOwner new contract owner.
-     */
-    function transferOwnership(address _newOwner) external onlyOwner {
-        require(_newOwner != address(0), "IDOSale: INVALID_ADDRESS");
-        require(_newOwner != owner, "IDOSale: OWNERSHIP_SELF_TRANSFER");
-        newOwner = _newOwner;
-    }
-
-    /**
-     * @dev The new owner accept an ownership transfer.
-     */
-    function acceptOwnership() external {
-        require(_msgSender() == newOwner, "IDOSale: CALLER_NO_NEW_OWNER");
-        emit OwnershipTransferred(owner, newOwner);
-        owner = newOwner;
-        newOwner = address(0);
     }
 
     /***********************|
