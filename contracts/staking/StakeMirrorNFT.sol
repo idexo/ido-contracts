@@ -4,7 +4,7 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "../interfaces/IStakeMirrorNFT.sol";
 
@@ -13,7 +13,7 @@ import "../interfaces/IStakeMirrorNFT.sol";
  * Deployed on sidechain.
  */
 
-contract StakeMirrorNFT is IStakeMirrorNFT, ERC721, ERC721URIStorage, Ownable, AccessControl {
+contract StakeMirrorNFT is IStakeMirrorNFT, ERC721, ERC721URIStorage, Ownable2Step, AccessControl {
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     uint256 public constant multiplierDenominator = 100;
@@ -264,8 +264,10 @@ contract StakeMirrorNFT is IStakeMirrorNFT, ERC721, ERC721URIStorage, Ownable, A
     function _beforeTokenTransfer(
         address from,
         address to,
-        uint256 tokenId
-    ) internal override {
+        uint256 firstTokenId,
+        uint256 batchSize
+    ) internal override(ERC721) {
         require(hasRole(OPERATOR_ROLE, msg.sender), "StakeMirrorNFT: CALLER_NO_OPERATOR_ROLE");
+        ERC721._beforeTokenTransfer(from, to, firstTokenId, batchSize);
     }
 }

@@ -4,13 +4,13 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../interfaces/IStakeToken.sol";
 import "../lib/StakeMath.sol";
 
-contract StakeToken is IStakeToken, ERC721, Ownable {
+contract StakeToken is IStakeToken, ERC721, Ownable2Step {
     using SafeMath for uint256;
     using StakeMath for uint256;
     // Last stake token id, start from 1
