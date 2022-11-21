@@ -98,7 +98,7 @@ contract("::RoyaltyNFT", async (accounts) => {
 
         describe("should revert if", async () => {
             it("inexistent tokenId", async () => {
-                await expectRevert(royaltyNFT.tokenURI(1, { from: owner }), "ERC721URIStorage: URI query for nonexistent token")
+                await expectRevert(royaltyNFT.tokenURI(1, { from: owner }), "ERC721: invalid token ID")
             })
         })
     })

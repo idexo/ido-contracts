@@ -60,7 +60,7 @@ contract("CommunityNFT", async (accounts) => {
             })
             it("mint to the zero address", async () => {
                 expect((await nft.tokenIds()).toString()).to.eq("1")
-                await expectRevert(nft.mintNFT(constants.ZERO_ADDRESS, "144", { from: bob }), "ERC721: balance query for the zero address")
+                await expectRevert(nft.mintNFT(constants.ZERO_ADDRESS, "144", { from: bob }), "ERC721: address zero is not a valid owner")
                 expect((await nft.tokenIds()).toString()).to.eq("1")
             })
         })
@@ -134,7 +134,7 @@ contract("CommunityNFT", async (accounts) => {
         })
         describe("reverts if", async () => {
             it("caller no owner", async () => {
-                await expectRevert(nft.setBaseURI("https://idexo.com/", { from: bob }), "CALLER_NO_OWNER")
+                await expectRevert(nft.setBaseURI("https://idexo.com/", { from: bob }), "Ownable: caller is not the owner")
             })
         })
     })

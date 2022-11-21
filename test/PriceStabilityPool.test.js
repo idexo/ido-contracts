@@ -140,7 +140,7 @@ describe("PriceStabilityPool", async () => {
             await expect(contract.connect(alice).purchaseCoupon(7)).to.emit(contract, "CouponPurchased")
 
             // check state variable update
-            await expect(contract.ownerOf(1)).to.be.revertedWith("ERC721: owner query for nonexistent token")
+            await expect(contract.ownerOf(1)).to.be.revertedWith("ERC721: invalid token ID")
             expect(await contract.stakedCoupons(1)).to.eq(0)
             expect(await contract.stakedCoupons(2)).to.eq(13)
             expect(await contract.couponBalances(alice.address)).to.eq(0)
