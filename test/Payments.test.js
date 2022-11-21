@@ -31,11 +31,11 @@ contract("::Payments", async (accounts) => {
         })
         describe("reverts if", async () => {
             it("add operator by NO-OWNER", async () => {
-                await expectRevert(payment.addOperator(bob, { from: alice }), "Ownable: CALLER_NO_OWNER")
+                await expectRevert(payment.addOperator(bob, { from: alice }), "Ownable: caller is not the owner")
             })
             it("remove operator by NO-OWNER", async () => {
                 await payment.addOperator(bob, { from: owner })
-                await expectRevert(payment.removeOperator(bob, { from: alice }), "Ownable: CALLER_NO_OWNER")
+                await expectRevert(payment.removeOperator(bob, { from: alice }), "Ownable: caller is not the owner")
             })
         })
     })
@@ -180,7 +180,7 @@ contract("::Payments", async (accounts) => {
         })
         describe("reverts if", async () => {
             it("change tokenURI by NO-OPERATOR", async () => {
-                await expectRevert(payment.setTokenURI(2, "test", { from: alice }), "Ownable: CALLER_NO_OWNER")
+                await expectRevert(payment.setTokenURI(2, "test", { from: alice }), "Ownable: caller is not the owner")
             })
         })
     })

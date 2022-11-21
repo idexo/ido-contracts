@@ -29,11 +29,11 @@ describe(`::Contract -> ${contractName}`, () => {
 
         describe("reverts if", async () => {
             it("add operator by NO-OWNER", async () => {
-                await expect(contract.connect(alice).addOperator(bob.address)).to.be.revertedWith("Ownable: CALLER_NO_OWNER")
+                await expect(contract.connect(alice).addOperator(bob.address)).to.be.revertedWith("Ownable: caller is not the owner")
             })
             it("remove operator by NO-OWNER", async () => {
                 await contract.addOperator(bob.address)
-                await expect(contract.connect(alice).removeOperator(bob.address)).to.be.revertedWith("Ownable: CALLER_NO_OWNER")
+                await expect(contract.connect(alice).removeOperator(bob.address)).to.be.revertedWith("Ownable: caller is not the owner")
             })
         })
     })

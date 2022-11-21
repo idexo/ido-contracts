@@ -28,7 +28,7 @@ describe('Whitelist', async () => {
     describe('reverts if', async () => {
       it('non owner call', async () => {
         await expect(contract.connect(alice).addWhitelist([alice.address, ethers.constants.AddressZero]))
-          .to.be.revertedWith('Ownable: CALLER_NO_OWNER');
+          .to.be.revertedWith('Ownable: caller is not the owner');
       });
     });
   });
@@ -44,7 +44,7 @@ describe('Whitelist', async () => {
     describe('reverts if', async () => {
       it('non owner call', async () => {
         await expect(contract.connect(alice).removeWhitelist([alice.address, ethers.constants.AddressZero]))
-          .to.be.revertedWith('Ownable: CALLER_NO_OWNER');
+          .to.be.revertedWith('Ownable: caller is not the owner');
       });
     });
   });

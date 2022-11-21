@@ -121,11 +121,11 @@ describe("PriceStabilityPool", async () => {
                             ethers.utils.parseEther("5"),
                             ethers.utils.parseEther("6")
                         )
-                ).to.be.revertedWith("Ownable: CALLER_NO_OWNER")
+                ).to.be.revertedWith("Ownable: caller is not the owner")
             })
             it("setTicketPrice() - non owner call", async () => {
                 await expect(contract.connect(alice).setTicketPrice(ONE_TIME_TICKET_HASH, ethers.utils.parseEther("1"))).to.be.revertedWith(
-                    "Ownable: CALLER_NO_OWNER"
+                    "Ownable: caller is not the owner"
                 )
             })
         })
@@ -265,11 +265,11 @@ describe("PriceStabilityPool", async () => {
         })
         describe("reverts if", async () => {
             it("add operator by non-operator", async () => {
-                await expect(contract.connect(bob).addOperator(bob.address)).to.be.revertedWith("Ownable: CALLER_NO_OWNER")
+                await expect(contract.connect(bob).addOperator(bob.address)).to.be.revertedWith("Ownable: caller is not the owner")
             })
             it("remove operator by non-operator", async () => {
                 await contract.addOperator(bob.address)
-                await expect(contract.connect(bob).removeOperator(bob.address)).to.be.revertedWith("Ownable: CALLER_NO_OWNER")
+                await expect(contract.connect(bob).removeOperator(bob.address)).to.be.revertedWith("Ownable: caller is not the owner")
             })
         })
     })
@@ -285,8 +285,8 @@ describe("PriceStabilityPool", async () => {
         })
         describe("reverts if", async () => {
             it("non-operator call addWhitelist/removeWhitelist", async () => {
-                await expect(contract.connect(carol).addWhitelist([alice.address, bob.address])).to.be.revertedWith("Ownable: CALLER_NO_OWNER")
-                await expect(contract.connect(carol).removeWhitelist([alice.address, bob.address])).to.be.revertedWith("Ownable: CALLER_NO_OWNER")
+                await expect(contract.connect(carol).addWhitelist([alice.address, bob.address])).to.be.revertedWith("Ownable: caller is not the owner")
+                await expect(contract.connect(carol).removeWhitelist([alice.address, bob.address])).to.be.revertedWith("Ownable: caller is not the owner")
             })
         })
     })
@@ -299,7 +299,7 @@ describe("PriceStabilityPool", async () => {
         })
         describe("reverts if", async () => {
             it("non owner call renounceOwnership", async () => {
-                await expect(contract.renounceOwnership()).to.be.revertedWith("Ownable: CALLER_NO_OWNER")
+                await expect(contract.renounceOwnership()).to.be.revertedWith("Ownable: caller is not the owner")
             })
         })
     })

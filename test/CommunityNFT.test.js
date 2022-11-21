@@ -34,11 +34,11 @@ contract("CommunityNFT", async (accounts) => {
         })
         describe("reverts if", async () => {
             it("add operator by non-admin", async () => {
-                await expectRevert(nft.addOperator(bob, { from: bob }), "Ownable: CALLER_NO_OWNER")
+                await expectRevert(nft.addOperator(bob, { from: bob }), "Ownable: caller is not the owner")
             })
             it("remove operator by non-admin", async () => {
                 await nft.addOperator(bob, { from: carol })
-                await expectRevert(nft.removeOperator(bob, { from: bob }), "Ownable: CALLER_NO_OWNER")
+                await expectRevert(nft.removeOperator(bob, { from: bob }), "Ownable: caller is not the owner")
             })
         })
     })

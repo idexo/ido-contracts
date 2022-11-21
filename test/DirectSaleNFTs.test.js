@@ -141,7 +141,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
 
         describe("should revert if", async () => {
             it("not owner", async () => {
-                await expectRevert(directSale.sweep(ido.address, alice, { from: bob }), "Ownable: CALLER_NO_OWNER")
+                await expectRevert(directSale.sweep(ido.address, alice, { from: bob }), "Ownable: caller is not the owner")
             })
         })
     })
