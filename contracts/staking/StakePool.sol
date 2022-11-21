@@ -12,13 +12,7 @@ contract StakePool is IStakePool, StakeToken, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
-    uint256 public constant MONTH = 31 days;
-    uint256 public constant QUARTER = 93 days;
-    uint256 public constant YEAR = 365 days;
-    // Reward distribution ratio - monthly, quarterly, yearly
-    uint256 public constant mDistributionRatio = 25;
-    uint256 public constant qDistributionRatio = 50;
-    uint256 public constant yDistributionRatio = 25;
+
     // Minimum stake amount
     uint256 public constant minStakeAmount = 2500 * 1e18;
 
