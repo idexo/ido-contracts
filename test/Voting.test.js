@@ -22,10 +22,10 @@ contract('Voting', async accounts => {
   before(async () => {
     ido = await ERC20.new('Idexo Community', 'IDO', {from: alice});
     erc20 = await ERC20.new('USD Tether', 'USDT', {from: alice});
-    sPool1 = await StakePool.new('Idexo Stake Token', 'IDS', ido.address, erc20.address);
-    sPool2 = await StakePool.new('Idexo Stake Token', 'IDS', ido.address, erc20.address);
-    sPool3 = await StakePool.new('Idexo Stake Token', 'IDS', ido.address, erc20.address);
-    sPool4 = await StakePool.new('Idexo Stake Token', 'IDS', ido.address, erc20.address);
+    sPool1 = await StakePool.new('Idexo Stake Token', 'IDS', '', ido.address, erc20.address);
+    sPool2 = await StakePool.new('Idexo Stake Token', 'IDS', '', ido.address, erc20.address);
+    sPool3 = await StakePool.new('Idexo Stake Token', 'IDS', '', ido.address, erc20.address);
+    sPool4 = await StakePool.new('Idexo Stake Token', 'IDS', '', ido.address, erc20.address);
     voting = await Voting.new([sPool1.address, sPool2.address]);
   });
 

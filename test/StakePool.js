@@ -22,7 +22,7 @@ function testStakePool(contractName, errorHead, timeIncrease) {
     before(async () => {
       ido = await IDO.new('IDO', 'IDO', {from: alice});
       erc20 = await ERC20.new(erc20Name, erc20Symbol, {from: alice});
-      stakePool = await StakePool.new(stakeTokenName, stakeTokenSymbol, ido.address, erc20.address, {from: alice});
+      stakePool = await StakePool.new(stakeTokenName, stakeTokenSymbol, '', ido.address, erc20.address, {from: alice});
       await stakePool.addOperator(bob, {from: alice});
     });
 
@@ -189,116 +189,6 @@ function testStakePool(contractName, errorHead, timeIncrease) {
               errorHead + '#onlyOperator: CALLER_NO_OPERATOR_ROLE'
             );
           });
-        });
-      });
-      describe('##distribute', async () => {
-        before(async () => {
-          // Deposit stake
-          await erc20.mint(alice, web3.utils.toWei(new BN(20000)));
-          await erc20.approve(stakePool.address, web3.utils.toWei(new BN(20000)), {from: alice});
-          await erc20.mint(bob, web3.utils.toWei(new BN(10000)));
-          await erc20.approve(stakePool.address, web3.utils.toWei(new BN(10000)), {from: bob});
-          await ido.mint(alice, web3.utils.toWei(new BN(10000)));
-          await ido.approve(stakePool.address, web3.utils.toWei(new BN(10000)), {from: alice});
-          await ido.mint(bob, web3.utils.toWei(new BN(10000)));
-          await ido.approve(stakePool.address, web3.utils.toWei(new BN(10000)), {from: bob});
-        });
-        describe('reverts if', async () => {
-          it('distribute non-operator', async () => {
-            await expectRevert(
-              stakePool.distribute({from: carol}),
-              errorHead + '#onlyOperator: CALLER_NO_OPERATOR_ROLE'
-            );
-          });
-          it('claim not owner', async () => {
-            await expectRevert(
-              stakePool.claimReward(100, {from: carol}),
-              errorHead + '#claimReward: CALLER_NO_TOKEN_OWNER'
-            );
-          });
-          it('claim without funds', async () => {
-            await expectRevert(
-              stakePool.claimReward(web3.utils.toWei(new BN(1000000)), {from: bob}),
-              errorHead + '#claimReward: INSUFFICIENT_FUNDS'
-            );
-          });
-        });
-        it('distribute', async () => {
-          // After 5 days
-          timeTraveler.advanceTime(time.duration.days(timeIncrease[0]));
-          await stakePool.deposit(web3.utils.toWei(new BN(3000)), {from: alice});
-          // After 1 day
-          timeTraveler.advanceTime(time.duration.days(timeIncrease[1]));
-          await stakePool.deposit(web3.utils.toWei(new BN(6000)), {from: bob});
-          // After 10 days
-          timeTraveler.advanceTime(time.duration.days(timeIncrease[2]));
-          await stakePool.depositReward(web3.utils.toWei(new BN(4000)), {from: alice});
-          // After 1 day
-          timeTraveler.advanceTime(time.duration.days(timeIncrease[3]));
-          await stakePool.depositReward(web3.utils.toWei(new BN(4500)), {from: alice});
-          // After 15 days (1 month passed)
-          timeTraveler.advanceTime(time.duration.days(timeIncrease[4]));
-
-          const latestBlock = await hre.ethers.provider.getBlock("latest")
-          await stakePool.getEligibleStakeAmount(latestBlock.timestamp).then((res) => {
-            expect(res.toString()).to.eq("17760000000000000000000")
-          })
-
-          await stakePool.distribute({from: bob});
-          await stakePool.claimableRewards(alice).then(res => {
-            expect(res.toString()).to.eq('2124999999999999997875');
-          })
-          await stakePool.mDistributes(0).then(res => {
-            expect(res[0].toString()).to.eq('2124999999999999997875');
-          });
-
-          // After 10 days
-          timeTraveler.advanceTime(time.duration.days(timeIncrease[5]));
-          await stakePool.depositReward(web3.utils.toWei(new BN(3000)), {from: alice});
-          // After 11 days
-          timeTraveler.advanceTime(time.duration.days(timeIncrease[6]));
-          await stakePool.depositReward(web3.utils.toWei(new BN(4500)), {from: alice});
-          // After 15 days (2 months passed)
-          timeTraveler.advanceTime(time.duration.days(timeIncrease[7]));
-          await stakePool.distribute({from: bob});
-          if (timeIncrease[7] > 0) {
-            await stakePool.mDistributes(1).then(res => {
-              expect(res[0].toString()).to.eq('1874999999999999996250');
-            });
-            await stakePool.claimableRewards(alice).then(res => {
-              expect(res.toString()).to.eq('3239864864864864859750');
-            });
-            await stakePool.claimableRewards(bob).then(res => {
-              expect(res.toString()).to.eq('760135135135135134375');
-            });
-            expectEvent(
-              await stakePool.claimReward(web3.utils.toWei(new BN(700)), {from: alice}),
-              'RewardClaimed'
-            );
-            await stakePool.claimableRewards(alice).then(res => {
-              expect(res.toString()).to.eq('2539864864864864859750');
-            });
-          }
-          expectEvent(await stakePool.claimReward(0, {from: alice}), 'RewardClaimed');
-        });
-        it('distribute after a year', async () => {
-          timeTraveler.advanceTime(time.duration.months(15));
-          await stakePool.distribute({from: bob}).then(res => {
-            expect(res).to.not.null;
-          });
-        });
-
-        it('distribute after two years', async () => {
-          timeTraveler.advanceTime(time.duration.months(15));
-          await stakePool.distribute({from: bob}).then(res => {
-            expect(res).to.not.null;
-          });
-        });
-        after(async () => {
-          for (let i = 0; i < timeIncrease.length; i++) {
-            timeTraveler.advanceTime(time.duration.days(timeIncrease[i] * -1));
-          }
-          timeTraveler.advanceTime(time.duration.months(-30));
         });
       });
     });
