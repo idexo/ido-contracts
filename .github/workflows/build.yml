@@ -38,7 +38,7 @@ jobs:
         restore-keys: npm-v2-
 
     - run: npm ci
-      if: steps.cache.outputs.cache-hit != 'true'
+
     - run: npm run test
       env:
         FORCE_COLOR: 1
