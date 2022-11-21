@@ -60,11 +60,11 @@ contract("IDOSale", async (accounts) => {
 
         describe("reverts if", async () => {
             it("add operator by non-operator", async () => {
-                await expectRevert(saleContract.addOperator(bob, { from: bob }), "IDOSale: CALLER_NO_OWNER")
+                await expectRevert(saleContract.addOperator(bob, { from: bob }), "Ownable: caller is not the owner")
             })
             it("remove operator by non-operator", async () => {
                 await saleContract.addOperator(bob)
-                await expectRevert(saleContract.removeOperator(bob, { from: bob }), "IDOSale: CALLER_NO_OWNER")
+                await expectRevert(saleContract.removeOperator(bob, { from: bob }), "Ownable: caller is not the owner")
             })
         })
     })
@@ -297,7 +297,7 @@ contract("IDOSale", async (accounts) => {
                 await expectRevert(saleContract.claim(web3.utils.toWei(new BN(15)), { from: bob }), "IDOSale: CLAIM_AMOUNT_EXCEEDED")
             })
             it("non-owner call sweep", async () => {
-                await expectRevert(saleContract.sweep(alice, { from: bob }), "IDOSale: CALLER_NO_OWNER")
+                await expectRevert(saleContract.sweep(alice, { from: bob }), "Ownable: caller is not the owner")
             })
             it("sweep to zero address", async () => {
                 await expectRevert(saleContract.sweep(constants.ZERO_ADDRESS), "IDOSale: ADDRESS_INVALID")
@@ -333,8 +333,8 @@ contract("IDOSale", async (accounts) => {
         })
         describe("reverts if", async () => {
             it("non-owner call setIdoPrice/setPurchaseCap", async () => {
-                await expectRevert(saleContract.setIdoPrice(new BN(550000), { from: bob }), "IDOSale: CALLER_NO_OWNER")
-                await expectRevert(saleContract.setPurchaseCap(web3.utils.toWei(new BN(222222)), { from: bob }), "IDOSale: CALLER_NO_OWNER")
+                await expectRevert(saleContract.setIdoPrice(new BN(550000), { from: bob }), "Ownable: caller is not the owner")
+                await expectRevert(saleContract.setPurchaseCap(web3.utils.toWei(new BN(222222)), { from: bob }), "Ownable: caller is not the owner")
             })
         })
     })
@@ -347,17 +347,14 @@ contract("IDOSale", async (accounts) => {
         })
         describe("reverts if", async () => {
             it("non-owner call transferOwnership", async () => {
-                await expectRevert(saleContract.transferOwnership(bob, { from: carol }), "IDOSale: CALLER_NO_OWNER")
-            })
-            it("call transferOwnership with zero address", async () => {
-                await expectRevert(saleContract.transferOwnership(constants.ZERO_ADDRESS, { from: bob }), "IDOSale: INVALID_ADDRESS")
+                await expectRevert(saleContract.transferOwnership(bob, { from: carol }), "Ownable: caller is not the owner")
             })
             it("non owner call renounceOwnership", async () => {
-                await expectRevert(saleContract.renounceOwnership({ from: darren }), "IDOSale: CALLER_NO_OWNER")
+                await expectRevert(saleContract.renounceOwnership({ from: darren }), "Ownable: caller is not the owner")
             })
             it("non new owner call acceptOwnership", async () => {
                 await saleContract.transferOwnership(alice, { from: bob })
-                await expectRevert(saleContract.acceptOwnership({ from: carol }), "IDOSale: CALLER_NO_NEW_OWNER")
+                await expectRevert(saleContract.acceptOwnership({ from: carol }), "Ownable2Step: caller is not the new owner")
                 expectEvent(await saleContract.renounceOwnership({ from: bob }), "OwnershipTransferred")
             })
         })

@@ -34,14 +34,14 @@ function testRelayManagerBatch(contractName, contractNameParent) {
         it('add operator by non-admin', async () => {
           await expectRevert(
             relayManager.addOperator(bob, {from: bob}),
-            contractNameParent + ': CALLER_NO_OWNER'
+            'Ownable: caller is not the owner'
           );
         });
         it('remove operator by non-admin', async () => {
           await relayManager.addOperator(bob);
           await expectRevert(
             relayManager.removeOperator(bob, {from: bob}),
-            contractNameParent + ': CALLER_NO_OWNER'
+            'Ownable: caller is not the owner'
           );
         });
       });
