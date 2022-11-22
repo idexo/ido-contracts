@@ -186,8 +186,6 @@ contract UncappedLinkedSoulbound is ERC721URIStorage, Operatorable, ReentrancyGu
         _transfer(_from, _to, _tokenId);
     }
 
-  
-
     /**
      * @dev Remove the given token from collectionIds.
      *

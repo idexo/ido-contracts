@@ -44,13 +44,12 @@ describe(`::Contract -> ${contractName}`, () => {
     })
 
     describe("# Locked transfers", async () => {
-        // it("try transfer", async () => {
-        //     await contract.connect(carol).transferFrom(carol.address, alice.address, 3)
-
-        //     await contract.balanceOf(alice.address).then((res) => {
-        //         expect(res).to.equal(2)
-        //     })
-        // })
+        it("try transfer", async () => {
+            await contract.transferFrom(bob.address, alice.address, 2)
+            await contract.safeTransferFrom(alice.address, bob.address, 2)
+            await contract.transferFrom(bob.address, alice.address, 2)
+            await contract.balanceOf(alice.address).then((res) => { expect(res).to.equal(3) })
+        })
 
         describe("## Revert if", async () => {
             it("not owner", async () => {
