@@ -60,7 +60,7 @@ describe(`::Contract -> ${contractName}`, () => {
     describe("# Locked transfers", async () => {
         it("try transfer", async () => {
             await contract.transferFrom(bob.address, alice.address, 2)
-            await contract.safeTransferFrom(alice.address, bob.address, 2)
+            await contract["safeTransferFrom(address,address,uint256)"](alice.address, bob.address, 2)
             await contract.transferFrom(bob.address, alice.address, 2)
             await contract.balanceOf(alice.address).then((res) => { expect(res).to.equal(3) })
         })

@@ -170,6 +170,14 @@ contract UncappedLinkedSoulbound is ERC721URIStorage, Operatorable, ReentrancyGu
         _transfer(_from, _to, _tokenId);
     }
 
+     /**
+     * override safeTransferFrom with data to error if not contract owner
+     */
+    function safeTransferFrom (address from, address to, uint256 tokenId, bytes memory _data) public override {
+        require(msg.sender == owner(), "SoulBoundNFT#_transfer: TRANSFER_LOCKED_ON_SBT");
+        _safeTransfer(from, to, tokenId, _data);
+    }
+
     /**
      * override transferFrom to error if not contract owner
      */
