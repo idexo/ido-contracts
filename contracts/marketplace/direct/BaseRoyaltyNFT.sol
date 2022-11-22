@@ -84,11 +84,12 @@ contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, Operatorable {
      * @dev Override {ERC721Enumerable:_beforeTokenTransfer}
      */
     function _beforeTokenTransfer(
-        address _from,
-        address _to,
-        uint256 _tokenId
+        address from,
+        address to,
+        uint256 firstTokenId,
+        uint256 batchSize
     ) internal override(ERC721, ERC721Enumerable) {
-        ERC721Enumerable._beforeTokenTransfer(_from, _to, _tokenId);
+        ERC721Enumerable._beforeTokenTransfer(from, to, firstTokenId, batchSize);
     }
 
     /**

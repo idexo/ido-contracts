@@ -35,14 +35,14 @@ function testToken(contractName, contractPath, requireName) {
         it("add operator by non-admin", async () => {
           await expectRevert(
             token.addOperator(bob, { from: bob }),
-            requireName + ": CALLER_NO_OWNER"
+            "Ownable: caller is not the owner"
           );
         });
         it("remove operator by non-admin", async () => {
           await token.addOperator(bob);
           await expectRevert(
             token.removeOperator(bob, { from: bob }),
-            requireName + ": CALLER_NO_OWNER"
+            "Ownable: caller is not the owner"
           );
         });
       });
@@ -115,26 +115,20 @@ function testToken(contractName, contractPath, requireName) {
         it("non-owner call transferOwnership", async () => {
           await expectRevert(
             token.transferOwnership(bob, { from: carol }),
-            requireName + ": CALLER_NO_OWNER"
-          );
-        });
-        it("call transferOwnership with zero address", async () => {
-          await expectRevert(
-            token.transferOwnership(constants.ZERO_ADDRESS, { from: bob }),
-            requireName + ": INVALID_ADDRESS"
+            "Ownable: caller is not the owner"
           );
         });
         it('non owner call renounceOwnership', async () => {
           await expectRevert(
             token.renounceOwnership({from: darren}),
-            requireName + ": CALLER_NO_OWNER"
+            "Ownable: caller is not the owner"
           );
         });
         it("non new owner call acceptOwnership", async () => {
           await token.transferOwnership(alice, { from: bob });
           await expectRevert(
             token.acceptOwnership({ from: carol }),
-            requireName + ": CALLER_NO_NEW_OWNER"
+            "Ownable2Step: caller is not the new owner"
           );
           expectEvent(
             await token.renounceOwnership({from: bob}),

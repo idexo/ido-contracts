@@ -38,11 +38,11 @@ contract("::RoyaltyNFT", async (accounts) => {
         })
         describe("reverts if", async () => {
             it("add operator by non-admin", async () => {
-                await expectRevert(royaltyNFT.addOperator(bob, { from: bob }), "Ownable: CALLER_NO_OWNER")
+                await expectRevert(royaltyNFT.addOperator(bob, { from: bob }), "Ownable: caller is not the owner")
             })
             it("remove operator by non-admin", async () => {
                 await royaltyNFT.addOperator(bob, { from: owner })
-                await expectRevert(royaltyNFT.removeOperator(bob, { from: carol }), "Ownable: CALLER_NO_OWNER")
+                await expectRevert(royaltyNFT.removeOperator(bob, { from: carol }), "Ownable: caller is not the owner")
             })
         })
     })
@@ -98,7 +98,7 @@ contract("::RoyaltyNFT", async (accounts) => {
 
         describe("should revert if", async () => {
             it("inexistent tokenId", async () => {
-                await expectRevert(royaltyNFT.tokenURI(1, { from: owner }), "ERC721URIStorage: URI query for nonexistent token")
+                await expectRevert(royaltyNFT.tokenURI(1, { from: owner }), "ERC721: invalid token ID")
             })
         })
     })

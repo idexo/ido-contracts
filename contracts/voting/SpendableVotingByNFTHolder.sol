@@ -261,7 +261,7 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
         validProposal(proposalId_)
     {
         require(
-            _proposals[proposalId_].author == msg.sender || owner == msg.sender,
+            _proposals[proposalId_].author == msg.sender || owner() == msg.sender,
             "NOT_OWNER_OR_AUTHOR"
         );
         require(_isHolder(msg.sender), "NOT_NFT_HOLDER");

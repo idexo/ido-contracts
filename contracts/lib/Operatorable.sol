@@ -2,9 +2,9 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 
-contract Operatorable is Ownable, AccessControl {
+contract Operatorable is Ownable2Step, AccessControl {
   bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
   /**

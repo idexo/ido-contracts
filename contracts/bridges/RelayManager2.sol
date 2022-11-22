@@ -4,15 +4,12 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 import "../interfaces/IWIDO.sol";
 
-contract RelayManager2 is AccessControl, ReentrancyGuard {
+contract RelayManager2 is AccessControl, ReentrancyGuard, Ownable2Step {
   using SafeERC20 for IWIDO;
-  // The contract owner address
-  address public owner;
-  // Proposed contract new owner address
-  address public newOwner;
 
   bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
   // Wrapped IDO token address
@@ -51,14 +48,11 @@ contract RelayManager2 is AccessControl, ReentrancyGuard {
     require(_adminFee != 0, "RelayManager2: ADMIN_FEE_INVALID");
     address sender = _msgSender();
     wIDO = _wIDO;
-    owner = sender;
     adminFee = _adminFee;
     baseGas = 21000; // default block gas limit
 
     _setupRole(DEFAULT_ADMIN_ROLE, sender);
     _setupRole(OPERATOR_ROLE, sender);
-
-    emit OwnershipTransferred(address(0), sender);
   }
 
   receive() external payable {
@@ -94,53 +88,6 @@ contract RelayManager2 is AccessControl, ReentrancyGuard {
     */
   function setMinTransferAmount(uint256 newMinTransferAmount) external onlyOwner {
     minTransferAmount = newMinTransferAmount;
-  }
-
-  /****************************|
-  |          Ownership         |
-  |___________________________*/
-
-  event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-  /**
-    * @dev Throws if called by any account other than the owner.
-    */
-  modifier onlyOwner() {
-    require(owner == _msgSender(), "RelayManager2: CALLER_NO_OWNER");
-    _;
-  }
-
-  /**
-    * @dev Leaves the contract without owner. It will not be possible to call
-    * `onlyOwner` functions anymore. Can only be called by the current owner.
-    *
-    * NOTE: Renouncing ownership will leave the contract without an owner,
-    * thereby removing any functionality that is only available to the owner.
-    */
-  function renounceOwnership() external onlyOwner {
-    emit OwnershipTransferred(owner, address(0));
-    owner = address(0);
-  }
-
-  /**
-    * @dev Transfer the contract ownership.
-    * The new owner still needs to accept the transfer.
-    * can only be called by the contract owner.
-    */
-  function transferOwnership(address _newOwner) external onlyOwner {
-    require(_newOwner != address(0), "RelayManager2: INVALID_ADDRESS");
-    require(_newOwner != owner, "RelayManager2: OWNERSHIP_SELF_TRANSFER");
-    newOwner = _newOwner;
-  }
-
-  /**
-    * @dev The new owner accept an ownership transfer.
-    */
-  function acceptOwnership() external {
-    require(_msgSender() == newOwner, "RelayManager2: CALLER_NO_NEW_OWNER");
-    emit OwnershipTransferred(owner, newOwner);
-    owner = newOwner;
-    newOwner = address(0);
   }
 
   /***********************|

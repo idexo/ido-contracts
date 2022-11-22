@@ -22,18 +22,33 @@ describe(`::Contract -> ${contractName}`, () => {
             await contract.addOperator(alice.address)
             expect(await contract.checkOperator(alice.address)).to.eq(true)
         })
+        it("should add description", async () => {
+            await contract.connect(alice).addDescription("test")
+            expect(await contract.collectionDescription()).to.eq("test")
+        })
+
         it("should remove operator", async () => {
             await contract.removeOperator(alice.address)
             expect(await contract.checkOperator(alice.address)).to.eq(false)
         })
+        it("supportsInterface", async () => {
+            await contract.supportsInterface(`0x00000000`).then((res) => {
+                expect(res).to.eq(false)
+            })
+        })
+        it("getCollectionIds", async () => {
+            await contract.getCollectionIds(alice.address).then((res) => {
+                expect(res.length).to.eq(0)
+            })
+        })
 
         describe("reverts if", async () => {
             it("add operator by NO-OWNER", async () => {
-                await expect(contract.connect(alice).addOperator(bob.address)).to.be.revertedWith("Ownable: CALLER_NO_OWNER")
+                await expect(contract.connect(alice).addOperator(bob.address)).to.be.revertedWith("Ownable: caller is not the owner")
             })
             it("remove operator by NO-OWNER", async () => {
                 await contract.addOperator(bob.address)
-                await expect(contract.connect(alice).removeOperator(bob.address)).to.be.revertedWith("Ownable: CALLER_NO_OWNER")
+                await expect(contract.connect(alice).removeOperator(bob.address)).to.be.revertedWith("Ownable: caller is not the owner")
             })
         })
     })
@@ -104,6 +119,10 @@ describe(`::Contract -> ${contractName}`, () => {
             await contract.connect(deployer).finalizeTransfer(2)
         })
 
+        it("should disapproveTransfer", async () => {
+            await contract.connect(bob).disapproveTransfer(4)
+        })
+
         describe("## Revert if", async () => {
             it("not approved", async () => {
                 await expect(contract.connect(deployer).finalizeTransfer(3)).to.revertedWith("NO_PENDING_TRANSFER")
@@ -130,6 +149,11 @@ describe(`::Contract -> ${contractName}`, () => {
             it("not approved", async () => {
                 await expect(contract.connect(carol).transferFrom(carol.address, alice.address, 3)).to.revertedWith(
                     "TRANSFER_LOCKED_ON_SBT_UNLESS_AUTHORIZED"
+                )
+            })
+            it("call disapproveTransfer with nothing pending", async () => {
+                await expect(contract.connect(carol).disapproveTransfer(1)).to.revertedWith(
+                    "NO_PENDING_TRANSFER"
                 )
             })
         })

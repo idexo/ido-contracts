@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import "./Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 
-contract Blacklist is Ownable {
+contract Blacklist is Ownable2Step {
   // wallet address => blacklisted status
   mapping(address => bool) blacklist;
 

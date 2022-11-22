@@ -37,11 +37,11 @@ contract("RelayManager2", async (accounts) => {
         })
         describe("reverts if", async () => {
             it("add operator by non-admin", async () => {
-                await expectRevert(relayManager.addOperator(bob, { from: bob }), "RelayManager2: CALLER_NO_OWNER")
+                await expectRevert(relayManager.addOperator(bob, { from: bob }), "Ownable: caller is not the owner")
             })
             it("remove operator by non-admin", async () => {
                 await relayManager.addOperator(bob)
-                await expectRevert(relayManager.removeOperator(bob, { from: bob }), "RelayManager2: CALLER_NO_OWNER")
+                await expectRevert(relayManager.removeOperator(bob, { from: bob }), "Ownable: caller is not the owner")
             })
         })
     })
@@ -120,26 +120,23 @@ contract("RelayManager2", async (accounts) => {
                 await expectRevert(relayManager.withdrawGasFee(carol, gasFee + 100, { from: bob }), "RelayManager2: INSUFFICIENT_GAS_FEE")
             })
             it("non-owner call setMinTransferAmount", async () => {
-                await expectRevert(relayManager.setMinTransferAmount(1, { from: carol }), "RelayManager2: CALLER_NO_OWNER")
+                await expectRevert(relayManager.setMinTransferAmount(1, { from: carol }), "Ownable: caller is not the owner")
             })
             it("non-owner call setAdminFee", async () => {
-                await expectRevert(relayManager.setAdminFee(1, { from: carol }), "RelayManager2: CALLER_NO_OWNER")
+                await expectRevert(relayManager.setAdminFee(1, { from: carol }), "Ownable: caller is not the owner")
             })
             it("non-owner call setBaseGas", async () => {
-                await expectRevert(relayManager.setBaseGas(1, { from: carol }), "RelayManager2: CALLER_NO_OWNER")
+                await expectRevert(relayManager.setBaseGas(1, { from: carol }), "Ownable: caller is not the owner")
             })
             it("non-owner call transferOwnership", async () => {
-                await expectRevert(relayManager.transferOwnership(bob, { from: carol }), "RelayManager2: CALLER_NO_OWNER")
-            })
-            it("call transferOwnership with zero address", async () => {
-                await expectRevert(relayManager.transferOwnership(constants.ZERO_ADDRESS, { from: bob }), "RelayManager2: INVALID_ADDRESS")
+                await expectRevert(relayManager.transferOwnership(bob, { from: carol }), "Ownable: caller is not the owner")
             })
             it("non owner call renounceOwnership", async () => {
-                await expectRevert(relayManager.renounceOwnership({ from: carol }), "RelayManager2: CALLER_NO_OWNER")
+                await expectRevert(relayManager.renounceOwnership({ from: carol }), "Ownable: caller is not the owner")
             })
             it("non new owner call acceptOwnership", async () => {
                 await relayManager.transferOwnership(alice, { from: bob })
-                await expectRevert(relayManager.acceptOwnership({ from: carol }), "RelayManager2: CALLER_NO_NEW_OWNER")
+                await expectRevert(relayManager.acceptOwnership({ from: carol }), "Ownable2Step: caller is not the new owner")
                 expectEvent(await relayManager.renounceOwnership({ from: bob }), "OwnershipTransferred")
             })
         })
