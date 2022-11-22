@@ -17,12 +17,12 @@ function testStakePool(contractName, errorHead, timeIncrease) {
     const stakeTokenSymbol = 'IDS';
     const erc20Name = 'USD Tether';
     const erc20Symbol = 'USDT';
-    const decimals = 18;
+    const DOMAIN = "https://idexo.com/"
 
     before(async () => {
       ido = await IDO.new('IDO', 'IDO', {from: alice});
       erc20 = await ERC20.new(erc20Name, erc20Symbol, {from: alice});
-      stakePool = await StakePool.new(stakeTokenName, stakeTokenSymbol, '', ido.address, erc20.address, {from: alice});
+      stakePool = await StakePool.new(stakeTokenName, stakeTokenSymbol, DOMAIN, ido.address, erc20.address, {from: alice});
       await stakePool.addOperator(bob, {from: alice});
     });
 
@@ -234,6 +234,24 @@ function testStakePool(contractName, errorHead, timeIncrease) {
             )
             await stakePool.getClaimableReward(21).then((res) => {
                 expect(res.toString()).to.eq("5000000000000000000000")
+            })
+        })
+
+        // it("should change tokenURI", async () => {
+        //     await stakePool.setTokenURI(1, "test", { from: alice })
+        //     await stakePool.tokenURI(1).then((res) => {
+        //         expect(res.toString()).to.eq(DOMAIN + "test")
+        //     })
+        // })
+        it("should change baseURI", async () => {
+            await stakePool.setBaseURI("http://newdomain/", { from: alice })
+            await stakePool.baseURI().then((res) => {
+                expect(res.toString()).to.eq("http://newdomain/")
+            })
+        })
+        describe("reverts if", async () => {
+            it("change tokenURI by NO-OPERATOR", async () => {
+                await expectRevert(stakePool.setTokenURI(1, "test", { from: bob }), "Ownable: caller is not the owner")
             })
         })
     })
