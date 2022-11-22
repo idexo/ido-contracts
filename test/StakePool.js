@@ -70,6 +70,12 @@ function testStakePool(contractName, errorHead, timeIncrease) {
           const aliceIDOBalance = await ido.balanceOf(alice);
           expect(aliceIDOBalance.toString()).to.eq('194800000000000000000000');
         });
+        it("should change tokenURI", async () => {
+            await stakePool.setTokenURI(1, "test", { from: alice })
+            await stakePool.tokenURI(1).then((res) => {
+                expect(res.toString()).to.eq(DOMAIN + "test")
+            })
+        })
         it('should add claimable reward', async () => {
             await stakePool.addClaimableReward(1, web3.utils.toWei(new BN(300)), {from: alice});
             await stakePool.getClaimableReward(1).then(res => {
@@ -237,12 +243,6 @@ function testStakePool(contractName, errorHead, timeIncrease) {
             })
         })
 
-        // it("should change tokenURI", async () => {
-        //     await stakePool.setTokenURI(1, "test", { from: alice })
-        //     await stakePool.tokenURI(1).then((res) => {
-        //         expect(res.toString()).to.eq(DOMAIN + "test")
-        //     })
-        // })
         it("should change baseURI", async () => {
             await stakePool.setBaseURI("http://newdomain/", { from: alice })
             await stakePool.baseURI().then((res) => {
