@@ -53,10 +53,12 @@ function testStakePool(contractName, errorHead, timeIncrease) {
 
     describe('#Stake', async () => {
       before(async () => {
-        await ido.mint(alice, web3.utils.toWei(new BN(20000)));
-        await ido.approve(stakePool.address, web3.utils.toWei(new BN(20000)), {from: alice});
-        await ido.mint(carol, web3.utils.toWei(new BN(20000)));
-        await ido.approve(stakePool.address, web3.utils.toWei(new BN(20000)), {from: carol});
+        await ido.mint(alice, web3.utils.toWei(new BN(200000)));
+        await ido.approve(stakePool.address, web3.utils.toWei(new BN(200000)), {from: alice});
+        await ido.mint(bob, web3.utils.toWei(new BN(200000)));
+        await ido.approve(stakePool.address, web3.utils.toWei(new BN(200000)), {from: bob});
+        await ido.mint(carol, web3.utils.toWei(new BN(200000)));
+        await ido.approve(stakePool.address, web3.utils.toWei(new BN(200000)), {from: carol});
       });
       describe('##deposit', async () => {
         it('should deposit', async () => {
@@ -66,7 +68,7 @@ function testStakePool(contractName, errorHead, timeIncrease) {
             expect(res[1].toString()).to.eq('120');
           });
           const aliceIDOBalance = await ido.balanceOf(alice);
-          expect(aliceIDOBalance.toString()).to.eq('14800000000000000000000');
+          expect(aliceIDOBalance.toString()).to.eq('194800000000000000000000');
         });
         describe('reverts if', async () => {
           it('stake amount is lower than minimum amount', async () => {
@@ -192,6 +194,40 @@ function testStakePool(contractName, errorHead, timeIncrease) {
         });
       });
     });
+
+    describe("multiple deposits and distribute rewards", async () => {
+        it("multiple deposits", async () => {
+            for (const user of [alice, bob, carol]) {
+                await stakePool.deposit(web3.utils.toWei(new BN(5000)), { from: user })
+            }
+            for (const user of [bob, alice, carol]) {
+                await stakePool.getStakeAmount(user).then((res) => {
+                    expect(res.toString()).to.not.eq("0")
+                })
+            }
+        })
+        it("should new deposit rewards", async () => {
+            expectEvent(await stakePool.depositReward(web3.utils.toWei(new BN(6000)), { from: alice }), "RewardDeposited")
+            await stakePool.getRewardDeposit(1).then((res) => {
+                expect(res[1].toString()).to.eq("6000000000000000000000")
+            })
+        })
+
+        it("should add claimable rewards", async () => {
+            const amountForRewards = web3.utils.toWei(new BN(5000))
+
+            await stakePool.addClaimableRewards(
+                [21, 22, 23, 24, 25, 26],
+                [amountForRewards, amountForRewards, amountForRewards, amountForRewards, amountForRewards, amountForRewards],
+                {
+                    from: alice
+                }
+            )
+            await stakePool.getClaimableReward(21).then((res) => {
+                expect(res.toString()).to.eq("5000000000000000000000")
+            })
+        })
+    })
   });
 }
 
