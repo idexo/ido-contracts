@@ -22,6 +22,11 @@ describe(`::Contract -> ${contractName}`, () => {
             await contract.addOperator(alice.address)
             expect(await contract.checkOperator(alice.address)).to.eq(true)
         })
+        it("should add description", async () => {
+            await contract.connect(alice).addDescription("test")
+            expect(await contract.collectionDescription()).to.eq("test")
+        })
+
         it("should remove operator", async () => {
             await contract.removeOperator(alice.address)
             expect(await contract.checkOperator(alice.address)).to.eq(false)
