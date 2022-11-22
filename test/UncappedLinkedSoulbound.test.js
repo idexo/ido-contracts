@@ -27,6 +27,16 @@ describe(`::Contract -> ${contractName}`, () => {
                 expect(res.toString()).to.eq(name)
             })
         })
+        it("supportsInterface", async () => {
+            await contract.supportsInterface(`0x00000000`).then((res) => {
+                expect(res).to.eq(false)
+            })
+        })
+        it("getCollectionIds", async () => {
+            await contract.getCollectionIds(alice.address).then((res) => {
+                expect(res.length).to.eq(0)
+            })
+        })
     })
 
     describe("# Mint for accounts", async () => {
