@@ -70,6 +70,15 @@ function testStakePool(contractName, errorHead, timeIncrease) {
           const aliceIDOBalance = await ido.balanceOf(alice);
           expect(aliceIDOBalance.toString()).to.eq('194800000000000000000000');
         });
+        it('should add claimable reward', async () => {
+            await stakePool.addClaimableReward(1, web3.utils.toWei(new BN(300)), {from: alice});
+            await stakePool.getClaimableReward(1).then(res => {
+              expect(res.toString()).to.eq('300000000000000000000');
+            });
+          });
+          it('should allow claim reward', async () => {
+            expectEvent( await stakePool.claimReward(1, 0, {from: alice}), 'RewardClaimed');
+          });
         describe('reverts if', async () => {
           it('stake amount is lower than minimum amount', async () => {
             await expectRevert(
