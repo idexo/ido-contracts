@@ -51,6 +51,10 @@ describe(`::Contract -> ${contractName}`, () => {
 
             expect(await contract.isHolder(bob.address)).to.equal(true)
         })
+        it("mint batch Soulbound NFTs", async () => {
+            await contract.mintBatchSBT([darren.address, darren.address], ["", ""])
+            expect(await contract.balanceOf(darren.address)).to.equal(2)
+        })
     })
 
     describe("# Locked transfers", async () => {
