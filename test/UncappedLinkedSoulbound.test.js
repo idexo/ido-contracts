@@ -11,8 +11,8 @@ describe(`::Contract -> ${contractName}`, () => {
 	const linkedContractAddress = "0x7428c044400a8c54c5685a7b186bf80a65b9b6da"
 	const linkedTokenId = 1
 
-	let contract 
-	let deployer, alice, bob, carol, darren 
+	let contract
+	let deployer, alice, bob, carol, darren
 	before(async () => {
 		const Contract = await ethers.getContractFactory(contractName)
 		const signers = await ethers.getSigners()
@@ -44,13 +44,10 @@ describe(`::Contract -> ${contractName}`, () => {
     })
 
     describe("# Locked transfers", async () => {
-        // it("try transfer", async () => {
-        //     await contract.connect(carol).transferFrom(carol.address, alice.address, 3)
-
-        //     await contract.balanceOf(alice.address).then((res) => {
-        //         expect(res).to.equal(2)
-        //     })
-        // })
+        it("try transfer", async () => {
+            await contract.transferFrom(bob.address, alice.address, 2)
+            await contract.balanceOf(alice.address).then((res) => { expect(res).to.equal(3) })
+        })
 
         describe("## Revert if", async () => {
             it("not owner", async () => {
