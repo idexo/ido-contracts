@@ -158,7 +158,7 @@ contract StakePoolFlexLock is StakeTokenFlexLock, ReentrancyGuard {
      * @param amount amount to add
      */
     function addStake(uint256 stakeId, uint256 amount) external nonReentrant {
-        require(msg.sender == ownerOf(stakeId) || msg.sender == owner, "StakePoolFlex: CALLER_NOT_TOKEN_OR_CONTRACT_OWNER");
+        require(msg.sender == ownerOf(stakeId) || msg.sender == owner(), "StakePoolFlex: CALLER_NOT_TOKEN_OR_CONTRACT_OWNER");
 
         _addStake(stakeId, amount);
     }

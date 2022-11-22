@@ -30,11 +30,11 @@ contract("::StakePoolFlexLock", async (accounts) => {
 
         describe("reverts if", async () => {
             it("add operator by NO-OWNER", async () => {
-                await expectRevert(stakePool.addOperator(bob, { from: alice }), "Ownable: CALLER_NO_OWNER")
+                await expectRevert(stakePool.addOperator(bob, { from: alice }), "Ownable: caller is not the owner")
             })
             it("remove operator by NO-OWNER", async () => {
                 await stakePool.addOperator(bob, { from: owner })
-                await expectRevert(stakePool.removeOperator(bob, { from: alice }), "Ownable: CALLER_NO_OWNER")
+                await expectRevert(stakePool.removeOperator(bob, { from: alice }), "Ownable: caller is not the owner")
             })
         })
     })
@@ -300,7 +300,7 @@ contract("::StakePoolFlexLock", async (accounts) => {
         })
         describe("reverts if", async () => {
             it("change tokenURI by NO-OPERATOR", async () => {
-                await expectRevert(stakePool.setTokenURI(1, "test", { from: alice }), "Ownable: CALLER_NO_OWNER")
+                await expectRevert(stakePool.setTokenURI(1, "test", { from: alice }), "Ownable: caller is not the owner")
             })
         })
     })

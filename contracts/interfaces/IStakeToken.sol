@@ -28,4 +28,8 @@ interface IStakeToken is IERC721 {
     )
         external
         returns (uint256);
+
+    function stakes(uint256 id) external view returns (uint256 amount, uint256 multiplier, uint256 depositedAt);
+
+    function stakerIds(address account, uint256 id) external view returns (uint256);
 }

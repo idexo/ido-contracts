@@ -32,11 +32,11 @@ describe(`::${contractName}`, () => {
 
         describe("reverts if", async () => {
             it("add operator by NO-OWNER", async () => {
-                await expect(payment.connect(alice).addOperator(bob.address)).to.be.revertedWith("Ownable: CALLER_NO_OWNER")
+                await expect(payment.connect(alice).addOperator(bob.address)).to.be.revertedWith("Ownable: caller is not the owner")
             })
             it("remove operator by NO-OWNER", async () => {
                 await payment.addOperator(bob.address)
-                await expect(payment.connect(alice).removeOperator(bob.address)).to.be.revertedWith("Ownable: CALLER_NO_OWNER")
+                await expect(payment.connect(alice).removeOperator(bob.address)).to.be.revertedWith("Ownable: caller is not the owner")
             })
         })
     })
@@ -165,7 +165,7 @@ describe(`::${contractName}`, () => {
         })
         describe("reverts if", async () => {
             it("change tokenURI by NO-OPERATOR", async () => {
-                await expect(payment.connect(alice).setTokenURI(2, "test")).to.revertedWith("Ownable: CALLER_NO_OWNER")
+                await expect(payment.connect(alice).setTokenURI(2, "test")).to.revertedWith("Ownable: caller is not the owner")
             })
         })
     })

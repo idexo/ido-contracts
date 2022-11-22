@@ -247,7 +247,6 @@ contract UncappedSBTCommunityRecovery is ERC721URIStorage, Operatorable, Reentra
         current.voters.push(msg.sender);
 
         tokenInfos[_tokenId].requestedTransfer++;
-
         pendingToApproval[_tokenId] = true;
 
         emit RequestedTransfer(_tokenId, nTransferId, from, to);
@@ -265,7 +264,6 @@ contract UncappedSBTCommunityRecovery is ERC721URIStorage, Operatorable, Reentra
         require(!approved(msg.sender, _tokenId), "ALREADY_APPROVED_CURRENT_TRANSFER");
 
         TransferInfo storage current = transferHistory[_tokenId][transferHistory[_tokenId].length - 1];
-
         current.numApprovals++;
 
         if (current.numApprovals > tokenInfos[_tokenId].numTokenOperators / 2) {
@@ -289,7 +287,6 @@ contract UncappedSBTCommunityRecovery is ERC721URIStorage, Operatorable, Reentra
         require(!approved(msg.sender, _tokenId), "ALREADY_DISAPPROVED_CURRENT_TRANSFER");
 
         TransferInfo storage current = transferHistory[_tokenId][transferHistory[_tokenId].length - 1];
-
         current.numDisaprovals++;
 
         if (current.numDisaprovals > tokenInfos[_tokenId].numTokenOperators / 2) {

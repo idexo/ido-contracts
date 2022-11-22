@@ -33,7 +33,7 @@ contract('WIDOPausable', async accounts => {
       it('non-owner call setRelayer', async () => {
         await expectRevert(
           contract.setRelayer(bob, {from: bob}),
-          'Ownable: CALLER_NO_OWNER'
+          'Ownable: caller is not the owner'
         );
       });
       it('non-relayer call mint/burn', async () => {
@@ -78,33 +78,27 @@ contract('WIDOPausable', async accounts => {
       it('non-owner call transferOwnership', async () => {
         await expectRevert(
           contract.transferOwnership(bob, {from: carol}),
-          'Ownable: CALLER_NO_OWNER'
-        );
-      });
-      it('call transferOwnership with zero address', async () => {
-        await expectRevert(
-          contract.transferOwnership(constants.ZERO_ADDRESS, {from: bob}),
-          'Ownable: INVALID_ADDRESS'
+          'Ownable: caller is not the owner'
         );
       });
       it('non new owner call acceptOwnership', async () => {
         await contract.transferOwnership(alice, {from: bob});
         await expectRevert(
           contract.acceptOwnership({from: carol}),
-          'Ownable: CALLER_NO_NEW_OWNER'
+          'Ownable2Step: caller is not the new owner'
         );
       });
       it('non owner call renounceOwnership', async () => {
         await expectRevert(
             contract.renounceOwnership({from: carol}),
-          'Ownable: CALLER_NO_OWNER'
+          'Ownable: caller is not the owner'
         );
       });
       it('non new owner call acceptOwnership', async () => {
         await contract.transferOwnership(alice, {from: bob});
         await expectRevert(
             contract.acceptOwnership({from: carol}),
-          'Ownable: CALLER_NO_NEW_OWNER'
+          'Ownable2Step: caller is not the new owner'
         );
         expectEvent(
           await contract.renounceOwnership({from: bob}),

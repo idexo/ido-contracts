@@ -10,7 +10,7 @@ contract('::StakePoolSimpleCombined', async accounts => {
   before(async () => {
     ido = await ERC20.new('Idexo Community', 'IDO', {from: alice});
     erc20 = await ERC20.new('USD Tether', 'USDT', {from: alice});
-    stakePool = await StakePool.new('Idexo Stake Token', 'IDS', ido.address, erc20.address, {from: alice});
+    stakePool = await StakePool.new('Idexo Stake Token', 'IDS', '', ido.address, erc20.address, {from: alice});
   });
 
   describe('# Role', async () => {

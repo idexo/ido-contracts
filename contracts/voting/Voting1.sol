@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "../interfaces/IStakePool.sol";
 
 /**
@@ -14,7 +14,7 @@ import "../interfaces/IStakePool.sol";
  * If not, poll expires within `_pollMaximumDurationInDays`.
  */
 
-contract Voting1 is Ownable, AccessControl {
+contract Voting1 is Ownable2Step, AccessControl {
     using SafeMath for uint256;
     using Counters for Counters.Counter;
 
