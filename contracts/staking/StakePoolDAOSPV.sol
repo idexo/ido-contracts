@@ -63,10 +63,6 @@ contract StakePoolDAOSPV is IStakePoolDAO, StakeTokenDAO, ReentrancyGuard {
         _withdraw(msg.sender, stakeId, amount);
     }
 
-   
-
-  
-
     /*************************|
     |   Internal Functions     |
     |________________________*/
@@ -76,10 +72,7 @@ contract StakePoolDAOSPV is IStakePoolDAO, StakeTokenDAO, ReentrancyGuard {
      * @param account address of recipient.
      * @param amount deposit amount.
      */
-    function _deposit(
-        address account,
-        uint256 amount
-    ) internal virtual nonReentrant {
+    function _deposit(address account, uint256 amount) internal virtual nonReentrant {
         uint256 depositedAt = block.timestamp;
         uint256 stakeId = _mint(account, amount, depositedAt);
         require(depositToken.transferFrom(account, address(this), amount), "StakePool#_deposit: TRANSFER_FAILED");
@@ -109,6 +102,4 @@ contract StakePoolDAOSPV is IStakePoolDAO, StakeTokenDAO, ReentrancyGuard {
 
         emit Withdrawn(account, stakeId, withdrawAmount);
     }
-
-  
 }

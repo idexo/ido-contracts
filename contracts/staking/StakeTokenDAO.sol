@@ -21,7 +21,7 @@ contract StakeTokenDAO is IStakeTokenDAO, ERC721, ERC721URIStorage {
 
     struct Stake {
         uint256 amount;
-        uint256 depositedAt; 
+        uint256 depositedAt;
     }
     // stake id => stake info
     mapping(uint256 => Stake) public override stakes;
@@ -60,7 +60,6 @@ contract StakeTokenDAO is IStakeTokenDAO, ERC721, ERC721URIStorage {
         require(msg.sender == ownerOf(tokenId), "StakeToken#setTokenURI: ONLY_TOKEN_OWNER_CAN_SET_TOKENURI");
         super._setTokenURI(tokenId, _tokenURI);
     }
-
 
     /**
      * @dev Return base URI
@@ -124,19 +123,10 @@ contract StakeTokenDAO is IStakeTokenDAO, ERC721, ERC721URIStorage {
      * - `stakeId` must exist in stake pool
      * @param stakeId uint256
      */
-    function getStakeInfo(uint256 stakeId)
-        public
-        view
-        override
-        returns (
-            uint256,
-            uint256
-        )
-    {
+    function getStakeInfo(uint256 stakeId) public view override returns (uint256, uint256) {
         require(_exists(stakeId), "StakeToken#getStakeInfo: STAKE_NOT_FOUND");
         return (stakes[stakeId].amount, stakes[stakeId].depositedAt);
     }
-
 
     /**
      * @dev Mint a new StakeToken.

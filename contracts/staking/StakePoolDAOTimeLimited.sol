@@ -3,7 +3,7 @@ pragma solidity 0.8.4;
 
 import "./StakePoolDAOSPV.sol";
 
-contract StakePoolDAOTimeLimited is StakePoolDAOSPV{
+contract StakePoolDAOTimeLimited is StakePoolDAOSPV {
     using SafeERC20 for IERC20;
 
     // Minimum pool stake amount
@@ -12,7 +12,6 @@ contract StakePoolDAOTimeLimited is StakePoolDAOSPV{
     uint256 public timeLimitInDays;
     // Time Limit after min pool stake amount reached
     uint256 public timeLimit;
-    // Address of deposit token.
 
     constructor(
         string memory stakeTokenName_,
@@ -31,10 +30,7 @@ contract StakePoolDAOTimeLimited is StakePoolDAOSPV{
      * @param account address of recipient.
      * @param amount deposit amount.
      */
-    function _deposit(
-        address account,
-        uint256 amount
-    ) internal virtual override {
+    function _deposit(address account, uint256 amount) internal virtual override {
         StakePoolDAOSPV._deposit(account, amount);
         if (timeLimit > 0) {
             require(block.timestamp < timeLimit, "StakePool#_deposit: DEPOSIT_TIME_CLOSED");
