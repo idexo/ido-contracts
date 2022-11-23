@@ -15,7 +15,9 @@ contract("Voting", async (accounts) => {
 
     before(async () => {
         ido = await ERC20.new("Idexo Community", "IDO", { from: alice })
+        await ido.mint(alice, web3.utils.toWei(new BN(10000)))
         spvdao = await SPVDAO.new("test", "T", "", 100, 1, ido.address, 15, 15, "description")
+        await ido.approve(spvdao.address, web3.utils.toWei(new BN(10000)), { from: alice })
     })
 
     describe("#Inital tests", async () => {
@@ -48,6 +50,16 @@ contract("Voting", async (accounts) => {
         })
         it("getStakeInfo", async () => {
             await expectRevert(spvdao.getStakeInfo(1), "StakeToken#getStakeInfo: STAKE_NOT_FOUND")
+        })
+    })
+
+    describe("#Proposal", async () => {
+        it("createProposal", async () => {
+            expectEvent(await spvdao.deposit(web3.utils.toWei(new BN(10000)), { from: alice }), "Deposited")
+            expectEvent(await spvdao.createProposal("test", bob, 100, ido.address, 1, { from: alice }), "NewProposal")
+            await spvdao.getProposal(1).then((res) => {
+                expect(res[0].toString()).to.eq("test")
+            })
         })
     })
 })
