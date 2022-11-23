@@ -19,14 +19,35 @@ contract("Voting", async (accounts) => {
     })
 
     describe("#Inital tests", async () => {
+        it("tokenURI", async () => {
+            await expectRevert(spvdao.tokenURI(1), "ERC721: invalid token ID")
+        })
         it("isHolder", async () => {
             expect(await spvdao.isHolder(bob)).to.eq(false)
         })
-    })
-
-    describe("#Get", async () => {
+        it("voted", async () => {
+            await expectRevert(spvdao.voted(1, bob), "INVALID_PROPOSAL")
+        })
+        it("getProposal", async () => {
+            await expectRevert(spvdao.getProposal(0), "INVALID_PROPOSAL")
+        })
+        it("getReviewIds", async () => {
+            expect(Number(await spvdao.getReviewIds(1))).to.eq(0)
+        })
+        it("getReview", async () => {
+            await expectRevert(spvdao.getReview(1, 1), "INVALID_PROPOSAL")
+        })
+        it("getComments", async () => {
+            expect((await spvdao.getComments(1)).length).to.eq(0)
+        })
+        it("getStakeTokenIds", async () => {
+            expect(Number(await spvdao.getStakeTokenIds(bob))).to.eq(0)
+        })
         it("getStakeAmount", async () => {
             expect(Number(await spvdao.getStakeAmount(bob))).to.eq(0)
+        })
+        it("getStakeInfo", async () => {
+            await expectRevert(spvdao.getStakeInfo(1), "StakeToken#getStakeInfo: STAKE_NOT_FOUND")
         })
     })
 })
