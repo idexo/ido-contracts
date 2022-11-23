@@ -26,22 +26,12 @@ contract("::Token", async (accounts) => {
         })
         describe("reverts if", async () => {
             it("add operator by owner", async () => {
-                await expectRevert(token.addOperator(alice, { from: alice }), "CALLER_NO_OWNER")
+                await expectRevert(token.addOperator(alice, { from: alice }), "Ownable: caller is not the owner")
             })
             it("remove operator by owner", async () => {
                 await token.addOperator(alice, { from: deployer })
-                await expectRevert(token.removeOperator(alice, { from: alice }), "CALLER_NO_OWNER")
+                await expectRevert(token.removeOperator(alice, { from: alice }), "Ownable: caller is not the owner")
             })
-        })
-    })
-
-    describe("# Ownership", async () => {
-        it("should transferOwnership", async () => {
-            await token.transferOwnership(alice, { from: deployer })
-            expect(await token.owner()).to.eq(alice)
-        })
-        it("should renounceOwnership", async () => {
-            await token.renounceOwnership({ from: alice })
         })
     })
 

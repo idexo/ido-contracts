@@ -166,7 +166,7 @@ contract UncappedLinkedSoulbound is ERC721URIStorage, Operatorable, ReentrancyGu
      * override safeTransferFrom to error if not contract owner
      */
     function safeTransferFrom (address _from, address _to, uint256 _tokenId) public override {
-        require(msg.sender == owner, "SoulBoundNFT#_transfer: TRANSFER_LOCKED_ON_SBT");
+        require(msg.sender == owner(), "SoulBoundNFT#_transfer: TRANSFER_LOCKED_ON_SBT");
         _transfer(_from, _to, _tokenId);
     }
 
@@ -174,7 +174,7 @@ contract UncappedLinkedSoulbound is ERC721URIStorage, Operatorable, ReentrancyGu
      * override safeTransferFrom with data to error if not contract owner
      */
     function safeTransferFrom (address from, address to, uint256 tokenId, bytes memory _data) public override {
-        require(msg.sender == owner, "SoulBoundNFT#_transfer: TRANSFER_LOCKED_ON_SBT");
+        require(msg.sender == owner(), "SoulBoundNFT#_transfer: TRANSFER_LOCKED_ON_SBT");
         _safeTransfer(from, to, tokenId, _data);
     }
 
@@ -182,11 +182,9 @@ contract UncappedLinkedSoulbound is ERC721URIStorage, Operatorable, ReentrancyGu
      * override transferFrom to error if not contract owner
      */
     function transferFrom (address _from, address _to, uint256 _tokenId) public override {
-        require(msg.sender == owner, "SoulBoundNFT#_transfer: TRANSFER_LOCKED_ON_SBT");
+        require(msg.sender == owner(), "SoulBoundNFT#_transfer: TRANSFER_LOCKED_ON_SBT");
         _transfer(_from, _to, _tokenId);
     }
-
-  
 
     /**
      * @dev Remove the given token from collectionIds.

@@ -70,7 +70,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
             it("token nonexistent", async () => {
                 await expectRevert(
                     directSale.openForSale(nft.address, 4, web3.utils.toWei(new BN(10000)).toString(), { from: carol }),
-                    "ERC721: owner query for nonexistent token"
+                    "ERC721: invalid token ID"
                 )
             })
             it("not owner", async () => {
@@ -141,7 +141,7 @@ contract("::DirectSaleNFTs", async (accounts) => {
 
         describe("should revert if", async () => {
             it("not owner", async () => {
-                await expectRevert(directSale.sweep(ido.address, alice, { from: bob }), "Ownable: CALLER_NO_OWNER")
+                await expectRevert(directSale.sweep(ido.address, alice, { from: bob }), "Ownable: caller is not the owner")
             })
         })
     })

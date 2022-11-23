@@ -66,10 +66,11 @@ contract StakePoolSimpleCombined is IStakePool, StakeToken, AccessControl, Reent
     constructor(
         string memory stakeTokenName_,
         string memory stakeTokenSymbol_,
+        string memory stakeTokenBASEUri_,
         IERC20 depositToken_,
         IERC20 rewardToken_
     )
-        StakeToken(stakeTokenName_, stakeTokenSymbol_)
+        StakeToken(stakeTokenName_, stakeTokenSymbol_, stakeTokenBASEUri_)
     {
         depositToken = depositToken_;
         rewardToken = rewardToken_;

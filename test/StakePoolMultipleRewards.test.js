@@ -33,11 +33,11 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
         })
         describe("reverts if", async () => {
             it("add operator by NO-OWNER", async () => {
-                await expectRevert(stakePool.addOperator(bob, { from: alice }), "Ownable: CALLER_NO_OWNER")
+                await expectRevert(stakePool.addOperator(bob, { from: alice }), "Ownable: caller is not the owner")
             })
             it("remove operator by NO-OWNER", async () => {
                 await stakePool.addOperator(bob, { from: owner })
-                await expectRevert(stakePool.removeOperator(bob, { from: alice }), "Ownable: CALLER_NO_OWNER")
+                await expectRevert(stakePool.removeOperator(bob, { from: alice }), "Ownable: caller is not the owner")
             })
         })
     })
@@ -122,7 +122,7 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
       })
         describe("reverts if", async () => {
             it("change tokenURI by NO-OPERATOR", async () => {
-                await expectRevert(stakePool.setTokenURI(1, "test", { from: alice }), "Ownable: CALLER_NO_OWNER")
+                await expectRevert(stakePool.setTokenURI(1, "test", { from: alice }), "Ownable: caller is not the owner")
             })
         })
     })
@@ -314,7 +314,7 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
             it("tokenId not exist", async () => {
                 await expectRevert(
                     stakePool.withdraw(3, web3.utils.toWei(new BN(1000)), { from: alice }),
-                    "ERC721: owner query for nonexistent token"
+                    "ERC721: invalid token ID"
                 )
             })
         })
@@ -414,14 +414,14 @@ contract("::StakePoolMultipleRewards", async (accounts) => {
             it("should not allow claim USDT reward", async () => {
                 await expectRevert(
                     stakePool.claimReward(usdt.address, 23, web3.utils.toWei(new BN(10000)), { from: darren }),
-                    "ERC721: owner query for nonexistent token"
+                    "ERC721: invalid token ID"
                 )
             })
 
             it("should not allow claim USDC reward", async () => {
                 await expectRevert(
                     stakePool.claimReward(usdc.address, 23, web3.utils.toWei(new BN(10000)), { from: darren }),
-                    "ERC721: owner query for nonexistent token"
+                    "ERC721: invalid token ID"
                 )
             })
         })

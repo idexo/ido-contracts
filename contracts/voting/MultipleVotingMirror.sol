@@ -3,14 +3,14 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "../interfaces/IStakeMirrorNFT.sol";
 
 /**
  * Voting contract that offers multiple options to voters.
  */
 
-contract MultipleVotingMirror is Ownable, AccessControl {
+contract MultipleVotingMirror is Ownable2Step, AccessControl {
   /* POLL */
   struct Poll {
     uint256 startTime; // poll start timestamp

@@ -17,7 +17,7 @@ describe('Operatorable', async () => {
     describe('reverts if', async () => {
       it('non owner call', async () => {
         await expect(contract.connect(bob).addOperator(bob.address))
-          .to.be.revertedWith('Ownable: CALLER_NO_OWNER');
+          .to.be.revertedWith('Ownable: caller is not the owner');
       });
     });
   });
@@ -30,7 +30,7 @@ describe('Operatorable', async () => {
     describe('reverts if', async () => {
       it('non owner call', async () => {
         await expect(contract.connect(bob).removeOperator(bob.address))
-          .to.be.revertedWith('Ownable: CALLER_NO_OWNER');
+          .to.be.revertedWith('Ownable: caller is not the owner');
       });
     });
   });
