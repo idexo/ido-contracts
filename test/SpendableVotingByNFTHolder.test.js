@@ -107,7 +107,13 @@ contract("Voting", async (accounts) => {
 
     describe("#Proposal", async () => {
         it("create new proposal", async () => {
-            voting.createProposal("Test Proposal 1", alice, web3.utils.toWei(new BN(1)), usdt.address, 1)
+            voting.createProposal("Test Proposal 1", alice, web3.utils.toWei(new BN(1)), usdt.address, 1, { from: alice })
+        })
+    })
+
+    describe("#Sweep", async () => {
+        it("should sweep funds from contract", async () => {
+            voting.sweep(usdt.address, carol, web3.utils.toWei(new BN(5000)))
         })
     })
 })
