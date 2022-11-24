@@ -162,7 +162,7 @@ contract("Voting", async (accounts) => {
             describe("get comments", async () => {
                 it("should get comments", async () => {
                     await voting.getComments(1).then((comments) => {
-                        expect(comments[0]["autor"]).to.eq(alice)
+                        expect(comments[0]["author"]).to.eq(alice)
                         expect(comments[0]["commentURI"]).to.eq("The contract expects a URi for the comment")
                     })
                 })
