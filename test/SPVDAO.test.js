@@ -8,6 +8,7 @@ const { BN, constants, expectEvent, expectRevert } = require("@openzeppelin/test
 const { toWei } = require("web3-utils")
 const time = require("./helpers/time")
 const timeTraveler = require("ganache-time-traveler")
+const { duration } = require("./helpers/time")
 
 contract("Voting", async (accounts) => {
     let ido, spvdao
@@ -66,6 +67,18 @@ contract("Voting", async (accounts) => {
             await spvdao.voteProposal(1, 1, { from: alice })
             expect(await spvdao.isHolder(bob)).to.eq(false)
             expect(await spvdao.isHolder(alice)).to.eq(true)
+        })
+        it("endProposalVote", async () => {
+            await expectRevert(spvdao.endProposalVote(1, { from: alice }), "OPEN_FOR_VOTE")
+            timeTraveler.advanceTime(duration.days(40))
+            await spvdao.getProposal(1).then((res) => {
+                expect(res.ended).to.eq(false)
+            })
+            await spvdao.endProposalVote(1, { from: alice })
+            await spvdao.getProposal(1).then((res) => {
+                expect(res.ended).to.eq(true)
+            })
+            timeTraveler.advanceTime(duration.days(-40))
         })
     })
 })
