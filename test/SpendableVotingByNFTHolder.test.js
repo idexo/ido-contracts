@@ -51,29 +51,6 @@ contract("Voting", async (accounts) => {
         })
     })
 
-    describe("#Deposit Funds", async () => {
-        it("should deposit funds to this voting contract", async () => {
-            await usdt.balanceOf(alice).then((balance) => {
-                expect(balance.toString()).to.eq(web3.utils.toWei(new BN(5000)).toString())
-            })
-            await usdt.approve(voting.address, web3.utils.toWei(new BN(5000)), { from: alice })
-            await voting.depositFunds(usdt.address, web3.utils.toWei(new BN(5000)), { from: alice })
-
-            await usdt.balanceOf(voting.address).then((balance) => {
-                expect(balance.toString()).to.eq(web3.utils.toWei(new BN(5000)).toString())
-            })
-        })
-
-        describe("reverts if", async () => {
-            it("INSUFFICIENT_BALANCE", async () => {
-                await expectRevert(voting.depositFunds(usdt.address, web3.utils.toWei(new BN(5000)), { from: alice }), "INSUFFICIENT_BALANCE")
-            })
-            it("INSUFFICIENT_ALLOWANCE", async () => {
-                await expectRevert(voting.depositFunds(usdt.address, web3.utils.toWei(new BN(5000)), { from: bob }), "INSUFFICIENT_ALLOWANCE")
-            })
-        })
-    })
-
     describe("#Mock Stakes", async () => {
         before(async () => {
             await ido.mint(alice, web3.utils.toWei(new BN(200000)))
@@ -106,8 +83,58 @@ contract("Voting", async (accounts) => {
     })
 
     describe("#Proposal", async () => {
-        it("create new proposal", async () => {
-            voting.createProposal("Test Proposal 1", alice, web3.utils.toWei(new BN(1)), usdt.address, 1, { from: alice })
+        // TODO: checking payeeWallet
+        describe("reverts if", async () => {
+            it("INSUFFICIENT_FUNDS", async () => {
+                await expectRevert(
+                    voting.createProposal("Test Proposal 1", alice, web3.utils.toWei(new BN(1)), usdt.address, 1, { from: alice }),
+                    "INSUFFICIENT_FUNDS"
+                )
+            })
+        })
+
+        describe("#Deposit Funds", async () => {
+            it("should deposit funds to this voting contract", async () => {
+                await usdt.balanceOf(alice).then((balance) => {
+                    expect(balance.toString()).to.eq(web3.utils.toWei(new BN(5000)).toString())
+                })
+                await usdt.approve(voting.address, web3.utils.toWei(new BN(5000)), { from: alice })
+                await voting.depositFunds(usdt.address, web3.utils.toWei(new BN(5000)), { from: alice })
+
+                await usdt.balanceOf(voting.address).then((balance) => {
+                    expect(balance.toString()).to.eq(web3.utils.toWei(new BN(5000)).toString())
+                })
+            })
+
+            describe("reverts if", async () => {
+                it("INSUFFICIENT_BALANCE", async () => {
+                    await expectRevert(voting.depositFunds(usdt.address, web3.utils.toWei(new BN(5000)), { from: alice }), "INSUFFICIENT_BALANCE")
+                })
+                it("INSUFFICIENT_ALLOWANCE", async () => {
+                    await expectRevert(voting.depositFunds(usdt.address, web3.utils.toWei(new BN(5000)), { from: bob }), "INSUFFICIENT_ALLOWANCE")
+                })
+            })
+        })
+
+        describe("#Create proposal", async () => {
+            it("create new proposal", async () => {
+                voting.createProposal("Test Proposal 1", alice, web3.utils.toWei(new BN(1)), usdt.address, 1, { from: alice })
+            })
+        })
+    })
+
+    describe("#Get proposal", async () => {
+        it("should get proposal #1", async () => {
+            const proposal = await voting.getProposal(1)
+            console.log(proposal)
+        })
+    })
+
+    describe("#Vote proposal", async () => {
+        it("should vote proposal #1", async () => {
+            await voting.voteProposal
+            const proposal = await voting.getProposal(1)
+            console.log(proposal)
         })
     })
 
