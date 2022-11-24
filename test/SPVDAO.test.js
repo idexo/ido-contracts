@@ -74,7 +74,7 @@ contract("Voting", async (accounts) => {
         })
         it("endProposalVote", async () => {
             await expectRevert(spvdao.endProposalVote(1, { from: alice }), "OPEN_FOR_VOTE")
-            timeTraveler.advanceTime(duration.days(40))
+            await timeTraveler.advanceTime(duration.days(40))
             await spvdao.getProposal(1).then((res) => {
                 expect(res.ended).to.eq(false)
             })
@@ -82,7 +82,19 @@ contract("Voting", async (accounts) => {
             await spvdao.getProposal(1).then((res) => {
                 expect(res.ended).to.eq(true)
             })
-            timeTraveler.advanceTime(duration.days(-40))
+        })
+        it("createReview", async () => {
+            await spvdao.createProposal("test2", bob, 100, ido.address, 1, { from: alice })
+            await spvdao.deposit(web3.utils.toWei(new BN(1000)), { from: alice })
+            await spvdao.voteProposal(2, 1, { from: alice })
+            await timeTraveler.advanceTime(duration.days(40))
+            await spvdao.endProposalVote(2, { from: alice })
+            expect(Number(await spvdao.getReviewIds(2))).to.eq(0)
+            expectEvent(await spvdao.createReview(2, "abc", { from: alice }), "NewReview")
+            expect(Number(await spvdao.getReviewIds(2))).to.eq(1)
+        })
+        after(async () => {
+            await timeTraveler.advanceTime(time.duration.months(-80))
         })
     })
 })
