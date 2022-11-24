@@ -154,6 +154,27 @@ contract("Voting", async (accounts) => {
             })
         })
 
+        describe("#Comments", async () => {
+            it("create new proposal comment", async () => {
+                voting.createComment(1, "The contract expects a URi for the comment", { from: alice })
+            })
+
+            describe("get comments", async () => {
+                it("should get comments", async () => {
+                    await voting.getComments(1).then((comments) => {
+                        expect(comments[0]["autor"]).to.eq(alice)
+                        expect(comments[0]["commentURI"]).to.eq("The contract expects a URi for the comment")
+                    })
+                })
+            })
+
+            describe("reverts if", async () => {
+                it("NOT_PROPOSAL_VOTER", async () => {
+                    await expectRevert(voting.createComment(1, "The contract expects a URi for the comment", { from: carol }), "NOT_PROPOSAL_VOTER")
+                })
+            })
+        })
+
         describe("#Review", async () => {
             describe("reverts if", async () => {
                 it("NOT_OWNER_OR_AUTHOR", async () => {
