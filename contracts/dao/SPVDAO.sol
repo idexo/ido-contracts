@@ -158,17 +158,14 @@ contract SPVDAO is StakePoolDAOTimeLimited {
      * @param optionId_ option id.
      */
     function voteProposal(uint8 proposalId_, uint8 optionId_) external nonReentrant returns (bool) {
-        Proposal storage vProposal = _proposals[proposalId_];
         require(_isHolder(msg.sender), "NOT_NFT_HOLDER");
         require(!voted(proposalId_, msg.sender), "ALREADY_VOTED");
-        require(block.timestamp < vProposal.endTime, "VOTE_ENDED");
-        require(optionId_ > 0 && optionId_ <= vProposal.options.length, "INVALID_OPTION");
+        require(block.timestamp < _proposals[proposalId_].endTime, "VOTE_ENDED");
+        require(optionId_ > 0 && optionId_ <= _proposals[proposalId_].options.length, "INVALID_OPTION");
 
-        uint256 vWeight = _voteWeight(msg.sender);
-
-        for (uint256 opt = 0; opt < vProposal.options.length; opt++) {
-            if (vProposal.options[opt].id == optionId_) {
-                vProposal.options[opt].votes += vWeight;
+        for (uint256 opt = 0; opt < _proposals[proposalId_].options.length; opt++) {
+            if (_proposals[proposalId_].options[opt].id == optionId_) {
+                _proposals[proposalId_].options[opt].votes += IERC721(_nftToHold).balanceOf(msg.sender);
             }
         }
         _votedProp[proposalId_][msg.sender] = true;
@@ -252,11 +249,9 @@ contract SPVDAO is StakePoolDAOTimeLimited {
         require(!_votedRev[proposalId_][msg.sender], "ALREADY_VOTED");
         require(optionId_ > 0 && optionId_ <= vReview.options.length, "INVALID_OPTION");
 
-        uint256 vWeight = _voteWeight(msg.sender);
-
         for (uint256 opt = 0; opt < vReview.options.length; opt++) {
             if (vReview.options[opt].id == optionId_) {
-                vReview.options[opt].votes += vWeight;
+                vReview.options[opt].votes += IERC721(_nftToHold).balanceOf(msg.sender);
             }
         }
         _votedRev[proposalId_][msg.sender] = true;
@@ -428,19 +423,6 @@ contract SPVDAO is StakePoolDAOTimeLimited {
         IERC20(tokenAddress).safeTransferFrom(account, address(this), amount);
 
         emit FundDeposited(account, tokenAddress, amount);
-    }
-
-    /**
-     * @dev get vote weight 1 vote per nft
-     *
-     * @param voter proposal id.
-     */
-    function _voteWeight(address voter) internal view returns (uint256) {
-        uint256 weight;
-
-        weight == IERC721(_nftToHold).balanceOf(voter);
-
-        return weight;
     }
 
     /**
