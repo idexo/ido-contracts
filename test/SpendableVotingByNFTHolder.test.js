@@ -56,7 +56,7 @@ contract("Voting", async (accounts) => {
             await ido.mint(alice, web3.utils.toWei(new BN(200000)))
             await ido.approve(sPool1.address, web3.utils.toWei(new BN(200000)), { from: alice })
             await ido.mint(bob, web3.utils.toWei(new BN(200000)))
-            await ido.approve(sPool1.address, web3.utils.toWei(new BN(200000)), { from: bob })
+            await ido.approve(sPool2.address, web3.utils.toWei(new BN(200000)), { from: bob })
             await ido.mint(carol, web3.utils.toWei(new BN(200000)))
             await ido.approve(sPool1.address, web3.utils.toWei(new BN(200000)), { from: carol })
         })
@@ -65,7 +65,10 @@ contract("Voting", async (accounts) => {
                 await sPool1.deposit(web3.utils.toWei(new BN(5200)), { from: alice })
                 await sPool1.getStakeInfo(1).then((res) => {
                     expect(res[0].toString()).to.eq("5200000000000000000000")
-                    expect(res[1].toString()).to.eq("120")
+                })
+                await sPool2.deposit(web3.utils.toWei(new BN(5200)), { from: bob })
+                await sPool2.getStakeInfo(1).then((res) => {
+                    expect(res[0].toString()).to.eq("5200000000000000000000")
                 })
                 const aliceIDOBalance = await ido.balanceOf(alice)
                 expect(aliceIDOBalance.toString()).to.eq("194800000000000000000000")
@@ -121,20 +124,34 @@ contract("Voting", async (accounts) => {
                 voting.createProposal("Test Proposal 1", alice, web3.utils.toWei(new BN(1)), usdt.address, 1, { from: alice })
             })
         })
-    })
 
-    describe("#Get proposal", async () => {
-        it("should get proposal #1", async () => {
-            const proposal = await voting.getProposal(1)
-            console.log(proposal)
+        describe("#Get proposal", async () => {
+            it("should get proposal #1", async () => {
+                const proposal = await voting.getProposal(1)
+                // console.log(proposal)
+            })
         })
-    })
 
-    describe("#Vote proposal", async () => {
-        it("should vote proposal #1", async () => {
-            await voting.voteProposal
-            const proposal = await voting.getProposal(1)
-            console.log(proposal)
+        describe("#Vote proposal", async () => {
+            it("should vote proposal #1", async () => {
+                await voting.voteProposal(1, 1, { from: alice })
+                const proposal = await voting.getProposal(1)
+                await voting.getProposal(1).then((proposal) => {
+                    expect(proposal.options[0]["votes"]).to.eq("1")
+                })
+            })
+
+            describe("reverts if", async () => {
+                it("ALREADY_VOTED", async () => {
+                    await expectRevert(voting.voteProposal(1, 1, { from: alice }), "ALREADY_VOTED")
+                })
+                it("NOT_NFT_HOLDER", async () => {
+                    await expectRevert(voting.voteProposal(1, 1, { from: carol }), "NOT_NFT_HOLDER")
+                })
+                it("INVALID_OPTION", async () => {
+                    await expectRevert(voting.voteProposal(1, 5, { from: bob }), "INVALID_OPTION")
+                })
+            })
         })
     })
 
