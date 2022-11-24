@@ -16,9 +16,9 @@ contract("Voting", async (accounts) => {
 
     before(async () => {
         ido = await ERC20.new("Idexo Community", "IDO", { from: alice })
-        await ido.mint(alice, web3.utils.toWei(new BN(10000)))
+        await ido.mint(alice, web3.utils.toWei(new BN(100000)))
         spvdao = await SPVDAO.new("test", "T", "", 100, 1, ido.address, 15, 15, "description")
-        await ido.approve(spvdao.address, web3.utils.toWei(new BN(10000)), { from: alice })
+        await ido.approve(spvdao.address, web3.utils.toWei(new BN(100000)), { from: alice })
     })
 
     describe("#Inital tests", async () => {
@@ -64,9 +64,13 @@ contract("Voting", async (accounts) => {
             })
         })
         it("voteProposal", async () => {
-            await spvdao.voteProposal(1, 1, { from: alice })
+            await spvdao.voteProposal(1, 2, { from: alice })
             expect(await spvdao.isHolder(bob)).to.eq(false)
             expect(await spvdao.isHolder(alice)).to.eq(true)
+            await spvdao.getProposal(1).then((res) => {
+                let votes = res.options.reduce((a, c) => a + Number(c.votes), 0)
+                expect(votes).to.eq(1)
+            })
         })
         it("endProposalVote", async () => {
             await expectRevert(spvdao.endProposalVote(1, { from: alice }), "OPEN_FOR_VOTE")
