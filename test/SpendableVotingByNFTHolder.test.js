@@ -74,6 +74,28 @@ contract("Voting", async (accounts) => {
         })
     })
 
+    describe("#Mock Stakes", async () => {
+        before(async () => {
+            await ido.mint(alice, web3.utils.toWei(new BN(200000)))
+            await ido.approve(sPool1.address, web3.utils.toWei(new BN(200000)), { from: alice })
+            await ido.mint(bob, web3.utils.toWei(new BN(200000)))
+            await ido.approve(sPool1.address, web3.utils.toWei(new BN(200000)), { from: bob })
+            await ido.mint(carol, web3.utils.toWei(new BN(200000)))
+            await ido.approve(sPool1.address, web3.utils.toWei(new BN(200000)), { from: carol })
+        })
+        describe("##stakes", async () => {
+            it("should create mock stakes", async () => {
+                await sPool1.deposit(web3.utils.toWei(new BN(5200)), { from: alice })
+                await sPool1.getStakeInfo(1).then((res) => {
+                    expect(res[0].toString()).to.eq("5200000000000000000000")
+                    expect(res[1].toString()).to.eq("120")
+                })
+                const aliceIDOBalance = await ido.balanceOf(alice)
+                expect(aliceIDOBalance.toString()).to.eq("194800000000000000000000")
+            })
+        })
+    })
+
     describe("#Get", async () => {
         it("getReviewIds", async () => {
             expect(Number(await voting.getReviewIds(1))).to.eq(0)
@@ -85,8 +107,13 @@ contract("Voting", async (accounts) => {
 
     describe("#Proposal", async () => {
         it("create new proposal", async () => {
-            // voting.createProposal("Test Proposal 1", erc20.address)
-            // expect(Number(await voting.getReviewIds(1))).to.eq(0)
+            voting.createProposal("Test Proposal 1", alice, web3.utils.toWei(new BN(1)), usdt.address, 1, { from: alice })
+        })
+    })
+
+    describe("#Sweep", async () => {
+        it("should sweep funds from contract", async () => {
+            voting.sweep(usdt.address, carol, web3.utils.toWei(new BN(5000)))
         })
     })
 })
