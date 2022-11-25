@@ -126,8 +126,11 @@ contract("Voting", async (accounts) => {
         })
 
         describe("#Create proposal", async () => {
-            it("create new proposal", async () => {
-                voting.createProposal("Test Proposal 1", payeeWallet, web3.utils.toWei(new BN(1)), usdt.address, 1, { from: alice })
+            it("create new proposal #1", async () => {
+                voting.createProposal("Test Proposal 1", payeeWallet, web3.utils.toWei(new BN(1000)), usdt.address, 1, { from: alice })
+            })
+            it("create new proposal #2", async () => {
+                voting.createProposal("Test Proposal 2", payeeWallet, web3.utils.toWei(new BN(3000)), usdt.address, 2, { from: alice })
             })
         })
 
@@ -144,6 +147,16 @@ contract("Voting", async (accounts) => {
                 const proposal = await voting.getProposal(1)
                 await voting.getProposal(1).then((proposal) => {
                     expect(proposal.options[1]["votes"]).to.eq("1")
+                })
+            })
+
+            it("should vote proposal #2", async () => {
+                await voting.voteProposal(2, 1, { from: alice })
+                await voting.voteProposal(2, 1, { from: bob })
+                await voting.voteProposal(2, 1, { from: carol })
+                const proposal = await voting.getProposal(1)
+                await voting.getProposal(2).then((proposal) => {
+                    expect(proposal.options[0]["votes"]).to.eq("3")
                 })
             })
 
@@ -202,11 +215,6 @@ contract("Voting", async (accounts) => {
                     await timeTraveler.revertToSnapshot(snapShot["result"])
                 })
             })
-
-            // it("should create review", async () => {
-            //     await timeTraveler.advanceTime(duration.days(20))
-            //     await voting.createReview(1, "First proposal id #1 review", { from: alice })
-            // })
         })
 
         describe("#End Proposal", async () => {
@@ -244,7 +252,7 @@ contract("Voting", async (accounts) => {
 
             it("should vote review", async () => {
                 let review = await voting.getReview(1, 0) // review id 0????
-                console.log(review)
+                // console.log(review)
                 await voting.voteReview(1, 0, 1, { from: alice })
                 await voting.voteReview(1, 0, 1, { from: bob })
                 await voting.voteReview(1, 0, 2, { from: carol })
@@ -252,37 +260,45 @@ contract("Voting", async (accounts) => {
                 // console.log(review)
             })
 
+            describe("reverts if", async () => {
+                it("VOTE_ENDED", async () => {
+                    await expectRevert(voting.voteReview(1, 0, 1, { from: alice }), "VOTE_ENDED")
+                })
+            })
+
             it("should end review", async () => {
                 await timeTraveler.advanceTime(duration.days(20))
                 await voting.endReviewVote(1, 0, { from: alice })
             })
 
-            // describe("reverts if", async () => {
-            //     it("NOT_OWNER_OR_AUTHOR", async () => {
-            //         await expectRevert(voting.createReview(1, "try creating review with no propopsal owner", { from: bob }), "NOT_OWNER_OR_AUTHOR")
-            //     })
-            //     it("NOT_NFT_HOLDER", async () => {
-            //         await sPool1.transferFrom(alice, bob, 1, { from: alice })
-            //         await expectRevert(voting.createReview(1, "First proposal id #1 review", { from: alice }), "NOT_NFT_HOLDER")
-            //     })
-            //     it("PROPOSAL_VOTE_OPEN", async () => {
-            //         await sPool1.transferFrom(bob, alice, 1, { from: bob })
-            //         await expectRevert(voting.createReview(1, "First proposal id #1 review", { from: alice }), "PROPOSAL_VOTE_OPEN")
-            //     })
-            //     it("REJECTED_PROPOSAL", async () => {
-            //         let snapShot = await timeTraveler.takeSnapshot()
-            //         await timeTraveler.advanceTime(duration.days(20))
-            //         await voting.endProposalVote(1, { from: alice })
-            //         await expectRevert(voting.createReview(1, "First proposal id #1 review", { from: alice }), "REJECTED_PROPOSAL")
-            //         await timeTraveler.revertToSnapshot(snapShot["result"])
-            //     })
-            // })
+            describe("handle Proposal #2", async () => {
+                it("should end proposal #2", async () => {
+                    const proposal = await voting.getProposal(2)
+                    // console.log(proposal)
+                    await voting.endProposalVote(2, { from: alice })
+                    const payeeBalance = await usdt.balanceOf(payeeWallet)
+                    // console.log("PAYEE BALANCE::", payeeBalance.toString())
+                })
+                it("should create and approve review for proposal #2", async () => {
+                    await voting.createReview(2, "Second proposal id #2 review", { from: alice })
+                    await voting.voteReview(2, 0, 1, { from: alice })
+                    await voting.voteReview(2, 0, 1, { from: bob })
+                    await voting.voteReview(2, 0, 2, { from: carol })
+                    await timeTraveler.advanceTime(duration.days(20))
+                    await voting.endReviewVote(2, 0, { from: alice })
+                    const payeeBalance = await usdt.balanceOf(payeeWallet)
+                    // console.log("PAYEE BALANCE::", payeeBalance.toString())
+                })
+            })
         })
     })
 
     describe("#Sweep", async () => {
         it("should sweep funds from contract", async () => {
-            voting.sweep(usdt.address, carol, web3.utils.toWei(new BN(4999)))
+            const contractBalance = await usdt.balanceOf(voting.address)
+            console.log("CONTRACT BALANCE::", contractBalance.toString())
+
+            voting.sweep(usdt.address, carol, web3.utils.toWei(new BN(1000)))
         })
     })
 })
