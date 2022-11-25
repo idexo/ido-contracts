@@ -160,7 +160,7 @@ contract SPVDAO is StakePoolDAOTimeLimited {
      */
     function voteProposal(uint256 _stakeTokenId, uint8 proposalId_, uint8 optionId_) external nonReentrant returns (bool) {
         require(_isHolder(msg.sender), "NOT_NFT_HOLDER");
-        require(ownerOf(_stakeTokenId) == msg.sender || "NOT_OWNER_OF_TOKEN")
+        require(ownerOf(_stakeTokenId) == msg.sender || "NOT_OWNER_OF_TOKEN");
         require(!voted(proposalId_, _stakeTokenId), "ALREADY_VOTED");
         require(block.timestamp < _proposals[proposalId_].endTime, "VOTE_ENDED");
         require(optionId_ > 0 && optionId_ <= _proposals[proposalId_].options.length, "INVALID_OPTION");
@@ -248,7 +248,7 @@ contract SPVDAO is StakePoolDAOTimeLimited {
         Review storage vReview = _reviews[proposalId_][reviewId_];
         require(block.timestamp < vReview.endTime, "VOTE_ENDED");
         require(_isHolder(msg.sender), "NOT_NFT_HOLDER");
-        require(ownerOf(_stakeTokenId) == msg.sender || "NOT_OWNER_OF_TOKEN")
+        require(ownerOf(_stakeTokenId) == msg.sender || "NOT_OWNER_OF_TOKEN");
         require(!_votedRev[proposalId_][stakeTokenId_], "ALREADY_VOTED");
         require(optionId_ > 0 && optionId_ <= vReview.options.length, "INVALID_OPTION");
 
@@ -332,7 +332,7 @@ contract SPVDAO is StakePoolDAOTimeLimited {
      */
     function createComment(uint256 stakeTokenId_, uint8 proposalId_, string memory commentURI_) external {
         require(_isHolder(msg.sender), "NOT_NFT_HOLDER");
-        require(ownerOf(_stakeTokenId) == msg.sender || "NOT_OWNER_OF_TOKEN")
+        require(ownerOf(_stakeTokenId) == msg.sender || "NOT_OWNER_OF_TOKEN");
         _commentIds++;
         _comments[proposalId_].push(Comment({ proposalId: proposalId_, id: _commentIds, commentURI: commentURI_, author: msg.sender, tokenId: stakeTokenId_ }));
 

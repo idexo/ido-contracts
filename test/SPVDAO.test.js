@@ -64,7 +64,7 @@ contract("Voting", async (accounts) => {
             })
         })
         it("voteProposal", async () => {
-            await spvdao.voteProposal(1, 2, { from: alice })
+            await spvdao.voteProposal(1, 1, 2, { from: alice })
             expect(await spvdao.isHolder(bob)).to.eq(false)
             expect(await spvdao.isHolder(alice)).to.eq(true)
             await spvdao.getProposal(1).then((res) => {
