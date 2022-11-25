@@ -165,7 +165,7 @@ contract SPVDAO is StakePoolDAOTimeLimited {
 
         for (uint256 opt = 0; opt < _proposals[proposalId_].options.length; opt++) {
             if (_proposals[proposalId_].options[opt].id == optionId_) {
-                _proposals[proposalId_].options[opt].votes += IERC721(_nftToHold).balanceOf(msg.sender);
+                _proposals[proposalId_].options[opt].votes += _voteWeight(msg.sender);
             }
         }
         _votedProp[proposalId_][msg.sender] = true;
@@ -251,7 +251,7 @@ contract SPVDAO is StakePoolDAOTimeLimited {
 
         for (uint256 opt = 0; opt < vReview.options.length; opt++) {
             if (vReview.options[opt].id == optionId_) {
-                vReview.options[opt].votes += IERC721(_nftToHold).balanceOf(msg.sender);
+                vReview.options[opt].votes += _voteWeight(msg.sender);
             }
         }
         _votedRev[proposalId_][msg.sender] = true;
@@ -438,6 +438,20 @@ contract SPVDAO is StakePoolDAOTimeLimited {
         }
 
         return isHold;
+    }
+
+    /**
+     * @dev get vote weight 1 vote per nft
+     *
+     * @param voter proposal id.
+     */
+    function _voteWeight(address voter) internal view returns (uint256) {
+        uint256 weight;
+        uint256[] memory sTokenIds = getStakeTokenIds(voter);
+        for (uint256 j = 0; j < sTokenIds.length; j++) {
+            weight += stakes[sTokenIds[j]].amount;
+        }
+        return weight;
     }
 
     /**

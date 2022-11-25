@@ -56,7 +56,7 @@ contract("Voting", async (accounts) => {
 
     describe("#Proposal", async () => {
         it("createProposal", async () => {
-            expectEvent(await spvdao.deposit(web3.utils.toWei(new BN(10000)), { from: alice }), "Deposited")
+            expectEvent(await spvdao.deposit(web3.utils.toWei(new BN(1000)), { from: alice }), "Deposited")
             expectEvent(await spvdao.createProposal("test", bob, 100, ido.address, 1, { from: alice }), "NewProposal")
             await spvdao.getProposal(1).then((res) => {
                 expect(res[0].toString()).to.eq("test")
@@ -69,7 +69,7 @@ contract("Voting", async (accounts) => {
             expect(await spvdao.isHolder(alice)).to.eq(true)
             await spvdao.getProposal(1).then((res) => {
                 let votes = res.options.reduce((a, c) => a + Number(c.votes), 0)
-                expect(votes).to.eq(1)
+                expect(votes).to.greaterThan(1)
             })
         })
         it("endProposalVote", async () => {
