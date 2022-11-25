@@ -181,7 +181,7 @@ contract("Voting", async (accounts) => {
             })
         })
 
-        describe("#Review", async () => {
+        describe("#Review reverts", async () => {
             describe("reverts if", async () => {
                 it("NOT_OWNER_OR_AUTHOR", async () => {
                     await expectRevert(voting.createReview(1, "try creating review with no propopsal owner", { from: bob }), "NOT_OWNER_OR_AUTHOR")
@@ -230,20 +230,59 @@ contract("Voting", async (accounts) => {
                     await expectRevert(voting.endProposalVote(1, { from: alice }), "INSUFFICIENT_FUNDS_CALL_ADMIN")
                     await timeTraveler.revertToSnapshot(snapShot["result"])
                 })
-                // it("REJECTED_PROPOSAL", async () => {
-                //     await expectRevert(voting.voteProposal(1, 5, { from: bob }), "REJECTED_PROPOSAL")
-                // })
+            })
+        })
+
+        describe("#Review", async () => {
+            it("should create review", async () => {
+                await voting.voteProposal(1, 1, { from: bob })
+                await voting.voteProposal(1, 1, { from: carol })
+                await timeTraveler.advanceTime(duration.days(20))
+                await voting.endProposalVote(1, { from: alice })
+                await voting.createReview(1, "First proposal id #1 review", { from: alice })
             })
 
-            // it("should create review", async () => {
-            //     await voting.createReview(1, "First proposal id #1 review", { from: alice })
+            it("should vote review", async () => {
+                let review = await voting.getReview(1, 0) // review id 0????
+                console.log(review)
+                await voting.voteReview(1, 0, 1, { from: alice })
+                await voting.voteReview(1, 0, 1, { from: bob })
+                await voting.voteReview(1, 0, 2, { from: carol })
+                review = await voting.getReview(1, 0)
+                // console.log(review)
+            })
+
+            it("should end review", async () => {
+                await timeTraveler.advanceTime(duration.days(20))
+                await voting.endReviewVote(1, 0, { from: alice })
+            })
+
+            // describe("reverts if", async () => {
+            //     it("NOT_OWNER_OR_AUTHOR", async () => {
+            //         await expectRevert(voting.createReview(1, "try creating review with no propopsal owner", { from: bob }), "NOT_OWNER_OR_AUTHOR")
+            //     })
+            //     it("NOT_NFT_HOLDER", async () => {
+            //         await sPool1.transferFrom(alice, bob, 1, { from: alice })
+            //         await expectRevert(voting.createReview(1, "First proposal id #1 review", { from: alice }), "NOT_NFT_HOLDER")
+            //     })
+            //     it("PROPOSAL_VOTE_OPEN", async () => {
+            //         await sPool1.transferFrom(bob, alice, 1, { from: bob })
+            //         await expectRevert(voting.createReview(1, "First proposal id #1 review", { from: alice }), "PROPOSAL_VOTE_OPEN")
+            //     })
+            //     it("REJECTED_PROPOSAL", async () => {
+            //         let snapShot = await timeTraveler.takeSnapshot()
+            //         await timeTraveler.advanceTime(duration.days(20))
+            //         await voting.endProposalVote(1, { from: alice })
+            //         await expectRevert(voting.createReview(1, "First proposal id #1 review", { from: alice }), "REJECTED_PROPOSAL")
+            //         await timeTraveler.revertToSnapshot(snapShot["result"])
+            //     })
             // })
         })
     })
 
     describe("#Sweep", async () => {
         it("should sweep funds from contract", async () => {
-            voting.sweep(usdt.address, carol, web3.utils.toWei(new BN(5000)))
+            voting.sweep(usdt.address, carol, web3.utils.toWei(new BN(4999)))
         })
     })
 })
