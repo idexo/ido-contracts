@@ -86,7 +86,7 @@ contract("Voting", async (accounts) => {
         it("createReview", async () => {
             await spvdao.createProposal("test2", bob, 100, ido.address, 1, { from: alice })
             await spvdao.deposit(web3.utils.toWei(new BN(1000)), { from: alice })
-            await spvdao.voteProposal(2, 1, { from: alice })
+            await spvdao.voteProposal(1, 2, 1, { from: alice })
             await timeTraveler.advanceTime(duration.days(40))
             await spvdao.endProposalVote(2, { from: alice })
             expect(Number(await spvdao.getReviewIds(2))).to.eq(0)
