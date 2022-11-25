@@ -2,14 +2,11 @@
 
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "../lib/Operatorable.sol";
+import "../staking/StakePoolDAOTimeLimited.sol";
 
-contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
+contract SPVDAO is StakePoolDAOTimeLimited {
     using SafeERC20 for IERC20;
+    string public poolDescription;
 
     struct Proposal {
         string description;
@@ -37,6 +34,7 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
         uint8 proposalId;
         string commentURI;
         address author;
+        uint256 tokenId;
     }
 
     struct Option {
@@ -55,15 +53,15 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
         string fundType;
     }
 
-    mapping(uint8 => mapping(address => bool)) private _votedProp;
-    mapping(uint8 => mapping(address => bool)) private _votedRev;
+    mapping(uint8 => mapping(uint256 => bool)) private _votedProp;
+    mapping(uint8 => mapping(uint256 => bool)) private _votedRev;
     mapping(uint8 => Proposal) private _proposals;
     mapping(uint8 => Review[]) private _reviews;
     mapping(uint8 => Comment[]) public _comments;
 
     Status[] private _status;
     FundType[] private _fundType;
-    IERC721[] private _nftToHold;
+    address private _nftToHold;
 
     uint8 public proposalIds;
     uint8 private _commentIds;
@@ -72,23 +70,28 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
 
     event FundDeposited(address indexed operator, address indexed tokenAddress, uint256 amount);
     event Swept(address indexed operator, address indexed token, address indexed to, uint256 amount);
-    event NewComment(address indexed author, uint8 proposalId, uint8 id, string comment);
+    event NewComment(address indexed author, uint256 stakeTokenId, uint8 proposalId, uint8 id, string comment);
     event NewProposal(uint8 proposalId, address indexed author);
     event NewReview(uint8 proposalId, uint8 reviewId);
 
     constructor(
+        string memory stakeTokenName_,
+        string memory stakeTokenSymbol_,
+        string memory stakeTokenBASEUri_,
+        uint256 timeLimitInDays_,
+        uint256 minPoolStakeAmount_,
+        IERC20 depositToken_,
         uint8 proposalDurationInDays_,
         uint8 reviewDurationInDays_,
-        address[] memory nftToHold_
-    ) {
-        for (uint256 n = 0; n < nftToHold_.length; n++) {
-            require(_isContract(nftToHold_[n]), "NOT_CONTRACT");
-            _nftToHold.push(IERC721(nftToHold_[n]));
-            require(proposalDurationInDays_ >= 14, "PROPOSAL_MIN_14_DAYS");
-            require(reviewDurationInDays_ >= 7, "REVIEW_MIN_7_DAYS");
-            rVoteDays = reviewDurationInDays_;
-            pVoteInDays = proposalDurationInDays_;
-        }
+        string memory poolDescription_
+    ) StakePoolDAOTimeLimited(stakeTokenName_, stakeTokenSymbol_, stakeTokenBASEUri_, timeLimitInDays_, minPoolStakeAmount_, depositToken_) {
+        _nftToHold = address(this);
+        require(proposalDurationInDays_ >= 7, "PROPOSAL_MIN_7_DAYS");
+        require(reviewDurationInDays_ >= 7, "REVIEW_MIN_7_DAYS");
+        rVoteDays = reviewDurationInDays_;
+        pVoteInDays = proposalDurationInDays_;
+        poolDescription = poolDescription_;
+
         string[5] memory sts = ["proposed", "approved", "rejected", "pending", "completed"];
         for (uint8 i = 0; i < sts.length; i++) {
             _status.push(Status(i + 1, sts[i]));
@@ -119,7 +122,6 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
         address paymentToken_,
         uint8 fundType_
     ) external {
-        require(_isContract(paymentToken_), "NOT_CONTRACT");
         require(_isHolder(msg.sender), "NOT_NFT_HOLDER");
         require(IERC721(paymentToken_).balanceOf(address(this)) >= amount_, "INSUFFICIENT_FUNDS");
 
@@ -156,20 +158,19 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      * @param proposalId_ proposal id.
      * @param optionId_ option id.
      */
-    function voteProposal(uint8 proposalId_, uint8 optionId_) external endedProposal(proposalId_) nonReentrant returns (bool) {
-        Proposal storage vProposal = _proposals[proposalId_];
+    function voteProposal(uint256 _stakeTokenId, uint8 proposalId_, uint8 optionId_) external nonReentrant returns (bool) {
         require(_isHolder(msg.sender), "NOT_NFT_HOLDER");
-        require(!voted(proposalId_, msg.sender), "ALREADY_VOTED");
-        require(optionId_ > 0 && optionId_ <= vProposal.options.length, "INVALID_OPTION");
+        require(ownerOf(_stakeTokenId) == msg.sender, "NOT_OWNER_OF_TOKEN");
+        require(!voted(proposalId_, _stakeTokenId), "ALREADY_VOTED");
+        require(block.timestamp < _proposals[proposalId_].endTime, "VOTE_ENDED");
+        require(optionId_ > 0 && optionId_ <= _proposals[proposalId_].options.length, "INVALID_OPTION");
 
-        uint256 vWeight = _voteWeight(msg.sender);
-
-        for (uint256 opt = 0; opt < vProposal.options.length; opt++) {
-            if (vProposal.options[opt].id == optionId_) {
-                vProposal.options[opt].votes += vWeight;
+        for (uint256 opt = 0; opt < _proposals[proposalId_].options.length; opt++) {
+            if (_proposals[proposalId_].options[opt].id == optionId_) {
+                _proposals[proposalId_].options[opt].votes += _voteWeight(_stakeTokenId);
             }
         }
-        _votedProp[proposalId_][msg.sender] = true;
+        _votedProp[proposalId_][_stakeTokenId] = true;
 
         return true;
     }
@@ -211,9 +212,9 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      * @param description_ description.
      */
     function createReview(uint8 proposalId_, string memory description_) external validProposal(proposalId_) {
-        require(_proposals[proposalId_].author == msg.sender || owner() == msg.sender, "NOT_OWNER_OR_AUTHOR");
+        require(_proposals[proposalId_].author == msg.sender, "NOT_OWNER_OR_AUTHOR");
         require(_isHolder(msg.sender), "NOT_NFT_HOLDER");
-        require(_proposals[proposalId_].ended == true, "PROPOSAL_VOTE_OPEN");
+        require(_proposals[proposalId_].ended = true, "PROPOSAL_VOTE_OPEN");
         require(_proposals[proposalId_].status.id != 3, "REJECTED_PROPOSAL");
 
         _reviews[proposalId_].push();
@@ -239,6 +240,7 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      * @param optionId_ option id.
      */
     function voteReview(
+        uint256 stakeTokenId_,
         uint8 proposalId_,
         uint8 reviewId_,
         uint8 optionId_
@@ -246,18 +248,16 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
         Review storage vReview = _reviews[proposalId_][reviewId_];
         require(block.timestamp < vReview.endTime, "VOTE_ENDED");
         require(_isHolder(msg.sender), "NOT_NFT_HOLDER");
-        require(voted(proposalId_, msg.sender), "NOT_PROPOSAL_VOTER");
-        require(!_votedRev[proposalId_][msg.sender], "ALREADY_VOTED");
+        require(ownerOf(stakeTokenId_) == msg.sender, "NOT_OWNER_OF_TOKEN");
+        require(!_votedRev[proposalId_][stakeTokenId_], "ALREADY_VOTED");
         require(optionId_ > 0 && optionId_ <= vReview.options.length, "INVALID_OPTION");
-
-        uint256 vWeight = _voteWeight(msg.sender);
 
         for (uint256 opt = 0; opt < vReview.options.length; opt++) {
             if (vReview.options[opt].id == optionId_) {
-                vReview.options[opt].votes += vWeight;
+                vReview.options[opt].votes += _voteWeight(stakeTokenId_);
             }
         }
-        _votedRev[proposalId_][msg.sender] = true;
+        _votedRev[proposalId_][stakeTokenId_] = true;
 
         return true;
     }
@@ -285,12 +285,12 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
                 IERC20(eProposal.paymentToken).safeTransfer(eProposal.payeeWallet, eProposal.amount / 2);
             }
             if (eProposal.fundType.id == 2) {
-                eProposal.status = _status[3]; // pending
+                eProposal.status = _status[4]; // pending
             } else {
-                eProposal.status = _status[4]; // completed
+                eProposal.status = _status[5]; // completed
             }
         } else {
-            eProposal.status = _status[3]; // pending
+            eProposal.status = _status[4]; // pending
         }
         endReview.ended = true;
     }
@@ -330,12 +330,13 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      * @param proposalId_ proposal id.
      * @param commentURI_ proposal id.
      */
-    function createComment(uint8 proposalId_, string memory commentURI_) external {
-        require(voted(proposalId_, msg.sender), "NOT_PROPOSAL_VOTER");
+    function createComment(uint256 stakeTokenId_, uint8 proposalId_, string memory commentURI_) external {
+        require(_isHolder(msg.sender), "NOT_NFT_HOLDER");
+        require(ownerOf(stakeTokenId_) == msg.sender, "NOT_OWNER_OF_TOKEN");
         _commentIds++;
-        _comments[proposalId_].push(Comment({ proposalId: proposalId_, id: _commentIds, commentURI: commentURI_, author: msg.sender }));
+        _comments[proposalId_].push(Comment({ proposalId: proposalId_, id: _commentIds, commentURI: commentURI_, author: msg.sender, tokenId: stakeTokenId_ }));
 
-        emit NewComment(msg.sender, proposalId_, _commentIds, commentURI_);
+        emit NewComment(msg.sender, stakeTokenId_, proposalId_, _commentIds, commentURI_);
     }
 
     /**
@@ -355,10 +356,10 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      * @dev Check if `account_` already voted for `proposalId`.
      *
      * @param proposalId_ proposal id.
-     * @param account_ account.
+     * @param stakeTokenId_ uint256.
      */
-    function voted(uint8 proposalId_, address account_) public view validProposal(proposalId_) returns (bool) {
-        return _votedProp[proposalId_][account_];
+    function voted(uint8 proposalId_, uint256 stakeTokenId_) public view validProposal(proposalId_) returns (bool) {
+        return _votedProp[proposalId_][stakeTokenId_];
     }
 
     /***********************|
@@ -377,7 +378,7 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      * Modifier check valid reviewId.
      */
     modifier validReview(uint8 proposalId_, uint8 reviewId_) {
-        require(reviewId_ >= 0 && reviewId_ < _reviews[proposalId_].length, "INVALID_REVIEW");
+        require(reviewId_ < _reviews[proposalId_].length, "INVALID_REVIEW");
         _;
     }
 
@@ -385,7 +386,7 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      * Modifier check if a proposal id ended.
      */
     modifier endedProposal(uint8 proposalId_) {
-        require(block.timestamp < _proposals[proposalIds].endTime, "VOTE_ENDED");
+        require(block.timestamp > _proposals[proposalIds].endTime, "VOTE_ENDED");
         _;
     }
 
@@ -404,25 +405,6 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
     function depositFunds(address tokenAddress, uint256 amount) external {
         require(amount > 0, "ZERO_AMOUNT");
         _depositFunds(msg.sender, tokenAddress, amount);
-    }
-
-    /*************************|
-    |     Sweept Funds        |
-    |________________________*/
-
-    /**
-     * @dev Sweep funds
-     * Accessible by operators
-     */
-    function sweep(
-        address token_,
-        address to,
-        uint256 amount
-    ) public onlyOperator {
-        IERC20 token = IERC20(token_);
-        // balance check is being done in ERC20
-        token.safeTransfer(to, amount);
-        emit Swept(msg.sender, token_, to, amount);
     }
 
     /*************************|
@@ -448,31 +430,30 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
     }
 
     /**
-     * @dev get vote weight 1 vote per nft
-     *
-     * @param voter proposal id.
-     */
-    function _voteWeight(address voter) internal view returns (uint256) {
-        uint256 weight;
-        for (uint256 nft = 0; nft < _nftToHold.length; nft++) {
-            weight += IERC721(_nftToHold[nft]).balanceOf(voter);
-        }
-        return weight;
-    }
-
-    /**
      * @dev check is holder
      *
      * @param voter proposal id.
      */
     function _isHolder(address voter) internal view returns (bool) {
         bool isHold;
-        for (uint256 nft = 0; nft < _nftToHold.length; nft++) {
-            if (IERC721(_nftToHold[nft]).balanceOf(voter) > 0) {
-                isHold = true;
-            }
+
+        if (IERC721(_nftToHold).balanceOf(voter) > 0) {
+            isHold = true;
         }
+
         return isHold;
+    }
+
+    /**
+     * @dev get vote weight 1 vote per nft
+     *
+     * @param stakeTokenId uint256.
+     */
+    function _voteWeight(uint256 stakeTokenId) internal view returns (uint256) {
+        uint256 weight;
+        
+        weight = stakes[stakeTokenId].amount / 1000000000000000000;
+        return weight;
     }
 
     /**
