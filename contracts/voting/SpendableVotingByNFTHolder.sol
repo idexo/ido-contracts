@@ -70,23 +70,9 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
     uint8 private pVoteInDays;
     uint8 private rVoteDays;
 
-    event FundDeposited(
-        address indexed operator,
-        address indexed tokenAddress,
-        uint256 amount
-    );
-    event Swept(
-        address indexed operator,
-        address indexed token,
-        address indexed to,
-        uint256 amount
-    );
-    event NewComment(
-        address indexed author,
-        uint8 proposalId,
-        uint8 id,
-        string comment
-    );
+    event FundDeposited(address indexed operator, address indexed tokenAddress, uint256 amount);
+    event Swept(address indexed operator, address indexed token, address indexed to, uint256 amount);
+    event NewComment(address indexed author, uint8 proposalId, uint8 id, string comment);
     event NewProposal(uint8 proposalId, address indexed author);
     event NewReview(uint8 proposalId, uint8 reviewId);
 
@@ -96,19 +82,14 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
         address[] memory nftToHold_
     ) {
         for (uint256 n = 0; n < nftToHold_.length; n++) {
+            require(_isContract(nftToHold_[n]), "NOT_CONTRACT");
             _nftToHold.push(IERC721(nftToHold_[n]));
             require(proposalDurationInDays_ >= 14, "PROPOSAL_MIN_14_DAYS");
             require(reviewDurationInDays_ >= 7, "REVIEW_MIN_7_DAYS");
             rVoteDays = reviewDurationInDays_;
             pVoteInDays = proposalDurationInDays_;
         }
-        string[5] memory sts = [
-            "proposed",
-            "approved",
-            "rejected",
-            "pending",
-            "completed"
-        ];
+        string[5] memory sts = ["proposed", "approved", "rejected", "pending", "completed"];
         for (uint8 i = 0; i < sts.length; i++) {
             _status.push(Status(i + 1, sts[i]));
         }
@@ -138,11 +119,9 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
         address paymentToken_,
         uint8 fundType_
     ) external {
+        require(_isContract(paymentToken_), "NOT_CONTRACT");
         require(_isHolder(msg.sender), "NOT_NFT_HOLDER");
-        require(
-            IERC721(paymentToken_).balanceOf(address(this)) >= amount_,
-            "INSUFFICIENT_FUNDS"
-        );
+        require(IERC721(paymentToken_).balanceOf(address(this)) >= amount_, "INSUFFICIENT_FUNDS");
 
         proposalIds++;
         Proposal storage prop = _proposals[proposalIds];
@@ -165,15 +144,8 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      *
      * @param proposalId_ proposal id.
      */
-    function getProposal(uint8 proposalId_)
-        external
-        view
-        returns (Proposal memory)
-    {
-        require(
-            proposalId_ > 0 && proposalId_ <= proposalIds,
-            "INVALID_PROPOSALID"
-        );
+    function getProposal(uint8 proposalId_) external view returns (Proposal memory) {
+        require(proposalId_ > 0 && proposalId_ <= proposalIds, "INVALID_PROPOSALID");
 
         return _proposals[proposalId_];
     }
@@ -184,19 +156,11 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      * @param proposalId_ proposal id.
      * @param optionId_ option id.
      */
-    function voteProposal(uint8 proposalId_, uint8 optionId_)
-        external
-        nonReentrant
-        returns (bool)
-    {
+    function voteProposal(uint8 proposalId_, uint8 optionId_) external endedProposal(proposalId_) nonReentrant returns (bool) {
         Proposal storage vProposal = _proposals[proposalId_];
         require(_isHolder(msg.sender), "NOT_NFT_HOLDER");
         require(!voted(proposalId_, msg.sender), "ALREADY_VOTED");
-        require(block.timestamp < vProposal.endTime, "VOTE_ENDED");
-        require(
-            optionId_ > 0 && optionId_ <= vProposal.options.length,
-            "INVALID_OPTION"
-        );
+        require(optionId_ > 0 && optionId_ <= vProposal.options.length, "INVALID_OPTION");
 
         uint256 vWeight = _voteWeight(msg.sender);
 
@@ -223,22 +187,12 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
             eProposal.options[0].votes > eProposal.options[1].votes // yes > no ... draw = rejected
         ) {
             eProposal.status = _status[1]; // approved
-            require(
-                IERC20(eProposal.paymentToken).balanceOf(address(this)) >=
-                    eProposal.amount,
-                "INSUFFICIENT_FUNDS_CALL_ADMIN"
-            );
+            require(IERC20(eProposal.paymentToken).balanceOf(address(this)) >= eProposal.amount, "INSUFFICIENT_FUNDS_CALL_ADMIN");
             if (eProposal.fundType.id == 1) {
-                IERC20(eProposal.paymentToken).safeTransfer(
-                    eProposal.payeeWallet,
-                    eProposal.amount
-                );
+                IERC20(eProposal.paymentToken).safeTransfer(eProposal.payeeWallet, eProposal.amount);
             } else if (eProposal.fundType.id == 2) {
                 // half_half
-                IERC20(eProposal.paymentToken).safeTransfer(
-                    eProposal.payeeWallet,
-                    eProposal.amount / 2
-                );
+                IERC20(eProposal.paymentToken).safeTransfer(eProposal.payeeWallet, eProposal.amount / 2);
             }
         } else {
             eProposal.status = _status[2]; // rejected
@@ -256,16 +210,10 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      * @param proposalId_ proposal id.
      * @param description_ description.
      */
-    function createReview(uint8 proposalId_, string memory description_)
-        external
-        validProposal(proposalId_)
-    {
-        require(
-            _proposals[proposalId_].author == msg.sender || owner() == msg.sender,
-            "NOT_OWNER_OR_AUTHOR"
-        );
+    function createReview(uint8 proposalId_, string memory description_) external validProposal(proposalId_) {
+        require(_proposals[proposalId_].author == msg.sender || owner() == msg.sender, "NOT_OWNER_OR_AUTHOR");
         require(_isHolder(msg.sender), "NOT_NFT_HOLDER");
-        require(_proposals[proposalId_].ended = true, "PROPOSAL_VOTE_OPEN");
+        require(_proposals[proposalId_].ended == true, "PROPOSAL_VOTE_OPEN");
         require(_proposals[proposalId_].status.id != 3, "REJECTED_PROPOSAL");
 
         _reviews[proposalId_].push();
@@ -277,9 +225,7 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
 
         string[2] memory options = ["yes", "no"];
         for (uint256 opt = 0; opt < options.length; opt++) {
-            nReview.options.push(
-                Option({id: uint8(opt + 1), name: options[opt], votes: 0})
-            );
+            nReview.options.push(Option({ id: uint8(opt + 1), name: options[opt], votes: 0 }));
         }
 
         emit NewReview(proposalId_, uint8(len));
@@ -296,21 +242,13 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
         uint8 proposalId_,
         uint8 reviewId_,
         uint8 optionId_
-    )
-        external
-        validProposal(proposalId_)
-        validReview(proposalId_, reviewId_)
-        returns (bool)
-    {
+    ) external validProposal(proposalId_) validReview(proposalId_, reviewId_) returns (bool) {
         Review storage vReview = _reviews[proposalId_][reviewId_];
         require(block.timestamp < vReview.endTime, "VOTE_ENDED");
         require(_isHolder(msg.sender), "NOT_NFT_HOLDER");
         require(voted(proposalId_, msg.sender), "NOT_PROPOSAL_VOTER");
         require(!_votedRev[proposalId_][msg.sender], "ALREADY_VOTED");
-        require(
-            optionId_ > 0 && optionId_ <= vReview.options.length,
-            "INVALID_OPTION"
-        );
+        require(optionId_ > 0 && optionId_ <= vReview.options.length, "INVALID_OPTION");
 
         uint256 vWeight = _voteWeight(msg.sender);
 
@@ -330,22 +268,13 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      * @param proposalId_ proposal id.
      * @param reviewId_ review id.
      */
-    function endReviewVote(uint8 proposalId_, uint8 reviewId_)
-        public
-        validProposal(proposalId_)
-        validReview(proposalId_, reviewId_)
-        nonReentrant
-    {
+    function endReviewVote(uint8 proposalId_, uint8 reviewId_) public validProposal(proposalId_) validReview(proposalId_, reviewId_) nonReentrant {
         Proposal storage eProposal = _proposals[proposalId_];
         Review storage endReview = _reviews[proposalId_][reviewId_];
         require(block.timestamp > endReview.endTime, "REVIEW_OPEN_FOR_VOTE");
         require(!endReview.ended, "ALREADY_ENDED");
         if (eProposal.fundType.id == 2) {
-            require(
-                IERC20(eProposal.paymentToken).balanceOf(address(this)) >=
-                    eProposal.amount / 2,
-                "INSUFFICIENT_FUNDS_CALL_ADMIN"
-            );
+            require(IERC20(eProposal.paymentToken).balanceOf(address(this)) >= eProposal.amount / 2, "INSUFFICIENT_FUNDS_CALL_ADMIN");
         }
 
         if (
@@ -353,18 +282,15 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
         ) {
             if (eProposal.fundType.id == 2) {
                 //half_half
-                IERC20(eProposal.paymentToken).safeTransfer(
-                    eProposal.payeeWallet,
-                    eProposal.amount / 2
-                );
+                IERC20(eProposal.paymentToken).safeTransfer(eProposal.payeeWallet, eProposal.amount / 2);
             }
             if (eProposal.fundType.id == 2) {
-                eProposal.status = _status[4]; // pending
+                eProposal.status = _status[3]; // pending
             } else {
-                eProposal.status = _status[5]; // completed
+                eProposal.status = _status[4]; // completed
             }
         } else {
-            eProposal.status = _status[4]; // pending
+            eProposal.status = _status[3]; // pending
         }
         endReview.ended = true;
     }
@@ -404,19 +330,10 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      * @param proposalId_ proposal id.
      * @param commentURI_ proposal id.
      */
-    function createComment(uint8 proposalId_, string memory commentURI_)
-        external
-    {
+    function createComment(uint8 proposalId_, string memory commentURI_) external {
         require(voted(proposalId_, msg.sender), "NOT_PROPOSAL_VOTER");
         _commentIds++;
-        _comments[proposalId_].push(
-            Comment({
-                proposalId: proposalId_,
-                id: _commentIds,
-                commentURI: commentURI_,
-                author: msg.sender
-            })
-        );
+        _comments[proposalId_].push(Comment({ proposalId: proposalId_, id: _commentIds, commentURI: commentURI_, author: msg.sender }));
 
         emit NewComment(msg.sender, proposalId_, _commentIds, commentURI_);
     }
@@ -426,11 +343,7 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      *
      * @param proposalId_ proposal id.
      */
-    function getComments(uint8 proposalId_)
-        external
-        view
-        returns (Comment[] memory comments)
-    {
+    function getComments(uint8 proposalId_) external view returns (Comment[] memory comments) {
         return _comments[proposalId_];
     }
 
@@ -444,12 +357,7 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      * @param proposalId_ proposal id.
      * @param account_ account.
      */
-    function voted(uint8 proposalId_, address account_)
-        public
-        view
-        validProposal(proposalId_)
-        returns (bool)
-    {
+    function voted(uint8 proposalId_, address account_) public view validProposal(proposalId_) returns (bool) {
         return _votedProp[proposalId_][account_];
     }
 
@@ -461,10 +369,7 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      * Modifier checks valid proposalId.
      */
     modifier validProposal(uint8 proposalId_) {
-        require(
-            proposalId_ > 0 && proposalId_ <= proposalIds,
-            "INVALID_PROPOSAL"
-        );
+        require(proposalId_ > 0 && proposalId_ <= proposalIds, "INVALID_PROPOSAL");
         _;
     }
 
@@ -472,7 +377,7 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      * Modifier check valid reviewId.
      */
     modifier validReview(uint8 proposalId_, uint8 reviewId_) {
-        require(reviewId_ < _reviews[proposalId_].length, "INVALID_REVIEW");
+        require(reviewId_ >= 0 && reviewId_ < _reviews[proposalId_].length, "INVALID_REVIEW");
         _;
     }
 
@@ -480,10 +385,7 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      * Modifier check if a proposal id ended.
      */
     modifier endedProposal(uint8 proposalId_) {
-        require(
-            block.timestamp > _proposals[proposalIds].endTime,
-            "VOTE_ENDED"
-        );
+        require(block.timestamp < _proposals[proposalIds].endTime, "VOTE_ENDED");
         _;
     }
 
@@ -538,14 +440,8 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
         uint256 amount
     ) internal virtual {
         require(amount > 0, "ZERO_AMOUNT");
-        require(
-            IERC20(tokenAddress).balanceOf(msg.sender) >= amount,
-            "INSUFFICIENT_BALANCE"
-        );
-        require(
-            IERC20(tokenAddress).allowance(msg.sender, address(this)) >= amount,
-            "INSUFFICIENT_ALLOWANCE"
-        );
+        require(IERC20(tokenAddress).balanceOf(msg.sender) >= amount, "INSUFFICIENT_BALANCE");
+        require(IERC20(tokenAddress).allowance(msg.sender, address(this)) >= amount, "INSUFFICIENT_ALLOWANCE");
         IERC20(tokenAddress).safeTransferFrom(account, address(this), amount);
 
         emit FundDeposited(account, tokenAddress, amount);
@@ -600,9 +496,7 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
         string[2] memory options = ["yes", "no"];
         Proposal storage prop = _proposals[proposalId_];
         for (uint256 opt = 0; opt < options.length; opt++) {
-            prop.options.push(
-                Option({id: uint8(opt + 1), name: options[opt], votes: 0})
-            );
+            prop.options.push(Option({ id: uint8(opt + 1), name: options[opt], votes: 0 }));
         }
     }
 
