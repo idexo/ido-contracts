@@ -359,12 +359,12 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
                 );
             }
             if (eProposal.fundType.id == 2) {
-                eProposal.status = _status[4]; // pending
+                eProposal.status = _status[3]; // pending
             } else {
-                eProposal.status = _status[5]; // completed
+                eProposal.status = _status[4]; // completed
             }
         } else {
-            eProposal.status = _status[4]; // pending
+            eProposal.status = _status[3]; // pending
         }
         endReview.ended = true;
     }
@@ -472,7 +472,7 @@ contract SpendableVotingByNFTHolder is ReentrancyGuard, Operatorable {
      * Modifier check valid reviewId.
      */
     modifier validReview(uint8 proposalId_, uint8 reviewId_) {
-        require(reviewId_ < _reviews[proposalId_].length, "INVALID_REVIEW");
+        require(reviewId_ >= 0 && reviewId_ < _reviews[proposalId_].length, "INVALID_REVIEW");
         _;
     }
 
