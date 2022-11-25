@@ -157,18 +157,19 @@ contract SPVDAO is StakePoolDAOTimeLimited {
      * @param proposalId_ proposal id.
      * @param optionId_ option id.
      */
-    function voteProposal(uint8 proposalId_, uint8 optionId_) external nonReentrant returns (bool) {
+    function voteProposal(uint256 _stakeTokenId, uint8 proposalId_, uint8 optionId_) external nonReentrant returns (bool) {
         require(_isHolder(msg.sender), "NOT_NFT_HOLDER");
-        require(!voted(proposalId_, msg.sender), "ALREADY_VOTED");
+        require(ownerOf(_stakeTokenId) == msg.sender || "NOT_OWNER_OF_TOKEN")
+        require(!voted(proposalId_, _stakeTokenId), "ALREADY_VOTED");
         require(block.timestamp < _proposals[proposalId_].endTime, "VOTE_ENDED");
         require(optionId_ > 0 && optionId_ <= _proposals[proposalId_].options.length, "INVALID_OPTION");
 
         for (uint256 opt = 0; opt < _proposals[proposalId_].options.length; opt++) {
             if (_proposals[proposalId_].options[opt].id == optionId_) {
-                _proposals[proposalId_].options[opt].votes += _voteWeight(msg.sender);
+                _proposals[proposalId_].options[opt].votes += _voteWeight(_stakeTokenId);
             }
         }
-        _votedProp[proposalId_][msg.sender] = true;
+        _votedProp[proposalId_][_stakeTokenId] = true;
 
         return true;
     }
@@ -354,8 +355,8 @@ contract SPVDAO is StakePoolDAOTimeLimited {
      * @param proposalId_ proposal id.
      * @param account_ account.
      */
-    function voted(uint8 proposalId_, address account_) public view validProposal(proposalId_) returns (bool) {
-        return _votedProp[proposalId_][account_];
+    function voted(uint8 proposalId_, uint256 stakeTokenId_) public view validProposal(proposalId_) returns (bool) {
+        return _votedProp[proposalId_][stakeTokenId_];
     }
 
     /***********************|
@@ -445,12 +446,10 @@ contract SPVDAO is StakePoolDAOTimeLimited {
      *
      * @param voter proposal id.
      */
-    function _voteWeight(address voter) internal view returns (uint256) {
+    function _voteWeight(uint256 stakeTokenId) internal view returns (uint256) {
         uint256 weight;
-        uint256[] memory sTokenIds = getStakeTokenIds(voter);
-        for (uint256 j = 0; j < sTokenIds.length; j++) {
-            weight += stakes[sTokenIds[j]].amount;
-        }
+        
+        weight = stakes[stakeTokenId].amount / 1000000000000000000;
         return weight;
     }
 
