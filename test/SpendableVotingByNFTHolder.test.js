@@ -161,6 +161,12 @@ contract("Voting", async (accounts) => {
             })
 
             describe("reverts if", async () => {
+                it("VOTE_ENDED", async () => {
+                    let snapShot = await timeTraveler.takeSnapshot()
+                    await timeTraveler.advanceTime(duration.days(20))
+                    await expectRevert(voting.voteProposal(1, 1, { from: alice }), "VOTE_ENDED")
+                    await timeTraveler.revertToSnapshot(snapShot["result"])
+                })
                 it("ALREADY_VOTED", async () => {
                     await expectRevert(voting.voteProposal(1, 1, { from: alice }), "ALREADY_VOTED")
                 })
@@ -279,6 +285,20 @@ contract("Voting", async (accounts) => {
                     const payeeBalance = await usdt.balanceOf(payeeWallet)
                     // console.log("PAYEE BALANCE::", payeeBalance.toString())
                 })
+
+                it("should create and reject review for proposal #2", async () => {
+                    let snapShot = await timeTraveler.takeSnapshot()
+                    await voting.createReview(2, "Second proposal id #2 review", { from: alice })
+                    await voting.voteReview(2, 0, 2, { from: alice })
+                    await voting.voteReview(2, 0, 2, { from: bob })
+                    await voting.voteReview(2, 0, 1, { from: carol })
+                    await timeTraveler.advanceTime(duration.days(20))
+                    await voting.endReviewVote(2, 0, { from: alice })
+                    const payeeBalance = await usdt.balanceOf(payeeWallet)
+                    // console.log("PAYEE BALANCE::", payeeBalance.toString())
+                    await timeTraveler.revertToSnapshot(snapShot["result"])
+                })
+
                 it("should create and approve review for proposal #2", async () => {
                     await voting.createReview(2, "Second proposal id #2 review", { from: alice })
                     await voting.voteReview(2, 0, 1, { from: alice })
@@ -296,7 +316,7 @@ contract("Voting", async (accounts) => {
     describe("#Sweep", async () => {
         it("should sweep funds from contract", async () => {
             const contractBalance = await usdt.balanceOf(voting.address)
-            console.log("CONTRACT BALANCE::", contractBalance.toString())
+            // console.log("CONTRACT BALANCE::", contractBalance.toString())
 
             voting.sweep(usdt.address, carol, web3.utils.toWei(new BN(1000)))
         })
