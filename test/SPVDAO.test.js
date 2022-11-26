@@ -135,6 +135,11 @@ contract("Voting", async (accounts) => {
                 expect(res.ended).to.eq(true)
             })
         })
+        it("createComment", async () => {
+            expect((await spvdao.getComments(2)).length).to.eq(0)
+            expectEvent(await spvdao.createComment(1, 2, "test_comment", { from: alice }), "NewComment")
+            expect((await spvdao.getComments(2)).length).to.eq(1)
+        })
         after(async () => {
             await timeTraveler.advanceTime(time.duration.days(-120))
         })
