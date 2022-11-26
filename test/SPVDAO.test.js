@@ -114,6 +114,17 @@ contract("Voting", async (accounts) => {
                 expect(votes).to.greaterThan(1)
             })
         })
+        it("voteReview", async () => {
+            await spvdao.getReview(2, 0).then((res) => {
+                let reviews = res.options.reduce((a, c) => a + Number(c.votes), 0)
+                expect(reviews).to.eq(0)
+            })
+            await spvdao.voteReview(1, 2, 0, 1, { from: alice })
+            await spvdao.getReview(2, 0).then((res) => {
+                let reviews = res.options.reduce((a, c) => a + Number(c.votes), 0)
+                expect(reviews).to.greaterThan(1)
+            })
+        })
         after(async () => {
             await timeTraveler.advanceTime(time.duration.months(-80))
         })
