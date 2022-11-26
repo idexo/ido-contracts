@@ -158,7 +158,11 @@ contract SPVDAO is StakePoolDAOTimeLimited {
      * @param proposalId_ proposal id.
      * @param optionId_ option id.
      */
-    function voteProposal(uint256 _stakeTokenId, uint8 proposalId_, uint8 optionId_) external nonReentrant returns (bool) {
+    function voteProposal(
+        uint256 _stakeTokenId,
+        uint8 proposalId_,
+        uint8 optionId_
+    ) external nonReentrant returns (bool) {
         require(_isHolder(msg.sender), "NOT_NFT_HOLDER");
         require(ownerOf(_stakeTokenId) == msg.sender, "NOT_OWNER_OF_TOKEN");
         require(!voted(proposalId_, _stakeTokenId), "ALREADY_VOTED");
@@ -285,12 +289,12 @@ contract SPVDAO is StakePoolDAOTimeLimited {
                 IERC20(eProposal.paymentToken).safeTransfer(eProposal.payeeWallet, eProposal.amount / 2);
             }
             if (eProposal.fundType.id == 2) {
-                eProposal.status = _status[4]; // pending
+                eProposal.status = _status[3]; // pending
             } else {
-                eProposal.status = _status[5]; // completed
+                eProposal.status = _status[4]; // completed
             }
         } else {
-            eProposal.status = _status[4]; // pending
+            eProposal.status = _status[3]; // pending
         }
         endReview.ended = true;
     }
@@ -330,11 +334,17 @@ contract SPVDAO is StakePoolDAOTimeLimited {
      * @param proposalId_ proposal id.
      * @param commentURI_ proposal id.
      */
-    function createComment(uint256 stakeTokenId_, uint8 proposalId_, string memory commentURI_) external {
+    function createComment(
+        uint256 stakeTokenId_,
+        uint8 proposalId_,
+        string memory commentURI_
+    ) external {
         require(_isHolder(msg.sender), "NOT_NFT_HOLDER");
         require(ownerOf(stakeTokenId_) == msg.sender, "NOT_OWNER_OF_TOKEN");
         _commentIds++;
-        _comments[proposalId_].push(Comment({ proposalId: proposalId_, id: _commentIds, commentURI: commentURI_, author: msg.sender, tokenId: stakeTokenId_ }));
+        _comments[proposalId_].push(
+            Comment({ proposalId: proposalId_, id: _commentIds, commentURI: commentURI_, author: msg.sender, tokenId: stakeTokenId_ })
+        );
 
         emit NewComment(msg.sender, stakeTokenId_, proposalId_, _commentIds, commentURI_);
     }
@@ -451,7 +461,7 @@ contract SPVDAO is StakePoolDAOTimeLimited {
      */
     function _voteWeight(uint256 stakeTokenId) internal view returns (uint256) {
         uint256 weight;
-        
+
         weight = stakes[stakeTokenId].amount / 1000000000000000000;
         return weight;
     }
