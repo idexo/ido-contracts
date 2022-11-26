@@ -125,8 +125,18 @@ contract("Voting", async (accounts) => {
                 expect(reviews).to.greaterThan(1)
             })
         })
+        it("endReviewVote", async () => {
+            await spvdao.getReview(2, 0).then((res) => {
+                expect(res.ended).to.eq(false)
+            })
+            await timeTraveler.advanceTime(duration.days(40))
+            await spvdao.endReviewVote(2, 0, { from: alice })
+            await spvdao.getReview(2, 0).then((res) => {
+                expect(res.ended).to.eq(true)
+            })
+        })
         after(async () => {
-            await timeTraveler.advanceTime(time.duration.months(-80))
+            await timeTraveler.advanceTime(time.duration.days(-120))
         })
     })
 })
