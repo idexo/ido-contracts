@@ -289,12 +289,12 @@ contract SPVDAO is StakePoolDAOTimeLimited {
                 IERC20(eProposal.paymentToken).safeTransfer(eProposal.payeeWallet, eProposal.amount / 2);
             }
             if (eProposal.fundType.id == 2) {
-                eProposal.status = _status[4]; // pending
+                eProposal.status = _status[3]; // pending
             } else {
-                eProposal.status = _status[5]; // completed
+                eProposal.status = _status[4]; // completed
             }
         } else {
-            eProposal.status = _status[4]; // pending
+            eProposal.status = _status[3]; // pending
         }
         endReview.ended = true;
     }
