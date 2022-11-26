@@ -145,7 +145,7 @@ function testStakePool(contractName, errorHead) {
                 })
                 describe("reverts if", async () => {
                     it("elegible stake amount date is invalid", async () => {
-                        const futureTime = Math.floor(Date.now() / 1000) + time.duration.days(300)
+                        const futureTime = Math.floor(Date.now() / 1000) + time.duration.months(300)
                         await expectRevert(
                             stakePool.getEligibleStakeAmount(futureTime, { from: alice }),
                             "StakeToken#getEligibleStakeAmount: NO_PAST_DATE"
