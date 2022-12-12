@@ -143,5 +143,8 @@ contract("Voting", async (accounts) => {
         after(async () => {
             await timeTraveler.advanceTime(time.duration.days(-120))
         })
+        it("depositFunds", async () => {
+            expectEvent(await spvdao.depositFunds(ido.address, web3.utils.toWei(new BN(1000)), { from: alice }), "FundDeposited")
+        })
     })
 })
