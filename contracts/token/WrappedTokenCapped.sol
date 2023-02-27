@@ -3,9 +3,9 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
-import "../interfaces/IWrappedToken.sol";
+import "../interfaces/ICappedWrappedToken.sol";
 
-contract WrappedTokenCapped is IWrappedToken, ERC20Permit, Ownable2Step {
+contract CappedWrappedToken is ICappedWrappedToken, ERC20Permit, Ownable2Step {
     address public relayer;
     uint256 public immutable cap;
 
