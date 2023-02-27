@@ -24,7 +24,7 @@ contract CappedWrappedToken is ICappedWrappedToken, ERC20Permit, Ownable2Step {
      * Only owner can call
      */
     function setRelayer(address newRelayer) external override onlyOwner {
-        require(newRelayer != address(0), "WIDO: NEW_RELAYER_ADDRESS_INVALID");
+        require(newRelayer != address(0), "WTOKEN: NEW_RELAYER_ADDRESS_INVALID");
         relayer = newRelayer;
 
         emit RelayerAddressChanged(newRelayer);
@@ -35,21 +35,21 @@ contract CappedWrappedToken is ICappedWrappedToken, ERC20Permit, Ownable2Step {
     |_______________________*/
 
     /**
-     * @dev Mint new WIDO
+     * @dev Mint new WTOKEN
      * Only relayer can call
      */
     function mint(address account, uint256 amount) external override {
-        require(_msgSender() == relayer, "WIDO: CALLER_NO_RELAYER");
-        require(totalSupply() + amount <= cap, "WIDO: AMOUNT_EXCEEDS_CAP");
+        require(_msgSender() == relayer, "WTOKEN: CALLER_NO_RELAYER");
+        require(totalSupply() + amount <= cap, "WTOKEN: AMOUNT_EXCEEDS_CAP");
         _mint(account, amount);
     }
 
     /**
-     * @dev Burn WIDO
+     * @dev Burn WTOKEN
      * Only relayer can call
      */
     function burn(address account, uint256 amount) external override {
-        require(_msgSender() == relayer, "WIDO: CALLER_NO_RELAYER");
+        require(_msgSender() == relayer, "WTOKEN: CALLER_NO_RELAYER");
         _burn(account, amount);
     }
 
