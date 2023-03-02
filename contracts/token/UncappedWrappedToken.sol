@@ -5,15 +5,12 @@ import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "../interfaces/IWrappedToken.sol";
 
-contract CappedWrappedToken is IWrappedToken, ERC20Permit, Ownable2Step {
+contract UncappedWrappedToken is IWrappedToken, ERC20Permit, Ownable2Step {
     address public relayer;
-    uint256 public immutable cap;
 
     event RelayerAddressChanged(address indexed relayer);
 
-    constructor(string memory wTokenName, string memory wTokenSymbol, uint256 wTokenCap) ERC20(wTokenName, wTokenSymbol) ERC20Permit(wTokenName) {
-        cap = wTokenCap * 1 ether;
-    }
+    constructor(string memory wTokenName, string memory wTokenSymbol) ERC20(wTokenName, wTokenSymbol) ERC20Permit(wTokenName) {}
 
     /**************************|
     |          Setters         |
@@ -40,7 +37,6 @@ contract CappedWrappedToken is IWrappedToken, ERC20Permit, Ownable2Step {
      */
     function mint(address account, uint256 amount) external override {
         require(_msgSender() == relayer, "WTOKEN: CALLER_NO_RELAYER");
-        require(totalSupply() + amount <= cap, "WTOKEN: AMOUNT_EXCEEDS_CAP");
         _mint(account, amount);
     }
 
