@@ -59,15 +59,33 @@ describe("SpendableVotingByStakeNFTHolder (ERC20)", function () {
 
         // mint tokens for the owner
         await erc20Token.mint(owner.address, toWei("100000"))
-        await erc20Token.connect(owner).approve(spendableVoting.address, toWei("100000"))
+        await erc20Token.connect(owner).approve(spendableVoting.address, toWei("50000"))
+    })
 
-        // Deposit funds into the SpendableVoting contract
-        await expect(spendableVoting.connect(owner).depositFunds(erc20Token.address, toWei("10000")))
-            .to.emit(spendableVoting, "FundDeposited")
-            .withArgs(owner.address, erc20Token.address, toWei("10000"))
+    describe("Fund contract", async () => {
+        it("should deposit funds into the contract", async function () {
+            // Deposit funds into the SpendableVoting contract
+            await expect(spendableVoting.connect(owner).depositFunds(erc20Token.address, toWei("10000")))
+                .to.emit(spendableVoting, "FundDeposited")
+                .withArgs(owner.address, erc20Token.address, toWei("10000"))
 
-        // check contract balance
-        expect(await erc20Token.balanceOf(spendableVoting.address)).to.equal(toWei("10000"))
+            // check contract balance
+            expect(await erc20Token.balanceOf(spendableVoting.address)).to.equal(toWei("10000"))
+        })
+
+        describe("Revert if", async () => {
+            it("insufficient allowance", async () => {
+                await expect(spendableVoting.connect(owner).depositFunds(erc20Token.address, toWei("60000"))).to.be.revertedWith(
+                    "INSUFFICIENT_ALLOWANCE"
+                )
+            })
+
+            it("insufficient balance", async () => {
+                await expect(spendableVoting.connect(owner).depositFunds(erc20Token.address, toWei("110000"))).to.be.revertedWith(
+                    "INSUFFICIENT_BALANCE"
+                )
+            })
+        })
     })
 
     describe("Proposals", async () => {
