@@ -282,6 +282,27 @@ describe("SpendableVotingByStakeNFTHolder (ERC20)", function () {
     })
 
     describe("Reviews", async () => {
+        describe("prefund type", async () => {
+            it("shoud create a review", async () => {
+                // Create the proposal 1
+                await expect(spendableVoting.connect(alice).createProposal("Test Proposal 4", payee.address, toWei("100"), erc20Token.address, 1))
+                    .to.emit(spendableVoting, "NewProposal")
+                    .withArgs(5, alice.address)
+                await spendableVoting.connect(alice).voteProposal(5, 1)
+                await spendableVoting.connect(bob).voteProposal(5, 2)
+                await spendableVoting.connect(carol).voteProposal(5, 2)
+                await spendableVoting.connect(darren).voteProposal(5, 2)
+
+                // get reviewIds
+                const reviewIds = await spendableVoting.getReviewIds(1)
+                // get review
+                if (reviewIds > 0) {
+                    const review = await spendableVoting.getReview(1, reviewIds - 1) // get last review
+                    expect(review.description).to.equal("Test Review for Proposal 1")
+                }
+            })
+        })
+
         describe("half half type", async () => {
             it("should create a review", async function () {
                 // Create the proposal 1
@@ -320,33 +341,72 @@ describe("SpendableVotingByStakeNFTHolder (ERC20)", function () {
                 // check contract balance after
                 expect(await erc20Token.balanceOf(spendableVoting.address)).to.equal(toWei("9800"))
             })
+
+            // test create another review
+            // it("should create a review", async function () {
+            //     // Create the proposal 1
+            //     await expect(spendableVoting.connect(alice).createReview(2, "Test Review 2 for Proposal 2"))
+            //         .to.emit(spendableVoting, "NewReview")
+            //         .withArgs(2, 2)
+
+            //     // get reviewIds
+            //     const reviewIds = await spendableVoting.getReviewIds(2)
+            //     // get review
+            //     if (reviewIds > 0) {
+            //         const review = await spendableVoting.getReview(2, reviewIds - 1) // get last review
+            //         expect(review.description).to.equal("Test Review 2 for Proposal 2")
+            //     }
+            // })
+
+            // it("should vote on a review 2", async function () {
+            //     // Vote
+            //     await spendableVoting.connect(alice).voteReview(2, 1, 1)
+            //     await spendableVoting.connect(bob).voteReview(2, 1, 1)
+            // })
+
+            // it("should end a review and transfer funds", async function () {
+            //     // Advance the time
+            //     await time.increase(time.duration.days(15))
+
+            //     // chack payee balance before
+            //     expect(await erc20Token.balanceOf(payee.address)).to.equal(toWei("150"))
+
+            //     // End the proposal
+            //     await spendableVoting.connect(alice).endReviewVote(2, 1)
+
+            //     // // check payee balance after
+            //     expect(await erc20Token.balanceOf(payee.address)).to.equal(toWei("200"))
+
+            //     // check contract balance after
+            //     expect(await erc20Token.balanceOf(spendableVoting.address)).to.equal(toWei("9800"))
+            // })
         })
 
         describe("Reverts if", async () => {
             // create proposal for testing
             before(async function () {
                 // Create and reject a proposal
-                await expect(spendableVoting.connect(alice).createProposal("Test Proposal 4", payee.address, toWei("100"), erc20Token.address, 1))
+                await expect(spendableVoting.connect(alice).createProposal("Test Proposal 6", payee.address, toWei("100"), erc20Token.address, 1))
                     .to.emit(spendableVoting, "NewProposal")
-                    .withArgs(5, alice.address)
-                await spendableVoting.connect(alice).voteProposal(5, 1)
-                await spendableVoting.connect(bob).voteProposal(5, 2)
-                await spendableVoting.connect(carol).voteProposal(5, 2)
-                await spendableVoting.connect(darren).voteProposal(5, 2)
+                    .withArgs(6, alice.address)
+                await spendableVoting.connect(alice).voteProposal(6, 1)
+                await spendableVoting.connect(bob).voteProposal(6, 2)
+                await spendableVoting.connect(carol).voteProposal(6, 2)
+                await spendableVoting.connect(darren).voteProposal(6, 2)
             })
 
             it("not owner or author", async function () {
-                await expectRevert(spendableVoting.connect(darren).createReview(5, "Failed Review"), "NOT_OWNER_OR_AUTHOR")
+                await expectRevert(spendableVoting.connect(darren).createReview(6, "Failed Review"), "NOT_OWNER_OR_AUTHOR")
             })
 
             it("open for vote", async function () {
-                await expectRevert(spendableVoting.connect(alice).createReview(5, "Failed Review"), "PROPOSAL_VOTE_OPEN")
+                await expectRevert(spendableVoting.connect(alice).createReview(6, "Failed Review"), "PROPOSAL_VOTE_OPEN")
             })
 
             it("rejected proposal", async function () {
                 await time.increase(time.duration.days(15))
-                await spendableVoting.connect(alice).endProposalVote(5)
-                await expectRevert(spendableVoting.connect(alice).createReview(5, "Failed Review"), "REJECTED_PROPOSAL")
+                await spendableVoting.connect(alice).endProposalVote(6)
+                await expectRevert(spendableVoting.connect(alice).createReview(6, "Failed Review"), "REJECTED_PROPOSAL")
             })
         })
     })
