@@ -13,7 +13,7 @@ const timeTraveler = require("ganache-time-traveler")
 
 async function deployContracts(paymentTokenAddress = undefined) {
   const [owner, voter, payee] = await ethers.getSigners();
-  console.log()
+  console.log(owner, voter, payee) // just to see current coverage
 
   // Deploy the necessary token contracts
   const ERC20Token = await ethers.getContractFactory("ERC20Mock");
