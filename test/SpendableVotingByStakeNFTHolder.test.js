@@ -288,6 +288,14 @@ describe("SpendableVotingByStakeNFTHolder (ERC20)", function () {
                 await expect(spendableVoting.connect(alice).createReview(2, "Test Review for Proposal 2"))
                     .to.emit(spendableVoting, "NewReview")
                     .withArgs(2, 1)
+
+                // get reviewIds
+                const reviewIds = await spendableVoting.getReviewIds(2)
+                // get review
+                if (reviewIds > 0) {
+                    const review = await spendableVoting.getReview(2, reviewIds - 1) // get last review
+                    expect(review.description).to.equal("Test Review for Proposal 2")
+                }
             })
 
             it("should vote on a review", async function () {
