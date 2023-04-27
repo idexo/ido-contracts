@@ -57,10 +57,15 @@ describe("SpendableVotingByStakeNFTHolder (ERC20)", function () {
             await expect(nft.connect(voter).deposit(toWei("100"), "week", true)).to.emit(nft, "Deposited")
         }
 
-        // Deposit funds into the SpendableVoting contract
+        // mint tokens for the owner
         await erc20Token.mint(owner.address, toWei("100000"))
         await erc20Token.connect(owner).approve(spendableVoting.address, toWei("100000"))
-        await spendableVoting.connect(owner).depositFunds(erc20Token.address, toWei("10000"))
+
+        // Deposit funds into the SpendableVoting contract
+        await expect(spendableVoting.connect(owner).depositFunds(erc20Token.address, toWei("10000")))
+            .to.emit(spendableVoting, "FundDeposited")
+            .withArgs(owner.address, erc20Token.address, toWei("10000"))
+
         // check contract balance
         expect(await erc20Token.balanceOf(spendableVoting.address)).to.equal(toWei("10000"))
     })
@@ -342,6 +347,19 @@ describe("SpendableVotingByStakeNFTHolder (ERC20)", function () {
     // })
 
     // Add more tests...
+
+    describe("sweep funds", async () => {
+        it("should sweep funds", async () => {
+            // get contract balance
+            const contractBalance = await erc20Token.balanceOf(spendableVoting.address)
+
+            // sweep funds
+            await spendableVoting.connect(owner).sweep(erc20Token.address, owner.address, contractBalance.toString())
+
+            // check if contract balance is 0
+            expect(await erc20Token.balanceOf(spendableVoting.address)).to.equal(0)
+        })
+    })
 })
 
 // describe("SpendableVotingByStakeNFTHolder (ETH)", function () {
