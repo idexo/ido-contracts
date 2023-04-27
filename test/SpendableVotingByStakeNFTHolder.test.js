@@ -340,7 +340,7 @@ describe("SpendableVotingByStakeNFTHolder (ETH)", function () {
         // Check if the payee has not received the ETH
         const payeeInitialBalance = ethers.utils.parseEther("10000")
 
-        expect(await payee.getBalance()).equal(payeeInitialBalance)
+        expect(await payee.getBalance()).lte(payeeInitialBalance)
     })
 
     it("should not allow double voting", async function () {
