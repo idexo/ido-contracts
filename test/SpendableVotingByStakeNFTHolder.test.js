@@ -501,14 +501,16 @@ describe("Run Tests", async () => {
 
                     // chack payee eth balance before
                     // console.log("payee eth balance before", await ethers.provider.getBalance(payee.address))
-                    expect((await ethers.provider.getBalance(payee.address)).toString()).to.equal(toWei("10000"))
+                    // expect((await ethers.provider.getBalance(payee.address)).toString()).to.equal(toWei("10000"))
+
+                    const balanceBefore = await ethers.provider.getBalance(payee.address)
 
                     // End the proposal
                     await spendableVoting.connect(alice).endProposalVote(1)
 
                     // // check payee eth balance after
                     // console.log("payee eth balance after", await ethers.provider.getBalance(payee.address))
-                    expect(await ethers.provider.getBalance(payee.address)).to.equal(toWei("10100"))
+                    expect((await ethers.provider.getBalance(payee.address)).sub(balanceBefore)).to.equal(toWei("100"))
 
                     // check contract eth balance after
                     expect(await ethers.provider.getBalance(spendableVoting.address)).to.equal(toWei("0"))
