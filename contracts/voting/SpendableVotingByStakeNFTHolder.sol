@@ -80,11 +80,7 @@ contract SpendableVotingByStakeNFTHolder is ReentrancyGuard, Operatorable {
     event NewProposal(uint8 proposalId, address indexed author);
     event NewReview(uint8 proposalId, uint8 reviewId);
 
-    constructor(
-        uint8 proposalDurationInDays_,
-        uint8 reviewDurationInDays_,
-        address[] memory nftToHold_
-    ) {
+    constructor(uint8 proposalDurationInDays_, uint8 reviewDurationInDays_, address[] memory nftToHold_) {
         require(proposalDurationInDays_ >= 14, "PROPOSAL_MIN_14_DAYS");
         require(reviewDurationInDays_ >= 7, "REVIEW_MIN_7_DAYS");
         rVoteDays = reviewDurationInDays_;
@@ -105,7 +101,6 @@ contract SpendableVotingByStakeNFTHolder is ReentrancyGuard, Operatorable {
         }
     }
 
-
     /*************************|
     |        Proposal         |
     |________________________*/
@@ -119,13 +114,7 @@ contract SpendableVotingByStakeNFTHolder is ReentrancyGuard, Operatorable {
      * @param paymentToken_ token for payment.
      * @param fundType_ uint8 fund type
      */
-    function createProposal(
-        string memory description_,
-        address payeeWallet_,
-        uint256 amount_,
-        address paymentToken_,
-        uint8 fundType_
-    ) external {
+    function createProposal(string memory description_, address payeeWallet_, uint256 amount_, address paymentToken_, uint8 fundType_) external {
         require(_isContract(paymentToken_) || paymentToken_ == ETHEREUM_TOKEN_ADDRESS, "NOT_CONTRACT");
         require(_isHolder(msg.sender), "NOT_NFT_HOLDER");
         require(paymentToken_ == ETHEREUM_TOKEN_ADDRESS || _isContract(paymentToken_), "INVALID_PAYMENT_TOKEN");
@@ -195,7 +184,7 @@ contract SpendableVotingByStakeNFTHolder is ReentrancyGuard, Operatorable {
      *
      * @param proposalId_ proposal id.
      */
-   function endProposalVote(uint8 proposalId_) public nonReentrant {
+    function endProposalVote(uint8 proposalId_) public nonReentrant {
         Proposal storage eProposal = _proposals[proposalId_];
         require(!eProposal.ended, "ALREADY_ENDED");
         require(block.timestamp > eProposal.endTime, "OPEN_FOR_VOTE");
@@ -227,13 +216,12 @@ contract SpendableVotingByStakeNFTHolder is ReentrancyGuard, Operatorable {
     // Helper function to transfer funds based on the payment token
     function _transferFunds(address paymentToken, address recipient, uint256 amount) private {
         if (paymentToken == ETHEREUM_TOKEN_ADDRESS) {
-            (bool success, ) = recipient.call{value: amount}("");
+            (bool success, ) = recipient.call{ value: amount }("");
             require(success, "ETH_TRANSFER_FAILED");
         } else {
             IERC20(paymentToken).safeTransfer(recipient, amount);
         }
     }
-
 
     /*************************|
     |          Review         |
@@ -303,7 +291,7 @@ contract SpendableVotingByStakeNFTHolder is ReentrancyGuard, Operatorable {
      * @param proposalId_ proposal id.
      * @param reviewId_ review id.
      */
-   function endReviewVote(uint8 proposalId_, uint8 reviewId_) public validProposal(proposalId_) validReview(proposalId_, reviewId_) nonReentrant {
+    function endReviewVote(uint8 proposalId_, uint8 reviewId_) public validProposal(proposalId_) validReview(proposalId_, reviewId_) nonReentrant {
         Proposal storage eProposal = _proposals[proposalId_];
         Review storage endReview = _reviews[proposalId_][reviewId_];
         require(block.timestamp > endReview.endTime, "REVIEW_OPEN_FOR_VOTE");
@@ -336,7 +324,6 @@ contract SpendableVotingByStakeNFTHolder is ReentrancyGuard, Operatorable {
         endReview.ended = true;
     }
 
-
     /**
      * @dev get number of reviews for a proposal
      *
@@ -352,13 +339,10 @@ contract SpendableVotingByStakeNFTHolder is ReentrancyGuard, Operatorable {
      * @param proposalId_ proposal id.
      * @param reviewId_ review id.
      */
-    function getReview(uint8 proposalId_, uint8 reviewId_)
-        public
-        view
-        validProposal(proposalId_)
-        validReview(proposalId_, reviewId_)
-        returns (Review memory)
-    {
+    function getReview(
+        uint8 proposalId_,
+        uint8 reviewId_
+    ) public view validProposal(proposalId_) validReview(proposalId_, reviewId_) returns (Review memory) {
         return _reviews[proposalId_][reviewId_];
     }
 
@@ -452,8 +436,6 @@ contract SpendableVotingByStakeNFTHolder is ReentrancyGuard, Operatorable {
         require(msg.value > 0, "ZERO_AMOUNT");
     }
 
-
-
     /*************************|
     |     Sweept Funds        |
     |________________________*/
@@ -462,15 +444,17 @@ contract SpendableVotingByStakeNFTHolder is ReentrancyGuard, Operatorable {
      * @dev Sweep funds
      * Accessible by operators
      */
-    function sweep(
-        address token_,
-        address to,
-        uint256 amount
-    ) public onlyOperator {
-        IERC20 token = IERC20(token_);
-        // balance check is being done in ERC20
-        token.safeTransfer(to, amount);
-        emit Swept(msg.sender, token_, to, amount);
+    function sweep(address token_, address to, uint256 amount) public onlyOperator {
+        if (token_ == ETHEREUM_TOKEN_ADDRESS) {
+            (bool success, ) = to.call{ value: amount }("");
+            require(success, "ETH_TRANSFER_FAILED");
+            emit Swept(msg.sender, token_, to, amount);
+        } else {
+            IERC20 token = IERC20(token_);
+            // balance check is being done in ERC20
+            token.safeTransfer(to, amount);
+            emit Swept(msg.sender, token_, to, amount);
+        }
     }
 
     /*************************|
@@ -482,19 +466,12 @@ contract SpendableVotingByStakeNFTHolder is ReentrancyGuard, Operatorable {
      * @param account address who deposits to the pool.
      * @param amount deposit amount.
      */
-   function _depositFunds(
-        address account,
-        address tokenAddress,
-        uint256 amount
-    ) internal virtual {
+    function _depositFunds(address account, address tokenAddress, uint256 amount) internal virtual {
         require(amount > 0, "ZERO_AMOUNT");
 
-    
         require(IERC20(tokenAddress).balanceOf(msg.sender) >= amount, "INSUFFICIENT_BALANCE");
         require(IERC20(tokenAddress).allowance(msg.sender, address(this)) >= amount, "INSUFFICIENT_ALLOWANCE");
         IERC20(tokenAddress).safeTransferFrom(account, address(this), amount);
-        
-
 
         emit FundDeposited(account, tokenAddress, amount);
     }
@@ -504,8 +481,8 @@ contract SpendableVotingByStakeNFTHolder is ReentrancyGuard, Operatorable {
      *
      * @param voter address.
      */
-   function _voteWeight(address voter) public returns (uint256) {
-    require(voter != address(0), "Voting#getWeight: ACCOUNT_INVALID");
+    function _voteWeight(address voter) public returns (uint256) {
+        require(voter != address(0), "Voting#getWeight: ACCOUNT_INVALID");
         uint256 w = 0; // total weight
 
         for (uint256 i = 0; i < _nftToHold.length; i++) {
@@ -513,14 +490,12 @@ contract SpendableVotingByStakeNFTHolder is ReentrancyGuard, Operatorable {
             uint256[] memory sTokenIds = sPool.getStakeTokenIds(voter);
             for (uint256 j = 0; j < sTokenIds.length; j++) {
                 (uint256 amount, , uint256 depositedAt) = sPool.getStakeInfo(sTokenIds[j]);
-                
-                    w = w.add(amount);
+
+                w = w.add(amount);
             }
         }
         return w;
-}
-
-
+    }
 
     /**
      * @dev check is holder
