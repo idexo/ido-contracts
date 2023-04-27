@@ -162,69 +162,123 @@ describe("SpendableVotingByStakeNFTHolder (ERC20)", function () {
             })
         })
 
+        describe("rejected proposal", async () => {
+            it("should create a proposal", async function () {
+                // Create the proposal 1
+                await expect(spendableVoting.connect(alice).createProposal("Test Proposal 3", payee.address, toWei("200"), erc20Token.address, 1))
+                    .to.emit(spendableVoting, "NewProposal")
+                    .withArgs(3, alice.address)
+            })
+
+            it("should vote on a proposal", async function () {
+                // Vote
+                await spendableVoting.connect(alice).voteProposal(3, 1)
+                await spendableVoting.connect(bob).voteProposal(3, 2)
+                await spendableVoting.connect(carol).voteProposal(3, 2)
+                await spendableVoting.connect(darren).voteProposal(3, 2)
+            })
+
+            it("should end a proposal and don't transfer funds", async function () {
+                // Advance the time
+                await time.increase(time.duration.days(15))
+
+                // chack payee balance before
+                expect(await erc20Token.balanceOf(payee.address)).to.equal(toWei("150"))
+
+                // End the proposal
+                await spendableVoting.connect(alice).endProposalVote(3)
+
+                // // check payee balance after
+                expect(await erc20Token.balanceOf(payee.address)).to.equal(toWei("150"))
+
+                // check contract balance after
+                expect(await erc20Token.balanceOf(spendableVoting.address)).to.equal(toWei("9850"))
+            })
+        })
+
         // TODO: dup requirement lines 129/131 in SpendableVotingByStakeNFTHolder.sol
 
-        // describe("Reverts if", async () => {
-        //     // create proposal for testing
-        //     before(async function () {
-        //         // Create the proposal 2
-        //         await expect(spendableVoting.connect(alice).createProposal("Test Proposal 2", payee.address, toWei("100"), erc20Token.address, 1))
-        //             .to.emit(spendableVoting, "NewProposal")
-        //             .withArgs(2, alice.address)
-        //         await spendableVoting.connect(alice).voteProposal(2, 1)
-        //     })
+        describe("Reverts if", async () => {
+            // create proposal for testing
+            before(async function () {
+                // Create the proposal 2
+                await expect(spendableVoting.connect(alice).createProposal("Test Proposal 3", payee.address, toWei("100"), erc20Token.address, 1))
+                    .to.emit(spendableVoting, "NewProposal")
+                    .withArgs(4, alice.address)
+                await spendableVoting.connect(alice).voteProposal(4, 1)
+            })
 
-        //     it("proposal already ended", async function () {
-        //         await expectRevert(spendableVoting.connect(alice).endProposalVote(1), "ALREADY_ENDED")
-        //     })
+            it("proposal already ended", async function () {
+                await expectRevert(spendableVoting.connect(alice).endProposalVote(1), "ALREADY_ENDED")
+            })
 
-        //     it("proposal not ended", async function () {
-        //         await expectRevert(spendableVoting.connect(alice).endProposalVote(2), "OPEN_FOR_VOTE")
-        //     })
+            it("proposal not ended", async function () {
+                await expectRevert(spendableVoting.connect(alice).endProposalVote(4), "OPEN_FOR_VOTE")
+            })
 
-        //     it("invalid proposal", async function () {
-        //         await expectRevert(spendableVoting.connect(alice).voteProposal(3, 1), "INVALID_PROPOSAL")
-        //     })
-        //     it("invalid option", async function () {
-        //         await expectRevert(spendableVoting.connect(bob).voteProposal(2, 3), "INVALID_OPTION")
-        //     })
-        //     it("already voted", async function () {
-        //         await expectRevert(spendableVoting.connect(alice).voteProposal(2, 1), "ALREADY_VOTED")
-        //     })
-        //     it("voter not NFT holder", async function () {
-        //         await expectRevert(spendableVoting.connect(owner).voteProposal(2, 1), "NOT_NFT_HOLDER")
-        //     })
-        //     it("proposer not NFT holder", async function () {
-        //         await expectRevert(
-        //             spendableVoting.connect(owner).createProposal("Test Proposal Failed", payee.address, toWei("100"), erc20Token.address, 1),
-        //             "NOT_NFT_HOLDER"
-        //         )
-        //     })
-        //     it("invalid Fund Type", async function () {
-        //         await expectRevert(
-        //             spendableVoting.connect(alice).createProposal("Test Proposal Failed", payee.address, toWei("100"), erc20Token.address, 4),
-        //             "INVALID_FUND_TYPE"
-        //         )
-        //     })
-        //     it("invalid amount", async function () {
-        //         await expectRevert(
-        //             spendableVoting.connect(alice).createProposal("Test Proposal Failed", payee.address, toWei("0"), erc20Token.address, 1),
-        //             "AMOUNT_MUST_BE_GREATER_THAN_ZERO"
-        //         )
-        //     })
-        //     it("insufficient funds on contract", async function () {
-        //         await expectRevert(
-        //             spendableVoting.connect(alice).createProposal("Test Proposal Failed", payee.address, toWei("15000"), erc20Token.address, 1),
-        //             "INSUFFICIENT_FUNDS"
-        //         )
-        //     })
-        //     it("paymentToken not contract", async function () {
-        //         await expectRevert(
-        //             spendableVoting.connect(alice).createProposal("Test Proposal Failed", payee.address, toWei("0"), bob.address, 1),
-        //             "NOT_CONTRACT"
-        //         )
-        //     })
-        // })
+            it("invalid proposal", async function () {
+                await expectRevert(spendableVoting.connect(alice).voteProposal(5, 1), "INVALID_PROPOSAL")
+            })
+            it("invalid option", async function () {
+                await expectRevert(spendableVoting.connect(bob).voteProposal(4, 4), "INVALID_OPTION")
+            })
+            it("already voted", async function () {
+                await expectRevert(spendableVoting.connect(alice).voteProposal(4, 1), "ALREADY_VOTED")
+            })
+            it("voter not NFT holder", async function () {
+                await expectRevert(spendableVoting.connect(owner).voteProposal(4, 1), "NOT_NFT_HOLDER")
+            })
+            it("proposer not NFT holder", async function () {
+                await expectRevert(
+                    spendableVoting.connect(owner).createProposal("Test Proposal Failed", payee.address, toWei("100"), erc20Token.address, 1),
+                    "NOT_NFT_HOLDER"
+                )
+            })
+            it("invalid Fund Type", async function () {
+                await expectRevert(
+                    spendableVoting.connect(alice).createProposal("Test Proposal Failed", payee.address, toWei("100"), erc20Token.address, 4),
+                    "INVALID_FUND_TYPE"
+                )
+            })
+            it("invalid amount", async function () {
+                await expectRevert(
+                    spendableVoting.connect(alice).createProposal("Test Proposal Failed", payee.address, toWei("0"), erc20Token.address, 1),
+                    "AMOUNT_MUST_BE_GREATER_THAN_ZERO"
+                )
+            })
+            it("insufficient funds on contract", async function () {
+                await expectRevert(
+                    spendableVoting.connect(alice).createProposal("Test Proposal Failed", payee.address, toWei("15000"), erc20Token.address, 1),
+                    "INSUFFICIENT_FUNDS"
+                )
+            })
+            it("paymentToken not contract", async function () {
+                await expectRevert(
+                    spendableVoting.connect(alice).createProposal("Test Proposal Failed", payee.address, toWei("0"), bob.address, 1),
+                    "NOT_CONTRACT"
+                )
+            })
+        })
+    })
+
+    describe("Comments", async () => {
+        it("should comment a proposal", async () => {
+            await expect(spendableVoting.connect(alice).createComment(1, "Test Comment"))
+                .to.emit(spendableVoting, "NewComment")
+                .withArgs(alice.address, 1, 1, "Test Comment")
+        })
+
+        it("get comments", async () => {
+            const comments = await spendableVoting.getComments(1)
+            expect(comments.length).to.equal(1)
+            expect(comments[0].commentURI).to.equal("Test Comment")
+        })
+
+        describe("Reverts if", async () => {
+            it("not proposal voter", async () => {
+                await expectRevert(spendableVoting.connect(bob).createComment(1, "Test Comment"), "NOT_PROPOSAL_VOTER")
+            })
+        })
     })
 
     describe("Reviews", async () => {
@@ -260,111 +314,34 @@ describe("SpendableVotingByStakeNFTHolder (ERC20)", function () {
             })
         })
 
-        // describe("Reverts if", async () => {
-        //     // create proposal for testing
-        //     before(async function () {
-        //         // Create the proposal 2
-        //         await expect(spendableVoting.connect(alice).createProposal("Test Proposal 2", payee.address, toWei("100"), erc20Token.address, 1))
-        //             .to.emit(spendableVoting, "NewProposal")
-        //             .withArgs(2, alice.address)
-        //         await spendableVoting.connect(alice).voteProposal(2, 1)
-        //     })
+        describe("Reverts if", async () => {
+            // create proposal for testing
+            before(async function () {
+                // Create and reject a proposal
+                await expect(spendableVoting.connect(alice).createProposal("Test Proposal 4", payee.address, toWei("100"), erc20Token.address, 1))
+                    .to.emit(spendableVoting, "NewProposal")
+                    .withArgs(5, alice.address)
+                await spendableVoting.connect(alice).voteProposal(5, 1)
+                await spendableVoting.connect(bob).voteProposal(5, 2)
+                await spendableVoting.connect(carol).voteProposal(5, 2)
+                await spendableVoting.connect(darren).voteProposal(5, 2)
+            })
 
-        //     it("proposal already ended", async function () {
-        //         await expectRevert(spendableVoting.connect(alice).endProposalVote(1), "ALREADY_ENDED")
-        //     })
+            it("not owner or author", async function () {
+                await expectRevert(spendableVoting.connect(darren).createReview(5, "Failed Review"), "NOT_OWNER_OR_AUTHOR")
+            })
 
-        //     it("proposal not ended", async function () {
-        //         await expectRevert(spendableVoting.connect(alice).endProposalVote(2), "OPEN_FOR_VOTE")
-        //     })
+            it("open for vote", async function () {
+                await expectRevert(spendableVoting.connect(alice).createReview(5, "Failed Review"), "PROPOSAL_VOTE_OPEN")
+            })
 
-        //     it("invalid proposal", async function () {
-        //         await expectRevert(spendableVoting.connect(alice).voteProposal(3, 1), "INVALID_PROPOSAL")
-        //     })
-        //     it("invalid option", async function () {
-        //         await expectRevert(spendableVoting.connect(bob).voteProposal(2, 3), "INVALID_OPTION")
-        //     })
-        //     it("already voted", async function () {
-        //         await expectRevert(spendableVoting.connect(alice).voteProposal(2, 1), "ALREADY_VOTED")
-        //     })
-        //     it("voter not NFT holder", async function () {
-        //         await expectRevert(spendableVoting.connect(owner).voteProposal(2, 1), "NOT_NFT_HOLDER")
-        //     })
-        //     it("proposer not NFT holder", async function () {
-        //         await expectRevert(
-        //             spendableVoting.connect(owner).createProposal("Test Proposal Failed", payee.address, toWei("100"), erc20Token.address, 1),
-        //             "NOT_NFT_HOLDER"
-        //         )
-        //     })
-        //     it("invalid Fund Type", async function () {
-        //         await expectRevert(
-        //             spendableVoting.connect(alice).createProposal("Test Proposal Failed", payee.address, toWei("100"), erc20Token.address, 4),
-        //             "INVALID_FUND_TYPE"
-        //         )
-        //     })
-        //     it("invalid amount", async function () {
-        //         await expectRevert(
-        //             spendableVoting.connect(alice).createProposal("Test Proposal Failed", payee.address, toWei("0"), erc20Token.address, 1),
-        //             "AMOUNT_MUST_BE_GREATER_THAN_ZERO"
-        //         )
-        //     })
-        //     it("insufficient funds on contract", async function () {
-        //         await expectRevert(
-        //             spendableVoting.connect(alice).createProposal("Test Proposal Failed", payee.address, toWei("15000"), erc20Token.address, 1),
-        //             "INSUFFICIENT_FUNDS"
-        //         )
-        //     })
-        //     it("paymentToken not contract", async function () {
-        //         await expectRevert(
-        //             spendableVoting.connect(alice).createProposal("Test Proposal Failed", payee.address, toWei("0"), bob.address, 1),
-        //             "NOT_CONTRACT"
-        //         )
-        //     })
-        // })
+            it("rejected proposal", async function () {
+                await time.increase(time.duration.days(15))
+                await spendableVoting.connect(alice).endProposalVote(5)
+                await expectRevert(spendableVoting.connect(alice).createReview(5, "Failed Review"), "REJECTED_PROPOSAL")
+            })
+        })
     })
-
-    // it("should end a review and transfer remaining funds", async function () {
-    //     const { voter, payee, erc20Token, nft, spendableVoting } = await deployContracts()
-
-    //     // Setup
-    //     await erc20Token.mint(voter.address, 1000)
-    //     await erc20Token.connect(voter).approve(nft.address, 2000)
-    //     await nft.connect(voter).deposit(100, "week", true)
-    //     await erc20Token.mint(spendableVoting.address, 1000)
-    //     const description = "Test Proposal"
-    //     const amount = 100
-    //     const fundType = 2 // half_half
-    //     await spendableVoting.connect(voter).createProposal(description, payee.address, amount, erc20Token.address, fundType)
-    //     await spendableVoting.connect(voter).voteProposal(1, 1) // Vote 'yes'
-    //     console.log(await spendableVoting.proposalIds())
-
-    //     // Advance the time
-    //     await time.increase(time.duration.days(15))
-
-    //     // End the proposal
-    //     await spendableVoting.connect(voter).endProposalVote(1)
-
-    //     //Create the review
-    //     await spendableVoting.connect(voter).createReview(1, "reviewing proposal")
-
-    //     const reviewIds = await spendableVoting.getReviewIds(1)
-
-    //     console.log("REVIEW ", await spendableVoting.getReview(1, 0))
-
-    //     // Vote on the review
-    //     await spendableVoting.connect(voter).voteReview(1, 0, 1) // Vote 'yes'
-
-    //     // Advance the time
-    //     await time.increase(time.duration.days(15))
-
-    //     // End the review
-    //     await spendableVoting.connect(voter).endReviewVote(1, 0)
-
-    //     // Check if the payee has received the remaining funds
-    //     expect(await erc20Token.balanceOf(payee.address)).to.equal(amount)
-    // })
-
-    // Add more tests...
 
     describe("sweep funds", async () => {
         it("should sweep funds", async () => {
