@@ -500,14 +500,14 @@ describe("Run Tests", async () => {
                     await time.increase(time.duration.days(15))
 
                     // chack payee eth balance before
-                    console.log("payee eth balance before", await ethers.provider.getBalance(payee.address))
+                    // console.log("payee eth balance before", await ethers.provider.getBalance(payee.address))
                     expect((await ethers.provider.getBalance(payee.address)).toString()).to.equal(toWei("10000"))
 
                     // End the proposal
                     await spendableVoting.connect(alice).endProposalVote(1)
 
                     // // check payee eth balance after
-                    console.log("payee eth balance after", await ethers.provider.getBalance(payee.address))
+                    // console.log("payee eth balance after", await ethers.provider.getBalance(payee.address))
                     expect(await ethers.provider.getBalance(payee.address)).to.equal(toWei("10100"))
 
                     // check contract eth balance after
