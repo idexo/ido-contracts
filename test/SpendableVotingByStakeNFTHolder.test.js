@@ -215,10 +215,10 @@ describe("Run Tests", async () => {
 
                 it("should vote on a proposal", async function () {
                     // Vote
-                    await spendableVoting.connect(alice).voteProposal(3, 1)
-                    await spendableVoting.connect(bob).voteProposal(3, 2)
-                    await spendableVoting.connect(carol).voteProposal(3, 2)
-                    await spendableVoting.connect(darren).voteProposal(3, 2)
+                    await spendableVoting.connect(alice).voteProposal(4, 1)
+                    await spendableVoting.connect(bob).voteProposal(4, 2)
+                    await spendableVoting.connect(carol).voteProposal(4, 2)
+                    await spendableVoting.connect(darren).voteProposal(4, 2)
                 })
 
                 it("should end a proposal and don't transfer funds", async function () {
