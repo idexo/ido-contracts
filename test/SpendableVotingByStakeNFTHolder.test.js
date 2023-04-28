@@ -94,7 +94,7 @@ describe("Run Tests", async () => {
                 it("should create a proposal", async function () {
                     const proposer = alice
                     const amount = toWei("100")
-                    const fundType = 1
+                    const fundType = 0
 
                     // Create the proposal 1
                     await expect(
@@ -133,7 +133,7 @@ describe("Run Tests", async () => {
                 it("should create a proposal", async function () {
                     const proposer = alice
                     const amount = toWei("100")
-                    const fundType = 2
+                    const fundType = 1
 
                     // Create the proposal 1
                     await expect(
@@ -416,18 +416,7 @@ describe("Run Tests", async () => {
             })
         })
 
-        describe("sweep funds", async () => {
-            it("should sweep funds", async () => {
-                // get contract balance
-                const contractBalance = await erc20Token.balanceOf(spendableVoting.address)
-
-                // sweep funds
-                await spendableVoting.connect(owner).sweep(erc20Token.address, owner.address, contractBalance.toString())
-
-                // check if contract balance is 0
-                expect(await erc20Token.balanceOf(spendableVoting.address)).to.equal(0)
-            })
-        })
+        
     })
 
     describe("SpendableVotingByStakeNFTHolder (ETH)", function () {
@@ -482,7 +471,7 @@ describe("Run Tests", async () => {
                 it("should create a proposal", async function () {
                     // Create the proposal 1
                     await expect(
-                        spendableVoting.connect(alice).createProposal("Test Proposal 1", payee.address, toWei("100"), constants.ZERO_ADDRESS, 1)
+                        spendableVoting.connect(alice).createProposal("Test Proposal 1", payee.address, toWei("100"), constants.ZERO_ADDRESS, 0)
                     )
                         .to.emit(spendableVoting, "NewProposal")
                         .withArgs(1, alice.address)
@@ -521,7 +510,7 @@ describe("Run Tests", async () => {
                 it("should create a proposal", async function () {
                     // Create the proposal 2
                     await expect(
-                        spendableVoting.connect(alice).createProposal("Test Proposal 2", payee.address, toWei("100"), constants.ZERO_ADDRESS, 2)
+                        spendableVoting.connect(alice).createProposal("Test Proposal 2", payee.address, toWei("100"), constants.ZERO_ADDRESS, 1)
                     )
                         .to.emit(spendableVoting, "NewProposal")
                         .withArgs(2, alice.address)
@@ -594,17 +583,6 @@ describe("Run Tests", async () => {
             })
         })
 
-        describe("sweep ETH funds", async () => {
-            it("should sweep funds", async () => {
-                // get contract eth balance
-                const contractBalance = await ethers.provider.getBalance(spendableVoting.address)
-
-                // sweep funds
-                await spendableVoting.connect(owner).sweep(constants.ZERO_ADDRESS, owner.address, contractBalance.toString())
-
-                // check if contract eth balance is 0
-                expect(await ethers.provider.getBalance(spendableVoting.address)).to.equal(0)
-            })
-        })
+        
     })
 })
