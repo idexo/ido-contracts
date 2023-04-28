@@ -384,6 +384,46 @@ describe("Run Tests", async () => {
                     // check contract balance after
                     expect(await erc20Token.balanceOf(spendableVoting.address)).to.equal(toWei("9800"))
                 })
+                })
+
+                describe("postfund type", async () => {
+                it("should create a review", async function () {
+                    // Create the proposal 1
+                    await expect(spendableVoting.connect(alice).createReview(3, "Test Review for Proposal 3"))
+                        .to.emit(spendableVoting, "NewReview")
+                        .withArgs(3, 1)
+
+                    // get reviewIds
+                    const reviewIds = await spendableVoting.getReviewIds(3)
+                    // get review
+                    if (reviewIds > 0) {
+                        const review = await spendableVoting.getReview(3, reviewIds - 1) // get last review
+                        expect(review.description).to.equal("Test Review for Proposal 3")
+                    }
+                })
+
+                it("should vote on a review", async function () {
+                    // Vote
+                    await spendableVoting.connect(alice).voteReview(3, 0, 1)
+                    await spendableVoting.connect(bob).voteReview(3, 0, 1)
+                })
+
+                it("should end a review and transfer funds", async function () {
+                    // Advance the time
+                    await time.increase(time.duration.days(15))
+
+                    // chack payee balance before
+                    expect(await erc20Token.balanceOf(payee.address)).to.equal(toWei("200"))
+
+                    // End the proposal
+                    await spendableVoting.connect(alice).endReviewVote(3, 0)
+
+                    // // check payee balance after
+                    expect(await erc20Token.balanceOf(payee.address)).to.equal(toWei("300"))
+
+                    // check contract balance after
+                    expect(await erc20Token.balanceOf(spendableVoting.address)).to.equal(toWei("9700"))
+                })
 
                 // test create another review
                 // it("should create a review", async function () {
