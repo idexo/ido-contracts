@@ -167,20 +167,24 @@ describe("Run Tests", async () => {
                 })
             })
 
-            describe("rejected proposal", async () => {
+             describe("postfund type", async () => {
                 it("should create a proposal", async function () {
-                    // Create the proposal 1
-                    await expect(spendableVoting.connect(alice).createProposal("Test Proposal 3", payee.address, toWei("200"), erc20Token.address, 1))
+                    const proposer = alice
+                    const amount = toWei("100")
+                    const fundType = 2
+
+                    // Create the proposal 2
+                    await expect(
+                        spendableVoting.connect(proposer).createProposal("Test Proposal 3", payee.address, amount, erc20Token.address, fundType)
+                    )
                         .to.emit(spendableVoting, "NewProposal")
-                        .withArgs(3, alice.address)
+                        .withArgs(3, proposer.address)
                 })
 
                 it("should vote on a proposal", async function () {
                     // Vote
                     await spendableVoting.connect(alice).voteProposal(3, 1)
-                    await spendableVoting.connect(bob).voteProposal(3, 2)
-                    await spendableVoting.connect(carol).voteProposal(3, 2)
-                    await spendableVoting.connect(darren).voteProposal(3, 2)
+                    await spendableVoting.connect(bob).voteProposal(3, 1)
                 })
 
                 it("should end a proposal and don't transfer funds", async function () {
@@ -201,6 +205,40 @@ describe("Run Tests", async () => {
                 })
             })
 
+            describe("rejected proposal", async () => {
+                it("should create a proposal", async function () {
+                    // Create the proposal 1
+                    await expect(spendableVoting.connect(alice).createProposal("Test Proposal 4", payee.address, toWei("200"), erc20Token.address, 1))
+                        .to.emit(spendableVoting, "NewProposal")
+                        .withArgs(4, alice.address)
+                })
+
+                it("should vote on a proposal", async function () {
+                    // Vote
+                    await spendableVoting.connect(alice).voteProposal(3, 1)
+                    await spendableVoting.connect(bob).voteProposal(3, 2)
+                    await spendableVoting.connect(carol).voteProposal(3, 2)
+                    await spendableVoting.connect(darren).voteProposal(3, 2)
+                })
+
+                it("should end a proposal and don't transfer funds", async function () {
+                    // Advance the time
+                    await time.increase(time.duration.days(15))
+
+                    // chack payee balance before
+                    expect(await erc20Token.balanceOf(payee.address)).to.equal(toWei("150"))
+
+                    // End the proposal
+                    await spendableVoting.connect(alice).endProposalVote(4)
+
+                    // // check payee balance after
+                    expect(await erc20Token.balanceOf(payee.address)).to.equal(toWei("150"))
+
+                    // check contract balance after
+                    expect(await erc20Token.balanceOf(spendableVoting.address)).to.equal(toWei("9850"))
+                })
+            })
+
             // TODO: dup requirement lines 129/131 in SpendableVotingByStakeNFTHolder.sol
 
             describe("Reverts if", async () => {
@@ -209,8 +247,8 @@ describe("Run Tests", async () => {
                     // Create the proposal 2
                     await expect(spendableVoting.connect(alice).createProposal("Test Proposal 3", payee.address, toWei("100"), erc20Token.address, 1))
                         .to.emit(spendableVoting, "NewProposal")
-                        .withArgs(4, alice.address)
-                    await spendableVoting.connect(alice).voteProposal(4, 1)
+                        .withArgs(5, alice.address)
+                    await spendableVoting.connect(alice).voteProposal(5, 1)
                 })
 
                 it("proposal already ended", async function () {
@@ -218,20 +256,20 @@ describe("Run Tests", async () => {
                 })
 
                 it("proposal not ended", async function () {
-                    await expectRevert(spendableVoting.connect(alice).endProposalVote(4), "OPEN_FOR_VOTE")
+                    await expectRevert(spendableVoting.connect(alice).endProposalVote(5), "OPEN_FOR_VOTE")
                 })
 
                 it("invalid proposal", async function () {
-                    await expectRevert(spendableVoting.connect(alice).voteProposal(5, 1), "INVALID_PROPOSAL")
+                    await expectRevert(spendableVoting.connect(alice).voteProposal(6, 1), "INVALID_PROPOSAL")
                 })
                 it("invalid option", async function () {
-                    await expectRevert(spendableVoting.connect(bob).voteProposal(4, 4), "INVALID_OPTION")
+                    await expectRevert(spendableVoting.connect(bob).voteProposal(5, 4), "INVALID_OPTION")
                 })
                 it("already voted", async function () {
-                    await expectRevert(spendableVoting.connect(alice).voteProposal(4, 1), "ALREADY_VOTED")
+                    await expectRevert(spendableVoting.connect(alice).voteProposal(5, 1), "ALREADY_VOTED")
                 })
                 it("voter not NFT holder", async function () {
-                    await expectRevert(spendableVoting.connect(owner).voteProposal(4, 1), "NOT_NFT_HOLDER")
+                    await expectRevert(spendableVoting.connect(owner).voteProposal(5, 1), "NOT_NFT_HOLDER")
                 })
                 it("proposer not NFT holder", async function () {
                     await expectRevert(
@@ -290,13 +328,13 @@ describe("Run Tests", async () => {
             describe("prefund type", async () => {
                 it("shoud create a review", async () => {
                     // Create the proposal 1
-                    await expect(spendableVoting.connect(alice).createProposal("Test Proposal 4", payee.address, toWei("100"), erc20Token.address, 1))
+                    await expect(spendableVoting.connect(alice).createProposal("Test Proposal 5", payee.address, toWei("100"), erc20Token.address, 1))
                         .to.emit(spendableVoting, "NewProposal")
-                        .withArgs(5, alice.address)
-                    await spendableVoting.connect(alice).voteProposal(5, 1)
-                    await spendableVoting.connect(bob).voteProposal(5, 2)
-                    await spendableVoting.connect(carol).voteProposal(5, 2)
-                    await spendableVoting.connect(darren).voteProposal(5, 2)
+                        .withArgs(6, alice.address)
+                    await spendableVoting.connect(alice).voteProposal(6, 1)
+                    await spendableVoting.connect(bob).voteProposal(6, 2)
+                    await spendableVoting.connect(carol).voteProposal(6, 2)
+                    await spendableVoting.connect(darren).voteProposal(6, 2)
 
                     // get reviewIds
                     const reviewIds = await spendableVoting.getReviewIds(1)
@@ -391,27 +429,27 @@ describe("Run Tests", async () => {
                 // create proposal for testing
                 before(async function () {
                     // Create and reject a proposal
-                    await expect(spendableVoting.connect(alice).createProposal("Test Proposal 6", payee.address, toWei("100"), erc20Token.address, 1))
+                    await expect(spendableVoting.connect(alice).createProposal("Test Proposal 7", payee.address, toWei("100"), erc20Token.address, 1))
                         .to.emit(spendableVoting, "NewProposal")
-                        .withArgs(6, alice.address)
-                    await spendableVoting.connect(alice).voteProposal(6, 1)
-                    await spendableVoting.connect(bob).voteProposal(6, 2)
-                    await spendableVoting.connect(carol).voteProposal(6, 2)
-                    await spendableVoting.connect(darren).voteProposal(6, 2)
+                        .withArgs(7, alice.address)
+                    await spendableVoting.connect(alice).voteProposal(7, 1)
+                    await spendableVoting.connect(bob).voteProposal(7, 2)
+                    await spendableVoting.connect(carol).voteProposal(7, 2)
+                    await spendableVoting.connect(darren).voteProposal(7, 2)
                 })
 
                 it("not owner or author", async function () {
-                    await expectRevert(spendableVoting.connect(darren).createReview(6, "Failed Review"), "NOT_OWNER_OR_AUTHOR")
+                    await expectRevert(spendableVoting.connect(darren).createReview(7, "Failed Review"), "NOT_OWNER_OR_AUTHOR")
                 })
 
                 it("open for vote", async function () {
-                    await expectRevert(spendableVoting.connect(alice).createReview(6, "Failed Review"), "PROPOSAL_VOTE_OPEN")
+                    await expectRevert(spendableVoting.connect(alice).createReview(7, "Failed Review"), "PROPOSAL_VOTE_OPEN")
                 })
 
                 it("rejected proposal", async function () {
                     await time.increase(time.duration.days(15))
-                    await spendableVoting.connect(alice).endProposalVote(6)
-                    await expectRevert(spendableVoting.connect(alice).createReview(6, "Failed Review"), "REJECTED_PROPOSAL")
+                    await spendableVoting.connect(alice).endProposalVote(7)
+                    await expectRevert(spendableVoting.connect(alice).createReview(7, "Failed Review"), "REJECTED_PROPOSAL")
                 })
             })
         })
