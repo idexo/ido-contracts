@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.4;
 
-import "../soulbound/UncappedLinkedSoulbound.sol";
+import "../soulbound/UncappedLinkedSoulboundFC.sol";
 
 contract UncappedLinkedSoulboundFactory {
 	event UncappedLinkedSoulboundCreated(address indexed creator, address indexed instance);
@@ -10,12 +10,16 @@ contract UncappedLinkedSoulboundFactory {
 	function createUncappedLinkedSoulbound(
 		string memory collectionName,
 		string memory collectionSymbol,
-		string memory collectionBaseURI
+		string memory collectionBaseURI,
+		address admin,
+		address operator
 	) external returns(address) {
 		UncappedLinkedSoulbound newContract = new UncappedLinkedSoulbound(
 			collectionName,
 			collectionSymbol,
-			collectionBaseURI
+			collectionBaseURI,
+			admin,
+			operator
 			);
 		newContract.transferOwnership(msg.sender);
 		emit UncappedLinkedSoulboundCreated(msg.sender, address(newContract));
