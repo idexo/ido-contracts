@@ -14,11 +14,14 @@ contract CappedLinkedSoulbound is ERC721URIStorage, Operatorable, ReentrancyGuar
     //Last stake token id, start from 1
     uint256 public tokenIds;
 
-    //NFT Base URI
+    //SBT Base URI
     string public baseURI;
 
-    //NFT Collection Description
+    //SBT Collection Description
     string public collectionDescription;
+
+    //cap on # of sbts in collection
+    uint256 private _cap;
 
     //LinkedNFT Struct
     struct LinkedNFT {
@@ -39,9 +42,11 @@ contract CappedLinkedSoulbound is ERC721URIStorage, Operatorable, ReentrancyGuar
     constructor(
         string memory collectionName,
         string memory collectionSymbol,
-        string memory collectionBaseURI
+        string memory collectionBaseURI,
+        uint256 cap
     ) ERC721(collectionName, collectionSymbol) {
         baseURI = collectionBaseURI;
+        _cap = cap;
     }
 
     /**
@@ -148,7 +153,8 @@ contract CappedLinkedSoulbound is ERC721URIStorage, Operatorable, ReentrancyGuar
         public
         onlyOperator
     {
-        require(recipients.length == tokenURIs.length, "StandardCappedNFTCollection#mintBatchNFT: PARAMS_LENGTH_MISMATCH");
+        require(recipients.length == tokenURIs.length, "CappedLinkedSoulbound#mintBatchSBT: PARAMS_LENGTH_MISMATCH");
+        require(tokenIds + recipients.length <= _cap, "CappedLinkedSoulbound#mintBatchSBT: CANNOT_EXCEED_MINTING_CAP");
         for (uint256 i = 0; i < recipients.length; i++) {
             mintSBT(recipients[i], tokenURIs[i]);
         }
@@ -214,6 +220,7 @@ contract CappedLinkedSoulbound is ERC721URIStorage, Operatorable, ReentrancyGuar
      * @param account address of recipient.
      */
     function _mint(address account, uint256 tokenId) internal virtual override {
+        require(tokenId <= _cap, "CappedLinkedSoulbound#_mint: CANNOT_EXCEED_MINTING_CAP");
         super._mint(account, tokenId);
         collectionIds[account].push(tokenId);
         emit SBTCreated(tokenId, account);

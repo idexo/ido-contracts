@@ -14,7 +14,7 @@ contract UncappedLinkedSoulboundFactory {
 		address admin,
 		address operator
 	) external returns(address) {
-		UncappedLinkedSoulbound newContract = new UncappedLinkedSoulbound(
+		UncappedLinkedSoulboundFC newContract = new UncappedLinkedSoulboundFC(
 			collectionName,
 			collectionSymbol,
 			collectionBaseURI,
@@ -25,6 +25,9 @@ contract UncappedLinkedSoulboundFactory {
 		emit UncappedLinkedSoulboundCreated(msg.sender, address(newContract));
 		return address(newContract);
 	}
+
+
+
 
 }
 

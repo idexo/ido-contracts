@@ -23,6 +23,8 @@ describe("UncappedLinkedSoulboundFactory", function() {
 				collectionName,
 				collectionSymbol,
 				collectionBaseURI,
+				accounts[0].address,
+				accounts[0].address,
 				{ from: accounts[0].address }
 				)
 

@@ -3,15 +3,25 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../lib/FactoryOperatorable.sol";
 
-contract UncappedLinkedSoulboundFC is ERC721URIStorage, FactoryOperatorable {
+contract CappedLinkedSoulboundFC is ERC721URIStorage, FactoryOperatorable, ReentrancyGuard {
+    using SafeMath for uint256;
+
     //Last stake token id, start from 1
     uint256 public tokenIds;
 
-    //NFT Base URI
+    //SBT Base URI
     string public baseURI;
+
+    //SBT Collection Description
+    string public collectionDescription;
+
+    //cap on # of sbts in collection
+    uint256 private _cap;
 
     //LinkedNFT Struct
     struct LinkedNFT {
@@ -27,15 +37,18 @@ contract UncappedLinkedSoulboundFC is ERC721URIStorage, FactoryOperatorable {
     mapping(uint256 => LinkedNFT[]) public linkedNFTs;
 
     event SBTCreated(uint256 indexed nftId, address indexed account);
+    
 
     constructor(
         string memory collectionName,
         string memory collectionSymbol,
         string memory collectionBaseURI,
+        uint256 cap,
         address admin,
         address operator
     ) ERC721(collectionName, collectionSymbol) FactoryOperatorable(admin, operator) {
         baseURI = collectionBaseURI;
+        _cap = cap;
     }
 
     /**
@@ -93,6 +106,8 @@ contract UncappedLinkedSoulboundFC is ERC721URIStorage, FactoryOperatorable {
         newLinkedNFT.contractAddress = contractAddress;
         newLinkedNFT.tokenId = _tokenId;
         linkedNFTs[tokenId].push(newLinkedNFT);
+
+
     }
 
     /**
@@ -101,6 +116,14 @@ contract UncappedLinkedSoulboundFC is ERC721URIStorage, FactoryOperatorable {
      */
     function getLinkedNFTs(uint256 _tokenId) public view returns (LinkedNFT[] memory) {
         return linkedNFTs[_tokenId];
+    }
+
+    /**********************|
+    |          Description |
+    |_____________________*/
+
+    function addDescription(string memory description) public onlyOperator {
+        collectionDescription = description;
     }
 
     /**********************|
@@ -132,7 +155,8 @@ contract UncappedLinkedSoulboundFC is ERC721URIStorage, FactoryOperatorable {
         public
         onlyOperator
     {
-        require(recipients.length == tokenURIs.length, "StandardCappedNFTCollection#mintBatchNFT: PARAMS_LENGTH_MISMATCH");
+        require(recipients.length == tokenURIs.length, "CappedLinkedSoulbound#mintBatchSBT: PARAMS_LENGTH_MISMATCH");
+        require(tokenIds + recipients.length <= _cap, "CappedLinkedSoulbound#mintBatchSBT: CANNOT_EXCEED_MINTING_CAP");
         for (uint256 i = 0; i < recipients.length; i++) {
             mintSBT(recipients[i], tokenURIs[i]);
         }
@@ -149,7 +173,7 @@ contract UncappedLinkedSoulboundFC is ERC721URIStorage, FactoryOperatorable {
     /**
      * override safeTransferFrom to error if not contract owner
      */
-    function safeTransferFrom(address _from, address _to, uint256 _tokenId) public override {
+    function safeTransferFrom (address _from, address _to, uint256 _tokenId) public override {
         require(msg.sender == owner(), "SoulBoundNFT#_transfer: TRANSFER_LOCKED_ON_SBT");
         _transfer(_from, _to, _tokenId);
     }
@@ -157,7 +181,7 @@ contract UncappedLinkedSoulboundFC is ERC721URIStorage, FactoryOperatorable {
      /**
      * override safeTransferFrom with data to error if not contract owner
      */
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) public override {
+    function safeTransferFrom (address from, address to, uint256 tokenId, bytes memory _data) public override {
         require(msg.sender == owner(), "SoulBoundNFT#_transfer: TRANSFER_LOCKED_ON_SBT");
         _safeTransfer(from, to, tokenId, _data);
     }
@@ -165,7 +189,7 @@ contract UncappedLinkedSoulboundFC is ERC721URIStorage, FactoryOperatorable {
     /**
      * override transferFrom to error if not contract owner
      */
-    function transferFrom(address _from, address _to, uint256 _tokenId) public override {
+    function transferFrom (address _from, address _to, uint256 _tokenId) public override {
         require(msg.sender == owner(), "SoulBoundNFT#_transfer: TRANSFER_LOCKED_ON_SBT");
         _transfer(_from, _to, _tokenId);
     }
@@ -182,12 +206,13 @@ contract UncappedLinkedSoulboundFC is ERC721URIStorage, FactoryOperatorable {
             if (_collectionIds[i] == tokenId) {
                 if (i != _collectionIds.length - 1) {
                     _collectionIds[i] = _collectionIds[_collectionIds.length - 1];
-                        }
+                }
                 _collectionIds.pop();
                 break;
             }
         }
     }
+ 
 
     /**
      * @dev Mint a new NFT in the Collection.
@@ -197,6 +222,7 @@ contract UncappedLinkedSoulboundFC is ERC721URIStorage, FactoryOperatorable {
      * @param account address of recipient.
      */
     function _mint(address account, uint256 tokenId) internal virtual override {
+        require(tokenId <= _cap, "CappedLinkedSoulbound#_mint: CANNOT_EXCEED_MINTING_CAP");
         super._mint(account, tokenId);
         collectionIds[account].push(tokenId);
         emit SBTCreated(tokenId, account);
@@ -221,5 +247,3 @@ contract UncappedLinkedSoulboundFC is ERC721URIStorage, FactoryOperatorable {
         collectionIds[to].push(tokenId);
     }
 }
-       
-
