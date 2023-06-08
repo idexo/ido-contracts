@@ -3,15 +3,18 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/interfaces/IERC2981.sol";
 import "../../lib/Operatorable.sol";
 
-contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, Operatorable {
+contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, IERC2981, Operatorable {
     // Base token URI
     string public baseTokenURI;
     // Last token ID starting from 1
     uint256 public tokenID;
     // Royalties fee receiver address
     address public royaltiesCollector;
+    // Royalties fee in Basis Points
+    uint16 public royaltiesFeeBP;
 
     event Minted(uint256 indexed tokenId);
     event Burned(uint256 indexed tokenId);
@@ -20,11 +23,14 @@ contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, Operatorable {
         string memory _name,
         string memory _symbol,
         string memory _baseTokenURI,
-        address _royaltiesCollector
+        address _royaltiesCollector,
+        uint16 _royaltiesFeeBP
     ) ERC721(_name, _symbol) {
         require(_royaltiesCollector != address(0), "INVALID_ADDRESS");
+        require(_royaltiesFeeBP <= 10000, "INVALID_ROYALTIES_FEE");
         baseTokenURI = _baseTokenURI;
         royaltiesCollector = _royaltiesCollector;
+        royaltiesFeeBP = _royaltiesFeeBP;
     }
 
     /**
@@ -43,6 +49,26 @@ contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, Operatorable {
     function setRoyaltiesCollector(address _royaltiesCollector) external onlyOwner {
         require(_royaltiesCollector != address(0), "INVALID_ADDRESS");
         royaltiesCollector = _royaltiesCollector;
+    }
+
+    /**
+     * @dev Set `royaltiesFeeBP`
+     * Only `owner` can call
+     * `_royaltiesFeeBP` must not be greater than 1000
+     */
+    function setRoyaltiesFeeBP(uint16 _royaltiesFeeBP) external onlyOperator {
+        require(_royaltiesFeeBP <= 10000, "INVALID_ROYALTIES_FEE");
+        royaltiesFeeBP = _royaltiesFeeBP;
+    }
+
+     /**
+     * @dev Implements EIP-2981 royaltyInfo()
+     * Returns the royalty collector address and the royalty fee in basis points
+     */
+    function royaltyInfo(uint256 _tokenId, uint256 _salePrice) external view override returns (address receiver, uint256 royaltyAmount) {
+        receiver = royaltiesCollector;
+        royaltyAmount = (_salePrice * royaltiesFeeBP) / 10000;
+        return (receiver, royaltyAmount);
     }
 
     /**
@@ -68,7 +94,7 @@ contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, Operatorable {
         _burn(_tokenId);
     }
 
-    function supportsInterface(bytes4 _interfaceId) public view virtual override(AccessControl, ERC721, ERC721Enumerable) returns (bool) {
+    function supportsInterface(bytes4 _interfaceId) public view virtual override(AccessControl, ERC721, ERC721Enumerable, IERC165) returns (bool) {
         return super.supportsInterface(_interfaceId);
     }
 

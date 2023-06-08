@@ -3,9 +3,9 @@ const { duration } = require("./helpers/time")
 const timeTraveler = require("ganache-time-traveler")
 const { BN, expectEvent, expectRevert } = require("@openzeppelin/test-helpers")
 const { ZERO_ADDRESS } = require("@openzeppelin/test-helpers/src/constants")
-const RoyaltyNFT = artifacts.require("contracts/marketplace/direct/RoyaltyNFT.sol:RoyaltyNFT")
+const RoyaltyNFT = artifacts.require("contracts/marketplace/direct/BaseRoyaltyNFT.sol:BaseRoyaltyNFT")
 
-contract("::RoyaltyNFT", async (accounts) => {
+contract("::BaseRoyaltyNFT", async (accounts) => {
     let royaltyNFT
     const [owner, alice, bob, carol, darren] = accounts
     const DOMAIN = "https://idexo.com/"
@@ -53,15 +53,15 @@ contract("::RoyaltyNFT", async (accounts) => {
         })
     })
 
-    describe("# RoyalsFeeBP", async () => {
+    describe("# RoyaltiesFeeBP", async () => {
         it("should set royaltiesFee", async () => {
             await royaltyNFT.setRoyaltiesFeeBP(1, { from: owner })
         })
         describe("should revert if", async () => {
-            it("royalties > 1000", async () => {
+            it("royalties > 10000", async () => {
                 // This test is compromised until the size of the variable 'royaltiesFeeBP' is corrected in the contract
                 // fixed to uint16
-                await expectRevert(royaltyNFT.setRoyaltiesFeeBP(1001, { from: owner }), "INVALID_ROYALTIES_FEE")
+                await expectRevert(royaltyNFT.setRoyaltiesFeeBP(10001, { from: owner }), "INVALID_ROYALTIES_FEE")
             })
         })
     })
@@ -94,6 +94,16 @@ contract("::RoyaltyNFT", async (accounts) => {
             royaltyNFT.tokenURI(2, { from: owner }).then((tokenURI) => {
                 expect(tokenURI).to.eq(DOMAIN + "alice")
             })
+        })
+        it("should return correct royalty amount", async() => {
+            const tokenId = 2
+            await royaltyNFT.setRoyaltiesFeeBP(1000, { from: owner })
+            const salePrice = ethers.utils.parseEther("5"); // 5 ETH
+            const expectedRoyaltyAmount = ethers.utils.parseEther("0.5");
+            const result = await royaltyNFT.royaltyInfo(tokenId, salePrice);
+            const royaltyAmount = result[1]
+            expect(royaltyAmount.toString()).to.equal(expectedRoyaltyAmount.toString());
+
         })
 
         describe("should revert if", async () => {
