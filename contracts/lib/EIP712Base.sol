@@ -2,9 +2,7 @@
 
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
-contract EIP712Base is Initializable {
+contract EIP712Base {
     struct EIP712Domain {
         string name;
         string version;
@@ -17,10 +15,6 @@ contract EIP712Base is Initializable {
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
         keccak256(bytes("EIP712Domain(string name,string version,address verifyingContract,bytes32 salt)"));
     bytes32 internal domainSeparator;
-
-    function _initializeEIP712(string memory name) internal onlyInitializing {
-        _setDomainSeparator(name);
-    }
 
     function _setDomainSeparator(string memory name) internal {
         domainSeparator = keccak256(
