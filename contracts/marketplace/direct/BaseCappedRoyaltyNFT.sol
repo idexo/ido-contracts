@@ -7,31 +7,40 @@ import "@openzeppelin/contracts/interfaces/IERC2981.sol";
 import "../../lib/Operatorable.sol";
 import "../../lib/NativeMetaTransaction.sol";
 
-contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, IERC2981, Operatorable, NativeMetaTransaction {
+contract BaseCappedRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, IERC2981, Operatorable, NativeMetaTransaction {
     // Base token URI
     string public baseTokenURI;
     // Last token ID starting from 1
     uint256 public tokenID;
+    //cap on # of nfts in collection
+    uint256 private _cap;
     // Royalties fee receiver address
     address public royaltiesCollector;
     // Royalties fee in Basis Points
     uint16 public royaltiesFeeBP;
 
+    //Collection wallet => nft id
+    mapping(address => uint256[]) public collectionIds;
+
     event Minted(uint256 indexed tokenId);
     event Burned(uint256 indexed tokenId);
+    event NFTCreated(uint256 indexed nftId, address indexed account);
 
     constructor(
         string memory _name,
         string memory _symbol,
         string memory _baseTokenURI,
+        uint256 cap,
         address _royaltiesCollector,
         uint16 _royaltiesFeeBP
     ) ERC721(_name, _symbol) {
         require(_royaltiesCollector != address(0), "INVALID_ADDRESS");
         require(_royaltiesFeeBP <= 10000, "INVALID_ROYALTIES_FEE");
+        require(cap > 0, "StandardCappedNFTCollection#constructor: CAP_MUST_BE_GREATER_THAN_0");
         baseTokenURI = _baseTokenURI;
         royaltiesCollector = _royaltiesCollector;
         royaltiesFeeBP = _royaltiesFeeBP;
+        _cap = cap;
     }
 
     /**
@@ -80,7 +89,7 @@ contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, IERC2981, Operato
      */
     function mint(address _account, string memory _uri) public onlyOperator {
         uint256 newTokenId = ++tokenID;
-        super._mint(_account, newTokenId);
+        _mint(_account, newTokenId);
         super._setTokenURI(newTokenId, _uri);
 
         emit Minted(newTokenId);
@@ -105,6 +114,20 @@ contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, IERC2981, Operato
      */
     function tokenURI(uint256 _tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
         return ERC721URIStorage.tokenURI(_tokenId);
+    }
+
+    /**
+     * @dev Mint a new NFT in the Collection.
+     * Requirements:
+     *
+     * - `account` must not be zero address, check ERC721 {_mint}
+     * @param account address of recipient.
+     */
+    function _mint(address account, uint256 tokenId) internal virtual override {
+        require(tokenId <= _cap, "BaseCappedRoyaltyNFT#_mint: CANNOT_EXCEED_MINTING_CAP");
+        super._mint(account, tokenId);
+        collectionIds[account].push(tokenId);
+        emit NFTCreated(tokenId, account);
     }
 
     /**
