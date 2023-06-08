@@ -5,7 +5,7 @@ const { BN, expectEvent, expectRevert } = require("@openzeppelin/test-helpers")
 const DirectSale = artifacts.require("contracts/marketplace/direct/DirectSale.sol:DirectSale")
 const ERC20 = artifacts.require("ERC20Mock")
 const CommunityNFT = artifacts.require("CommunityNFT")
-const RoyaltyNFT = artifacts.require("contracts/marketplace/direct/RoyaltyNFT.sol:RoyaltyNFT")
+const RoyaltyNFT = artifacts.require("contracts/marketplace/direct/BaseRoyaltyNFT.sol:BaseRoyaltyNFT")
 
 contract("::DirectSale", async (accounts) => {
     let directSale, royaltyNFT, nft, ido, usdt, usdc
@@ -105,6 +105,33 @@ contract("::DirectSale", async (accounts) => {
         //     })
         // })
     })
+
+    describe("# Royalty", async () => {
+    it("should send the correct amount of royalty to the royalty wallet", async () => {
+        await royaltyNFT.mint(alice, "alice", { from: owner })
+        const price = web3.utils.toWei(new BN(10000));
+        await directSale.openForSale(royaltyNFT.address, 3, price,  { from: alice })
+        await royaltyNFT.approve(directSale.address, 3, { from: alice })
+
+        await royaltyNFT.setRoyaltiesFeeBP(1000, { from: owner })
+        const expectedRoyalty = price.div(new BN(10));
+
+        // Initial balances
+        const initialRoyaltyWalletBalance = await ido.balanceOf(owner);
+
+        // Perform sale
+        await ido.mint(darren, web3.utils.toWei(new BN(500000)), { from: owner });
+        await ido.approve(directSale.address, web3.utils.toWei(new BN(500000)), { from: darren });
+        await directSale.purchase(royaltyNFT.address, 3, { from: darren });
+
+        // Balances after sale
+        const finalRoyaltyWalletBalance = await ido.balanceOf(owner);
+
+        // Check that the seller received the correct royalty
+        expect(finalRoyaltyWalletBalance.sub(initialRoyaltyWalletBalance)).to.be.bignumber.equal(expectedRoyalty);
+    });
+});
+
 
     // describe("# Staking", async () => {
     //     before(async () => {

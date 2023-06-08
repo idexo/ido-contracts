@@ -148,10 +148,13 @@ contract DirectSaleNFTs is Ownable2Step {
         uint256 _tokenID
     ) internal virtual {
         require(nftSales[_nft][_tokenID].price != 0, "INVALID_PRICE");
+        
+        nftSales[_nft][_tokenID].isOpenForSale = false;
 
+        
         IERC20(purchaseToken).safeTransferFrom(_buyer, _tokenOwner, nftSales[_nft][_tokenID].price);
         IERC721(_nft).safeTransferFrom(_tokenOwner, _buyer, _tokenID);
-        nftSales[_nft][_tokenID].isOpenForSale = false;
+        
 
         emit Purchased(_tokenID, _tokenOwner, _buyer);
     }
