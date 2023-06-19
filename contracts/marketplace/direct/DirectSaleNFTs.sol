@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
-import "../../lib/NativeMetaTransaction.sol";
+import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 
-contract DirectSaleNFTs is Ownable2Step, NativeMetaTransaction {
+contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
     using SafeERC20 for IERC20;
 
     // ERC20 token
@@ -31,7 +31,7 @@ contract DirectSaleNFTs is Ownable2Step, NativeMetaTransaction {
     event FalseSeller(address seller, address falseSeller);
     event Swept(address token, address to);
 
-    constructor(address _purchaseToken, uint256 _saleStartTime) {
+    constructor(address _purchaseToken, uint256 _saleStartTime, address _trustedForwarder) ERC2771Context(_trustedForwarder) {
         if (_saleStartTime == 0) _saleStartTime = block.timestamp;
         require(_purchaseToken != address(0), "ADDRESS_ZERO");
         require(_saleStartTime >= block.timestamp, "INVALID_SALE_START");
@@ -170,5 +170,17 @@ contract DirectSaleNFTs is Ownable2Step, NativeMetaTransaction {
         IERC20(_token).safeTransfer(_to, amount);
 
         emit Swept(_token, _to);
+    }
+
+    /// @notice Overrides _msgSender() function from Context.sol
+    /// @return address The current execution context's sender address
+    function _msgSender() internal view override(Context, ERC2771Context) returns (address){
+        return ERC2771Context._msgSender();
+    }
+
+    /// @notice Overrides _msgData() function from Context.sol
+    /// @return address The current execution context's data
+    function _msgData() internal view override(Context, ERC2771Context) returns (bytes calldata){
+        return ERC2771Context._msgData();
     }
 }

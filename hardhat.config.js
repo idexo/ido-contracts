@@ -63,13 +63,31 @@ const withOptimizations = argv.enableGasReport || argv.compileMode === 'producti
  */
 module.exports = {
   solidity: {
-    version: argv.compiler,
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
+    compilers: [
+      {
+        version: "0.8.4",
+        settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200,
+        },
       },
-    },
+      },
+      {
+        version: "0.8.9",
+        settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200,
+        },
+      },
+      }
+    ],
+    overrides: {
+      "contracts/marketplace/direct/*.sol": {
+        version: "0.8.9",
+      }
+    }
   },
   networks: {
     hardhat: {

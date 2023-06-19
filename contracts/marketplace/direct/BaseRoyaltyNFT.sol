@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/interfaces/IERC2981.sol";
-import "../../lib/Operatorable.sol";
-import "../../lib/NativeMetaTransaction.sol";
+import "../lib/OperatorableNew.sol";
+import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 
-contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, IERC2981, Operatorable, NativeMetaTransaction {
+contract BaseRoyaltyNFT is ERC2771Context, ERC721Enumerable, ERC721URIStorage, IERC2981, OperatorableNew  {
     // Base token URI
     string public baseTokenURI;
     // Last token ID starting from 1
@@ -25,8 +25,9 @@ contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, IERC2981, Operato
         string memory _symbol,
         string memory _baseTokenURI,
         address _royaltiesCollector,
-        uint16 _royaltiesFeeBP
-    ) ERC721(_name, _symbol) {
+        uint16 _royaltiesFeeBP,
+        address _trustedForwarder
+    ) ERC2771Context(_trustedForwarder) ERC721(_name, _symbol) {
         require(_royaltiesCollector != address(0), "INVALID_ADDRESS");
         require(_royaltiesFeeBP <= 10000, "INVALID_ROYALTIES_FEE");
         baseTokenURI = _baseTokenURI;
@@ -134,5 +135,17 @@ contract BaseRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, IERC2981, Operato
      */
     function _baseURI() internal view override returns (string memory) {
         return baseTokenURI;
+    }
+
+    /// @notice Overrides _msgSender() function from Context.sol
+    /// @return address The current execution context's sender address
+    function _msgSender() internal view override(Context, ERC2771Context) returns (address){
+        return ERC2771Context._msgSender();
+    }
+
+    /// @notice Overrides _msgData() function from Context.sol
+    /// @return address The current execution context's data
+    function _msgData() internal view override(Context, ERC2771Context) returns (bytes calldata){
+        return ERC2771Context._msgData();
     }
 }
