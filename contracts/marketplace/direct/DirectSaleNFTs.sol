@@ -23,10 +23,10 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
     // nft address => nft id => nft sale info structure
     mapping(address => mapping(uint256 => NFTSaleInfo)) public nftSales;
 
-    event SaleOpened(uint256 indexed tokenID);
-    event SaleClosed(uint256 indexed tokenID);
-    event PriceSet(uint256 indexed tokenID, uint256 price);
-    event Purchased(uint256 indexed tokenID, address seller, address buyer);
+    event SaleOpened(address indexed nftAddress, uint256 indexed tokenID);
+    event SaleClosed(address indexed nftAddress, uint256 indexed tokenID);
+    event PriceSet(address indexed nftAddress, uint256 indexed tokenID, uint256 price);
+    event Purchased(address indexed nftAddress, uint256 indexed tokenID, address seller, address buyer);
     event FalseSeller(address seller, address falseSeller);
     event Swept(address token, address to);
 
@@ -57,7 +57,7 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
         nftSales[_nft][_tokenID].seller = _msgSender();
         nftSales[_nft][_tokenID].isOpenForSale = true;
 
-        emit SaleOpened(_tokenID);
+        emit SaleOpened(_nft, _tokenID);
     }
 
     /**
@@ -76,6 +76,7 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
         require(_msgSender() == nftSales[_nft][_tokenID].seller, "OWNERSHIP_CHANGED");
 
         _setPrice(_nft, _tokenID, _price);
+        emit PriceSet(_nft, _tokenID, _price);
     }
 
     function _setPrice(
@@ -85,7 +86,7 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
     ) private {
         nftSales[_nft][_tokenID].price = _price;
 
-        emit PriceSet(_tokenID, _price);
+        emit PriceSet(_nft, _tokenID, _price);
     }
 
     /**
@@ -98,7 +99,7 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
 
         nftSales[_nft][_tokenID].isOpenForSale = false;
 
-        emit SaleClosed(_tokenID);
+        emit SaleClosed(_nft, _tokenID);
     }
 
     /**
@@ -136,7 +137,7 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
         IERC721(_nft).safeTransferFrom(_tokenOwner, _buyer, _tokenID);
         
 
-        emit Purchased(_tokenID, _tokenOwner, _buyer);
+        emit Purchased(_nft, _tokenID, _tokenOwner, _buyer);
     }
 
     /**

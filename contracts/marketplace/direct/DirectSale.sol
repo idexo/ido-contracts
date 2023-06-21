@@ -30,6 +30,6 @@ contract DirectSale is DirectSaleNFTs {
         BaseRoyaltyNFT(_nft).safeTransferFrom(_tokenOwner, _buyer, _tokenID);
         
 
-        emit Purchased(_tokenID, _tokenOwner, _buyer);
+        emit Purchased(_nft, _tokenID, _tokenOwner, _buyer);
     }
 }
