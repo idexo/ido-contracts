@@ -3,6 +3,7 @@ const { duration } = require("./helpers/time")
 const timeTraveler = require("ganache-time-traveler")
 const { BN, expectEvent, expectRevert } = require("@openzeppelin/test-helpers")
 const { ZERO_ADDRESS } = require("@openzeppelin/test-helpers/src/constants")
+const Forwarder = artifacts.require("Forwarder")
 const RoyaltyNFT = artifacts.require("contracts/marketplace/direct/BaseRoyaltyNFT.sol:BaseRoyaltyNFT")
 
 contract("::BaseRoyaltyNFT", async (accounts) => {
@@ -12,7 +13,8 @@ contract("::BaseRoyaltyNFT", async (accounts) => {
     const startTime = Math.floor(Date.now() / 1000) + duration.days(1)
 
     before(async () => {
-        royaltyNFT = await RoyaltyNFT.new("RoyaltyNFT", "RNFT", "", owner, 1, { from: owner })
+        forwarder = await Forwarder.new({ from: owner })
+        royaltyNFT = await RoyaltyNFT.new("RoyaltyNFT", "RNFT", "", owner, 1, forwarder.address, { from: owner })
     })
 
     describe("#Role", async () => {

@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity 0.8.9;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/interfaces/IERC2981.sol";
-import "../../lib/Operatorable.sol";
-import "../../lib/NativeMetaTransaction.sol";
+import "../lib/OperatorableNew.sol";
 
-contract BaseCappedRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, IERC2981, Operatorable, NativeMetaTransaction {
+contract BaseCappedRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, IERC2981, OperatorableNew {
     // Base token URI
     string public baseTokenURI;
     // Last token ID starting from 1

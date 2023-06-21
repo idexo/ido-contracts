@@ -5,6 +5,7 @@ const { BN, expectEvent, expectRevert } = require("@openzeppelin/test-helpers")
 const DirectSale = artifacts.require("contracts/marketplace/direct/DirectSale.sol:DirectSale")
 const ERC20 = artifacts.require("ERC20Mock")
 const CommunityNFT = artifacts.require("CommunityNFT")
+const Forwarder = artifacts.require("Forwarder")
 const RoyaltyNFT = artifacts.require("contracts/marketplace/direct/BaseRoyaltyNFT.sol:BaseRoyaltyNFT")
 
 contract("::DirectSale", async (accounts) => {
@@ -15,21 +16,22 @@ contract("::DirectSale", async (accounts) => {
 
     before(async () => {
         ido = await ERC20.new("Idexo Community", "IDO", { from: owner })
-        royaltyNFT = await RoyaltyNFT.new("RoyaltyNFT", "RNFT", DOMAIN, owner, 1, { from: owner })
+        forwarder = await Forwarder.new({ from: owner })
+        royaltyNFT = await RoyaltyNFT.new("RoyaltyNFT", "RNFT", DOMAIN, owner, 1, forwarder.address, { from: owner })
         nft = await CommunityNFT.new("TEST", "T", DOMAIN, { from: owner })
-        directSale = await DirectSale.new(ido.address, startTime, { from: owner })
+        directSale = await DirectSale.new(ido.address, forwarder.address, { from: owner })
     })
 
-    describe("# SaleStartTime", async () => {
-        it("should set sale start time", async () => {
-            await directSale.setSaleStartTime(Math.floor(Date.now() / 1000) + duration.seconds(100), { from: owner })
-        })
-        // it("should get minPoolStakeAmount", async () => {
-        //     await directSale.minPoolStakeAmount().then((res) => {
-        //         expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
-        //     })
-        // })
-    })
+    // describe("# SaleStartTime", async () => {
+    //     it("should set sale start time", async () => {
+    //         await directSale.setSaleStartTime(Math.floor(Date.now() / 1000) + duration.seconds(100), { from: owner })
+    //     })
+    //     // it("should get minPoolStakeAmount", async () => {
+    //     //     await directSale.minPoolStakeAmount().then((res) => {
+    //     //         expect(res.toString()).to.eq(web3.utils.toWei(new BN(10000)).toString())
+    //     //     })
+    //     // })
+    // })
 
     describe("# Open For Sale", async () => {
         it("should put an NFT for sale", async () => {
