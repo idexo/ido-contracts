@@ -3,11 +3,12 @@ pragma solidity 0.8.9;
 
 import "./DirectSaleNFTs.sol";
 import "./BaseRoyaltyNFT.sol";
+import "@openzeppelin/contracts/metatx/MinimalForwarder.sol";
 
 contract DirectSale is DirectSaleNFTs {
     using SafeERC20 for IERC20;
 
-    constructor(address _purchaseToken, uint256 _saleStartTime, address _trustedForwarder) DirectSaleNFTs(_purchaseToken, _saleStartTime, _trustedForwarder) {}
+    constructor(address _purchaseToken, address _trustedForwarder) DirectSaleNFTs(_purchaseToken, _trustedForwarder) {}
 
     function currentOwner(address _nft, uint256 _tokenID) internal virtual view override returns (address) {
         return BaseRoyaltyNFT(_nft).ownerOf(_tokenID);

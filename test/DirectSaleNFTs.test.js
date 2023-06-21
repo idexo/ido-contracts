@@ -4,6 +4,7 @@ const timeTraveler = require("ganache-time-traveler")
 const { BN, expectEvent, expectRevert } = require("@openzeppelin/test-helpers")
 const DirectSaleNFTs = artifacts.require("contracts/marketplace/direct/DirectSaleNFTs.sol:DirectSaleNFTs")
 const ERC20 = artifacts.require("ERC20Mock")
+const Forwarder = artifacts.require("Forwarder")
 const CommunityNFT = artifacts.require("CommunityNFT")
 
 contract("::DirectSaleNFTs", async (accounts) => {
@@ -14,31 +15,32 @@ contract("::DirectSaleNFTs", async (accounts) => {
     before(async () => {
         const startTime = Math.floor(Date.now() / 1000) + duration.seconds(3600)
         ido = await ERC20.new("Idexo Community", "IDO", { from: owner })
+        forwarder = await Forwarder.new({ from: owner })
         nft = await CommunityNFT.new("TEST", "T", DOMAIN, { from: owner })
-        directSale = await DirectSaleNFTs.new(ido.address, startTime, { from: owner })
+        directSale = await DirectSaleNFTs.new(ido.address, forwarder.address, { from: owner })
     })
 
-    describe("# SaleStartTime", async () => {
-        it("should set sale start time", async () => {
-            await directSale.setSaleStartTime(Math.floor(Date.now() / 1000) + duration.seconds(2400), { from: owner })
-        })
-        describe("should revert if", async () => {
-            it("timestamp < block.timestamp", async () => {
-                await expectRevert(
-                    directSale.setSaleStartTime(Math.floor(Date.now() / 1000) - duration.seconds(2400), { from: owner }),
-                    "INVALID_SALE_START"
-                )
-            })
-            it("sale started", async () => {
-                await timeTraveler.advanceTimeAndBlock(duration.days(1))
-                await expectRevert(
-                    directSale.setSaleStartTime(Math.floor(Date.now() / 1000) + duration.seconds(2400), { from: owner }),
-                    "SALE_STARTED"
-                )
-                // await timeTraveler.advanceTimeAndBlock(duration.days(-1))
-            })
-        })
-    })
+    // describe("# SaleStartTime", async () => {
+    //     it("should set sale start time", async () => {
+    //         await directSale.setSaleStartTime(Math.floor(Date.now() / 1000) + duration.seconds(2400), { from: owner })
+    //     })
+    //     describe("should revert if", async () => {
+    //         it("timestamp < block.timestamp", async () => {
+    //             await expectRevert(
+    //                 directSale.setSaleStartTime(Math.floor(Date.now() / 1000) - duration.seconds(2400), { from: owner }),
+    //                 "INVALID_SALE_START"
+    //             )
+    //         })
+    //         it("sale started", async () => {
+    //             await timeTraveler.advanceTimeAndBlock(duration.days(1))
+    //             await expectRevert(
+    //                 directSale.setSaleStartTime(Math.floor(Date.now() / 1000) + duration.seconds(2400), { from: owner }),
+    //                 "SALE_STARTED"
+    //             )
+    //             // await timeTraveler.advanceTimeAndBlock(duration.days(-1))
+    //         })
+    //     })
+    // })
 
     describe("# Open For Sale", async () => {
         it("should put alice NFT for sale", async () => {

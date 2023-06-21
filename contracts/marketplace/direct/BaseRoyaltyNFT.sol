@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/interfaces/IERC2981.sol";
 import "../lib/OperatorableNew.sol";
 import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+import "@openzeppelin/contracts/metatx/MinimalForwarder.sol";
 
 contract BaseRoyaltyNFT is ERC2771Context, ERC721Enumerable, ERC721URIStorage, IERC2981, OperatorableNew  {
     // Base token URI
@@ -17,7 +18,7 @@ contract BaseRoyaltyNFT is ERC2771Context, ERC721Enumerable, ERC721URIStorage, I
     // Royalties fee in Basis Points
     uint16 public royaltiesFeeBP;
 
-    event Minted(uint256 indexed tokenId);
+    event Minted(uint256 indexed tokenId, address indexed account);
     event Burned(uint256 indexed tokenId);
 
     constructor(
@@ -84,7 +85,7 @@ contract BaseRoyaltyNFT is ERC2771Context, ERC721Enumerable, ERC721URIStorage, I
         super._mint(_account, newTokenId);
         super._setTokenURI(newTokenId, _uri);
 
-        emit Minted(newTokenId);
+        emit Minted(newTokenId, _account);
     }
 
     /**

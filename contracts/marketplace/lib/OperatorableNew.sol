@@ -11,13 +11,13 @@ contract OperatorableNew is Ownable2Step, AccessControl {
     * @dev Restricted to members of the `operator` role.
     */
   modifier onlyOperator() {
-    require(hasRole(OPERATOR_ROLE, msg.sender), "Operatorable: CALLER_NO_OPERATOR_ROLE");
+    require(hasRole(OPERATOR_ROLE, _msgSender()), "Operatorable: CALLER_NO_OPERATOR_ROLE");
     _;
   }
 
   constructor() {
-    _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-    _setupRole(OPERATOR_ROLE, msg.sender);
+    _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+    _setupRole(OPERATOR_ROLE, _msgSender());
   }
 
   /**

@@ -6,14 +6,13 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+import "@openzeppelin/contracts/metatx/MinimalForwarder.sol";
 
 contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
     using SafeERC20 for IERC20;
 
     // ERC20 token
     address public purchaseToken;
-    // Public sale start date
-    uint256 public saleStartTime;
 
     struct NFTSaleInfo {
         address seller;
@@ -31,30 +30,10 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
     event FalseSeller(address seller, address falseSeller);
     event Swept(address token, address to);
 
-    constructor(address _purchaseToken, uint256 _saleStartTime, address _trustedForwarder) ERC2771Context(_trustedForwarder) {
-        if (_saleStartTime == 0) _saleStartTime = block.timestamp;
+    constructor(address _purchaseToken, address _trustedForwarder) ERC2771Context(_trustedForwarder) {
         require(_purchaseToken != address(0), "ADDRESS_ZERO");
-        require(_saleStartTime >= block.timestamp, "INVALID_SALE_START");
 
         purchaseToken = _purchaseToken;
-        saleStartTime = _saleStartTime;
-    }
-
-    modifier saleIsOpen() {
-        require(saleStartTime <= block.timestamp, "SALE_NOT_OPEN");
-        _;
-    }
-
-    /**
-     * @dev Set `saleStartTime`
-     * Only owner can call
-     * `_saleStartTime` must be greater than current timestamp
-     */
-    function setSaleStartTime(uint256 _saleStartTime) external onlyOwner {
-        require(saleStartTime > block.timestamp, "SALE_STARTED");
-        require(_saleStartTime > block.timestamp, "INVALID_SALE_START");
-
-        saleStartTime = _saleStartTime;
     }
 
     function currentOwner(address _nft, uint256 _tokenID) internal virtual view returns (address) {
@@ -71,11 +50,11 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
         address _nft,
         uint256 _tokenID,
         uint256 _price
-    ) external saleIsOpen {
-        require(msg.sender == currentOwner(_nft, _tokenID), "CALLER_NOT_NFT_OWNER");
+    ) external {
+        require(_msgSender() == currentOwner(_nft, _tokenID), "CALLER_NOT_NFT_OWNER");
 
         _setPrice(_nft, _tokenID, _price);
-        nftSales[_nft][_tokenID].seller = msg.sender;
+        nftSales[_nft][_tokenID].seller = _msgSender();
         nftSales[_nft][_tokenID].isOpenForSale = true;
 
         emit SaleOpened(_tokenID);
@@ -91,10 +70,10 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
         address _nft,
         uint256 _tokenID,
         uint256 _price
-    ) public saleIsOpen {
+    ) public {
         require(_price != 0, "INVALID_PRICE");
-        require(msg.sender == IERC721(_nft).ownerOf(_tokenID), "CALLER_NOT_NFT_OWNER_OR_TOKEN_INVALID");
-        require(msg.sender == nftSales[_nft][_tokenID].seller, "OWNERSHIP_CHANGED");
+        require(_msgSender() == IERC721(_nft).ownerOf(_tokenID), "CALLER_NOT_NFT_OWNER_OR_TOKEN_INVALID");
+        require(_msgSender() == nftSales[_nft][_tokenID].seller, "OWNERSHIP_CHANGED");
 
         _setPrice(_nft, _tokenID, _price);
     }
@@ -115,7 +94,7 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
      * `_tokenID` must exist
      */
     function closeForSale(address _nft, uint256 _tokenID) external {
-        require(msg.sender == currentOwner(_nft, _tokenID), "CALLER_NOT_NFT_OWNER_OR_TOKEN_INVALID");
+        require(_msgSender() == currentOwner(_nft, _tokenID), "CALLER_NOT_NFT_OWNER_OR_TOKEN_INVALID");
 
         nftSales[_nft][_tokenID].isOpenForSale = false;
 
@@ -128,17 +107,17 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
      * `_tokenID` must exist
      * `_tokenID` must be open for sale
      */
-    function purchase(address _nft, uint256 _tokenID) external saleIsOpen {
+    function purchase(address _nft, uint256 _tokenID) external {
         address nftOwner = currentOwner(_nft, _tokenID);
         require(nftSales[_nft][_tokenID].isOpenForSale, "NFT_SALE_CLOSED");
         require(nftOwner != address(0), "INVALID_NFT");
-        require(nftOwner != msg.sender, "SELF_PURCHASE");
+        require(nftOwner != _msgSender(), "SELF_PURCHASE");
 
         if ((nftOwner != nftSales[_nft][_tokenID].seller)) {
             nftSales[_nft][_tokenID].isOpenForSale = false;
             emit FalseSeller(nftOwner, nftSales[_nft][_tokenID].seller);
         } else {
-            _purchase(_nft, nftOwner, msg.sender, _tokenID);
+            _purchase(_nft, nftOwner, _msgSender(), _tokenID);
         }
     }
 
