@@ -170,7 +170,7 @@ describe("BaseRoyaltyNFT", function() {
 
   // now pass the request and signature over to the relayer account and have the relayer account 
   // execute the meta-tx with it's own funds
-  await expect(minimalforwarder.execute(request, signature)).to.emit(directSale, 'SaleOpened').withArgs(1)
+  await expect(minimalforwarder.execute(request, signature)).to.emit(directSale, 'SaleOpened').withArgs(royaltynft.address, 1)
   
   // check the end user's funds after the transaction has been sent, they should be untouched
   const bobFundsAfter = await ethers.provider.getBalance(bob.address)
