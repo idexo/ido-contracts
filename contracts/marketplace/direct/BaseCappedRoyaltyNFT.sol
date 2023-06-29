@@ -86,7 +86,7 @@ contract BaseCappedRoyaltyNFT is ERC721Enumerable, ERC721URIStorage, IERC2981, O
      * `_account` must not be zero address
      * `_uri` can be empty
      */
-    function mint(address _account, string memory _uri) public onlyOperator {
+    function mintNFT(address _account, string memory _uri) public onlyOperator {
         uint256 newTokenId = ++tokenID;
         _mint(_account, newTokenId);
         super._setTokenURI(newTokenId, _uri);

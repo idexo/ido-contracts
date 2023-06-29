@@ -80,7 +80,7 @@ contract BaseRoyaltyNFT is ERC2771Context, ERC721Enumerable, ERC721URIStorage, I
      * `_account` must not be zero address
      * `_uri` can be empty
      */
-    function mint(address _account, string memory _uri) public onlyOperator {
+    function mintNFT(address _account, string memory _uri) public onlyOperator {
         uint256 newTokenId = ++tokenID;
         super._mint(_account, newTokenId);
         super._setTokenURI(newTokenId, _uri);
