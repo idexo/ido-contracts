@@ -96,7 +96,7 @@ describe("BaseRoyaltyNFT", function() {
   
   // connect operator's account to the RoyaltyNFT contract handle and mint an NFT to end user
   const royaltynft = this.royaltyNFT.connect(owner)
-  await expect(royaltynft.mint(alice.address, "https://nftm3.com")).to.emit(royaltynft, 'Minted').withArgs(1, alice.address)
+  await expect(royaltynft.mintNFT(alice.address, "https://nftm3.com")).to.emit(royaltynft, 'Minted').withArgs(1, alice.address)
   
   // now check the end user's funds after the transaction has been sent
   const ownerFundsAfter = await ethers.provider.getBalance(owner.address)
@@ -125,7 +125,7 @@ describe("BaseRoyaltyNFT", function() {
   const { request, signature } = await signMetaTxRequest(owner.provider, minimalforwarder, {
     from: owner.address,
     to: royaltynft.address,
-    data: royaltynft.interface.encodeFunctionData('mint', [bob.address, "https://nftm3.com"]),
+    data: royaltynft.interface.encodeFunctionData('mintNFT', [bob.address, "https://nftm3.com"]),
   })
   
   // now pass the request and signature over to the relayer account and have the relayer account 
@@ -157,7 +157,7 @@ describe("BaseRoyaltyNFT", function() {
   const directSale = this.directSale
   
   // connect operator's account to the RoyaltyNFT contract handle and mint an NFT to end user
-  await expect(royaltynft.mint(bob.address, "https://nftm3.com")).to.emit(royaltynft, 'Minted').withArgs(1, bob.address)
+  await expect(royaltynft.mintNFT(bob.address, "https://nftm3.com")).to.emit(royaltynft, 'Minted').withArgs(1, bob.address)
 
   //now let bob open a sale on the NFT without paying the gas
 
