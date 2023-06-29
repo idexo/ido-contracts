@@ -35,7 +35,7 @@ contract("::DirectSale", async (accounts) => {
 
     describe("# Open For Sale", async () => {
         it("should put an NFT for sale", async () => {
-            await royaltyNFT.mint(alice, "alice", { from: owner })
+            await royaltyNFT.mintNFT(alice, "alice", { from: owner })
             await nft.mintNFT(alice, "alice", { from: owner })
             await timeTraveler.advanceTime(duration.seconds(200))
 
@@ -44,7 +44,7 @@ contract("::DirectSale", async (accounts) => {
             await directSale.openForSale(royaltyNFT.address, 1, web3.utils.toWei(new BN(10000)).toString(), { from: alice })
         })
         it("should put another NFT for sale", async () => {
-            await royaltyNFT.mint(bob, "alice", { from: owner })
+            await royaltyNFT.mintNFT(bob, "alice", { from: owner })
             await nft.mintNFT(bob, "alice", { from: owner })
             await timeTraveler.advanceTime(duration.seconds(200))
 
@@ -110,7 +110,7 @@ contract("::DirectSale", async (accounts) => {
 
     describe("# Royalty", async () => {
     it("should send the correct amount of royalty to the royalty wallet", async () => {
-        await royaltyNFT.mint(alice, "alice", { from: owner })
+        await royaltyNFT.mintNFT(alice, "alice", { from: owner })
         const price = web3.utils.toWei(new BN(10000));
         await directSale.openForSale(royaltyNFT.address, 3, price,  { from: alice })
         await royaltyNFT.approve(directSale.address, 3, { from: alice })
