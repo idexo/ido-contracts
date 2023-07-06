@@ -21,9 +21,12 @@ contract DirectSale is DirectSaleNFTs {
         uint256 _tokenID
     ) internal virtual override {
         require(nftSales[_nft][_tokenID].price != 0, "INVALID_PRICE");
+        uint256 nftSaleId = nftIdSaleId[_nft][_tokenID];
+        NFTSaleInfo memory nftSale = salesById[nftSaleId];
 
         (address royaltyCollector, uint256 royaltyFee) = BaseRoyaltyNFT(_nft).royaltyInfo(_tokenID, nftSales[_nft][_tokenID].price);
         nftSales[_nft][_tokenID].isOpenForSale = false;
+        nftSale.isOpenForSale = false;
 
         IERC20(purchaseToken).safeTransferFrom(_buyer, BaseRoyaltyNFT(_nft).royaltiesCollector(), royaltyFee);
         IERC20(purchaseToken).safeTransferFrom(_buyer, _tokenOwner, nftSales[_nft][_tokenID].price - royaltyFee);
