@@ -88,12 +88,12 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
      * `_price` must not be zero
      */
     function setPrice(
+        uint256 _saleId,
         address _nft,
         uint256 _tokenID,
         uint256 _price
     ) public {
-        uint256 nftSaleId = nftIdSaleId[_nft][_tokenID];
-        NFTSaleInfo storage nftSale = salesById[nftSaleId];
+        NFTSaleInfo storage nftSale = salesById[_saleId];
         require(nftSale.isOpenForSale, "SALE_CLOSED");
         require(_price != 0, "INVALID_PRICE");
         require(_msgSender() == IERC721(_nft).ownerOf(_tokenID), "CALLER_NOT_NFT_OWNER_OR_TOKEN_INVALID");
