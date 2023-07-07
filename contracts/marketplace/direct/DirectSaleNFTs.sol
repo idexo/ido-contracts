@@ -14,11 +14,22 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
     // ERC20 token
     address public purchaseToken;
 
+    //last sale id - start from 1
+    uint256 public saleIds;
+
     struct NFTSaleInfo {
+        address nftContractAddress;
+        uint256 tokenid;
         address seller;
         uint256 price;
         bool isOpenForSale;
     }
+
+    //sale id => sale info
+    mapping(uint256 => NFTSaleInfo) public salesById;
+
+    // nft address => nft id => nft sale id structure for retrieving saleId by ntfTokenId
+    mapping(address => mapping(uint256 => uint256)) public nftIdSaleId;
 
     // nft address => nft id => nft sale info structure
     mapping(address => mapping(uint256 => NFTSaleInfo)) public nftSales;
@@ -53,6 +64,16 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
     ) external {
         require(_msgSender() == currentOwner(_nft, _tokenID), "CALLER_NOT_NFT_OWNER");
 
+        saleIds++;
+        NFTSaleInfo storage nftSale = salesById[saleIds];
+
+        nftSale.nftContractAddress = _nft;
+        nftSale.tokenid = _tokenID;
+        nftSale.seller = _msgSender();
+        nftSale.price = _price;
+        nftSale.isOpenForSale = true;
+
+
         _setPrice(_nft, _tokenID, _price);
         nftSales[_nft][_tokenID].seller = _msgSender();
         nftSales[_nft][_tokenID].isOpenForSale = true;
@@ -67,13 +88,17 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
      * `_price` must not be zero
      */
     function setPrice(
+        uint256 _saleId,
         address _nft,
         uint256 _tokenID,
         uint256 _price
     ) public {
+        NFTSaleInfo storage nftSale = salesById[_saleId];
+        require(nftSale.isOpenForSale, "SALE_CLOSED");
         require(_price != 0, "INVALID_PRICE");
         require(_msgSender() == IERC721(_nft).ownerOf(_tokenID), "CALLER_NOT_NFT_OWNER_OR_TOKEN_INVALID");
         require(_msgSender() == nftSales[_nft][_tokenID].seller, "OWNERSHIP_CHANGED");
+        nftSale.price = _price;
 
         _setPrice(_nft, _tokenID, _price);
         emit PriceSet(_nft, _tokenID, _price);
@@ -94,8 +119,11 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
      * Accessible by only nft owner
      * `_tokenID` must exist
      */
-    function closeForSale(address _nft, uint256 _tokenID) external {
+    function closeForSale(uint256 _saleId, address _nft, uint256 _tokenID) external {
+        NFTSaleInfo storage nftSale = salesById[_saleId];
         require(_msgSender() == currentOwner(_nft, _tokenID), "CALLER_NOT_NFT_OWNER_OR_TOKEN_INVALID");
+        require(nftSale.isOpenForSale, "SALE_NOT_OPEN");
+
 
         nftSales[_nft][_tokenID].isOpenForSale = false;
 
@@ -109,13 +137,18 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
      * `_tokenID` must be open for sale
      */
     function purchase(address _nft, uint256 _tokenID) external {
+        uint256 nftSaleId = nftIdSaleId[_nft][_tokenID];
+        NFTSaleInfo memory nftSale = salesById[nftSaleId];
         address nftOwner = currentOwner(_nft, _tokenID);
         require(nftSales[_nft][_tokenID].isOpenForSale, "NFT_SALE_CLOSED");
         require(nftOwner != address(0), "INVALID_NFT");
         require(nftOwner != _msgSender(), "SELF_PURCHASE");
 
+
+
         if ((nftOwner != nftSales[_nft][_tokenID].seller)) {
             nftSales[_nft][_tokenID].isOpenForSale = false;
+            nftSale.isOpenForSale = false;
             emit FalseSeller(nftOwner, nftSales[_nft][_tokenID].seller);
         } else {
             _purchase(_nft, nftOwner, _msgSender(), _tokenID);
@@ -128,7 +161,10 @@ contract DirectSaleNFTs is ERC2771Context, Ownable2Step {
         address _buyer,
         uint256 _tokenID
     ) internal virtual {
-        require(nftSales[_nft][_tokenID].price != 0, "INVALID_PRICE");
+        uint256 nftSaleId = nftIdSaleId[_nft][_tokenID];
+
+        NFTSaleInfo memory nftSale = salesById[nftSaleId];
+        nftSale.isOpenForSale = false;
         
         nftSales[_nft][_tokenID].isOpenForSale = false;
 

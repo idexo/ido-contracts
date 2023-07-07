@@ -86,25 +86,25 @@ contract("::DirectSaleNFTs", async (accounts) => {
 
     describe("# Price", async () => {
         it("should set new Price", async () => {
-            expectEvent(await directSale.setPrice(nft.address, 1, web3.utils.toWei(new BN(20000)).toString(), { from: alice }), "PriceSet")
+            expectEvent(await directSale.setPrice(1, nft.address, 1, web3.utils.toWei(new BN(20000)).toString(), { from: alice }), "PriceSet")
         })
 
         describe("should revert if", async () => {
             it("price 0", async () => {
-                await expectRevert(directSale.setPrice(nft.address, 1, 0, { from: alice }), "INVALID_PRICE")
+                await expectRevert(directSale.setPrice(1, nft.address, 1, 0, { from: alice }), "INVALID_PRICE")
             })
         })
     })
 
     describe("# Close For Sale", async () => {
         it("should close to sale", async () => {
-            expectEvent(await directSale.closeForSale(nft.address, 2, { from: bob }), "SaleClosed")
+            expectEvent(await directSale.closeForSale(2, nft.address, 2, { from: bob }), "SaleClosed")
         })
 
         describe("should revert if", async () => {
             it("not owner or ownership changed", async () => {
                 await expectRevert(
-                    directSale.closeForSale(nft.address, 3, { from: alice }),
+                    directSale.closeForSale(3, nft.address, 3, { from: alice }),
                     "CALLER_NOT_NFT_OWNER_OR_TOKEN_INVALID"
                 )
             })

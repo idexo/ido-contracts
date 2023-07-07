@@ -61,7 +61,9 @@ contract("::DirectSale", async (accounts) => {
 
     describe("# Price", async () => {
         it("should set new Price", async () => {
-            await directSale.setPrice(royaltyNFT.address, 1, web3.utils.toWei(new BN(20000)).toString(), { from: alice })
+            await royaltyNFT.mintNFT(alice, "alice", { from: owner })
+            await directSale.openForSale(royaltyNFT.address, 3, web3.utils.toWei(new BN(10000)).toString(), { from: alice })
+            await directSale.setPrice(3, royaltyNFT.address, 3, web3.utils.toWei(new BN(20000)).toString(), { from: alice })
 
             // await directSale.openForSale(royaltyNFT.address, 1, web3.utils.toWei(new BN(10000)).toString(), { from: alice })
         })
@@ -74,7 +76,7 @@ contract("::DirectSale", async (accounts) => {
 
     describe("# Close For Sale", async () => {
         it("should remove an NFT for sale", async () => {
-            await directSale.closeForSale(royaltyNFT.address, 1, { from: alice })
+            await directSale.closeForSale(1, royaltyNFT.address, 1, { from: alice })
         })
         // it("should get minPoolStakeAmount", async () => {
         //     await directSale.minPoolStakeAmount().then((res) => {
@@ -112,8 +114,8 @@ contract("::DirectSale", async (accounts) => {
     it("should send the correct amount of royalty to the royalty wallet", async () => {
         await royaltyNFT.mintNFT(alice, "alice", { from: owner })
         const price = web3.utils.toWei(new BN(10000));
-        await directSale.openForSale(royaltyNFT.address, 3, price,  { from: alice })
-        await royaltyNFT.approve(directSale.address, 3, { from: alice })
+        await directSale.openForSale(royaltyNFT.address, 4, price,  { from: alice })
+        await royaltyNFT.approve(directSale.address, 4, { from: alice })
 
         await royaltyNFT.setRoyaltiesFeeBP(1000, { from: owner })
         const expectedRoyalty = price.div(new BN(10));
@@ -124,7 +126,7 @@ contract("::DirectSale", async (accounts) => {
         // Perform sale
         await ido.mint(darren, web3.utils.toWei(new BN(500000)), { from: owner });
         await ido.approve(directSale.address, web3.utils.toWei(new BN(500000)), { from: darren });
-        await directSale.purchase(royaltyNFT.address, 3, { from: darren });
+        await directSale.purchase(royaltyNFT.address, 4, { from: darren });
 
         // Balances after sale
         const finalRoyaltyWalletBalance = await ido.balanceOf(owner);
