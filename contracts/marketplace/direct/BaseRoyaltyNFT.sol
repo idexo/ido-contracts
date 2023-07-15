@@ -45,6 +45,16 @@ contract BaseRoyaltyNFT is ERC2771Context, ERC721Enumerable, ERC721URIStorage, I
     }
 
     /**
+     * @dev Set token URI
+     * Only `operator` can call
+     *
+     * - `tokenId` must exist, see {ERC721URIStorage:_setTokenURI}
+     */
+    function setTokenURI(uint256 tokenId, string memory _tokenURI) public onlyOperator {
+        super._setTokenURI(tokenId, _tokenURI);
+    }
+
+    /**
      * @dev Set `royaltiesCollector` address
      * Only `owner` can call
      * `_royaltiesCollector` must not be zero address
