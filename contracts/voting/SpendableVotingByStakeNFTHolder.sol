@@ -67,7 +67,7 @@ contract SpendableVotingByStakeNFTHolder is ReentrancyGuard, Operatorable {
 
     Status[] private _status;
     FundType[] private _fundType;
-    IStakePool[] private _nftToHold;
+    IStakePool[] public _nftToHold;
 
     uint8 public proposalIds;
     uint8 private _commentIds;
