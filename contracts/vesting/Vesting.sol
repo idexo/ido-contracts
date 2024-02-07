@@ -15,11 +15,9 @@ contract Vesting is Ownable, ReentrancyGuard {
     uint256 public immutable startTime;
     uint256 public immutable cliff;
     uint256 public immutable duration;
-    uint256 public immutable claimsPeriod;
 
     uint256 public totalAmount;
     uint256 public claimedAmount;
-    uint256 public lastClaimTime;
 
     // ERC20 token address.
     IERC20 public immutable token;
@@ -34,15 +32,13 @@ contract Vesting is Ownable, ReentrancyGuard {
         address beneficiary_,
         uint256 startTime_,
         uint256 cliff_,
-        uint256 duration_,
-        uint256 claimsPeriod_
+        uint256 duration_
     ) {
         token = erc20_;
         beneficiary = beneficiary_;
         startTime = startTime_;
         cliff = cliff_;
         duration = duration_;
-        claimsPeriod = claimsPeriod_;
     }
 
     /**************************|
@@ -71,12 +67,10 @@ contract Vesting is Ownable, ReentrancyGuard {
     function claim(uint256 amount) public nonReentrant {
         require(msg.sender == beneficiary, "CALLER_NO_BENEFICIARY");
         require(block.timestamp >= startTime.add(cliff * 1 days), "CLIFF_PERIOD");
-        require(block.timestamp.sub(lastClaimTime) >= claimsPeriod * 1 days, "WITHIN_CLAIM_PERIOD_FROM_LAST_CLAIM");
         require(amount > 0, "AMOUNT_INVALID");
         require(amount <= getAvailableClaimAmount(), "AVAILABLE_CLAIM_AMOUNT_EXCEEDED");
 
         claimedAmount = claimedAmount.add(amount);
-        lastClaimTime = block.timestamp;
         token.safeTransfer(beneficiary, amount);
 
         emit Claimed(amount);
@@ -100,10 +94,6 @@ contract Vesting is Ownable, ReentrancyGuard {
      * Equals to total vested amount - claimed amount.
      */
     function getAvailableClaimAmount() public view returns (uint256) {
-        if (block.timestamp.sub(lastClaimTime) >= claimsPeriod * 1 days) {
-            return getVestedAmount().sub(claimedAmount);
-        } else {
-            return 0;
-        }
+       return getVestedAmount().sub(claimedAmount);     
     }
 }

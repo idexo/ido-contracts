@@ -28,7 +28,7 @@ contract("::Vesting", async (accounts) => {
         await web3.eth.getBlock(currentBlockNumber).then((block) => {
             currentTimestamp = block.timestamp
         })
-        startTime = currentTimestamp + time.duration.months(1)
+        startTime = currentTimestamp + time.duration.days(1)
         vestingERC20 = await Vesting.new(erc20.address, bob, startTime, cliff, duration, 1, { from: alice })
     })
 
@@ -102,10 +102,34 @@ contract("::Vesting", async (accounts) => {
                 await erc20.approve(vestingERC20.address, totalAmount, { from: alice })
                 await vestingERC20.depositInitial(totalAmount, { from: alice })
             })
-            it("should claim", async () => {
-                await timeTraveler.advanceTimeAndBlock(time.duration.months(6))
-                expectEvent(await vestingERC20.claim(new BN(100000), { from: bob }), "Claimed", {
-                    amount: new BN(100000)
+            // it("should claim", async () => {
+            //     await timeTraveler.advanceTimeAndBlock(time.duration.months(6))
+            //     expectEvent(await vestingERC20.claim(new BN(100000), { from: bob }), "Claimed", {
+            //         amount: new BN(100000)
+            //     })
+            // })
+             it("should claim correct amount 25 days after cliff ends", async () => {
+                await timeTraveler.advanceTimeAndBlock(time.duration.days(cliff + 25))
+                let availableToClaim = await vestingERC20.getAvailableClaimAmount()
+                expect(availableToClaim.toString()).to.not.eq("0")
+                expectEvent(await vestingERC20.claim(availableToClaim, { from: bob }), "Claimed", {
+                    amount: availableToClaim
+                })
+            })
+            it("should claim correct amount 75 days after cliff ends", async () => {
+                await timeTraveler.advanceTimeAndBlock(time.duration.days(cliff + 75))
+                let availableToClaim = await vestingERC20.getAvailableClaimAmount()
+                expect(availableToClaim.toString()).to.not.eq("0")
+                expectEvent(await vestingERC20.claim(availableToClaim, { from: bob }), "Claimed", {
+                    amount: availableToClaim
+                })
+            })
+            it("should claim remaining amount at the end of claim period", async () => {
+                await timeTraveler.advanceTimeAndBlock(time.duration.days(cliff + duration))
+                let availableToClaim = await vestingERC20.getAvailableClaimAmount()
+                expect(availableToClaim.toString()).to.eq(totalAmount.toString())
+                expectEvent(await vestingERC20.claim(availableToClaim, { from: bob }), "Claimed", {
+                    amount: availableToClaim
                 })
             })
             describe("reverts if", async () => {
