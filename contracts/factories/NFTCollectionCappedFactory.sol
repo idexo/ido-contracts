@@ -2,30 +2,31 @@
 
 pragma solidity 0.8.4;
 
-import "../soulbound/UncappedLinkedSoulboundFC.sol";
+import "../nft/StandardCappedNFTCollectionFC.sol";
 
-contract UncappedLinkedSoulboundFactory {
-	event UncappedLinkedSoulboundCreated(address indexed creator, address indexed instance);
+contract NFTCollectionCappedFactory {
+	event StandardCappedNFTCollection(address indexed creator, address indexed instance);
 
-	function createUncappedLinkedSoulbound(
+	function createStandardCappedNFTCollection(
 		string memory collectionName,
 		string memory collectionSymbol,
 		string memory collectionBaseURI,
+		uint256 cap,
 		address admin,
 		address operator
 	) external returns(address) {
-		UncappedLinkedSoulboundFC newContract = new UncappedLinkedSoulboundFC(
+		StandardCappedNFTCollectionFC newContract = new StandardCappedNFTCollectionFC(
 			collectionName,
 			collectionSymbol,
 			collectionBaseURI,
+			cap,
 			admin,
 			operator
 			);
 		newContract.transferOwnership(msg.sender);
-		emit UncappedLinkedSoulboundCreated(msg.sender, address(newContract));
+		emit StandardCappedNFTCollection(msg.sender, address(newContract));
 		return address(newContract);
 	}
-
 
 
 
