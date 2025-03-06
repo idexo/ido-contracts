@@ -80,12 +80,26 @@ module.exports = {
           enabled: true,
           runs: 200,
         },
+        viaIR: true
+      },
+      },
+      {
+        version: "0.8.19",
+        settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200,
+        },
+        viaIR: true
       },
       }
     ],
     overrides: {
       "contracts/marketplace/direct/*.sol": {
         version: "0.8.9",
+      },
+      "contracts/paymentsv2/*.sol": {
+        version: "0.8.19",
       }
     }
   },
