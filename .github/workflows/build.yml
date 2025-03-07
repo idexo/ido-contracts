@@ -40,14 +40,6 @@ jobs:
     - name: Clean npm cache  
       run: npm cache clean --force   
 
-    # - name: Cache node modules
-    #   uses: actions/cache@v3
-    #   id: cache
-    #   with:
-    #     path: '**/node_modules'
-    #     key: npm-v2-${{ hashFiles('**/package-lock.json') }}
-    #     restore-keys: npm-v2-
-
     - name: Install dependencies  
       run: npm ci  
       env:  
@@ -58,8 +50,3 @@ jobs:
       env:  
         FORCE_COLOR: 1  
         ENABLE_GAS_REPORT: true  
-          
-    # - name: Run coverage  
-    #   run: npm run coverage  
-    #   env:  
-    #     NODE_OPTIONS: --max_old_space_size=4096  
