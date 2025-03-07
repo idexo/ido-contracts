@@ -50,7 +50,7 @@ contract ProductPaymentContract is ERC721URIStorage, Ownable {
     mapping(uint256 => Receipt) public receipts;  
     uint256 public productCounter;  
   
-    // Events for better traceability  
+    // Events for better traceability - bump  
     event ProductAdded(uint256 indexed productId, string name, string metadataUrl);  
     event ProductUpdated(uint256 indexed productId, string name, string metadataUrl);  
     event ProductDeactivated(uint256 indexed productId);  
