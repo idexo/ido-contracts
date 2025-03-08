@@ -8,43 +8,44 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";    
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";    
     
-interface INonfungiblePositionManager {    
-    struct Position {    
-        uint96 nonce;    
-        address operator;    
-        address token0;    
-        address token1;    
-        uint24 fee;    
-        int24 tickLower;    
-        int24 tickUpper;    
-        uint128 liquidity;    
-        uint256 feeGrowthInside0LastX128;    
-        uint256 feeGrowthInside1LastX128;    
-        uint128 tokensOwed0;    
-        uint128 tokensOwed1;    
-    }    
-        
-    // Use individual parameters instead of a struct    
-    function collect(    
-        uint256 tokenId,    
-        address recipient,    
-        uint128 amount0Max,    
-        uint128 amount1Max    
-    ) external payable returns (uint256 amount0, uint256 amount1);    
-        
-    function positions(uint256 tokenId) external view returns (Position memory);    
-        
-    function transferFrom(address from, address to, uint256 tokenId) external;    
-        
-    function safeTransferFrom(address from, address to, uint256 tokenId) external;    
-        
-    function approve(address to, uint256 tokenId) external;    
-        
-    function getApproved(uint256 tokenId) external view returns (address);    
-        
-    function isApprovedForAll(address owner, address operator) external view returns (bool);    
-        
-    function setApprovalForAll(address operator, bool approved) external;    
+interface INonfungiblePositionManager {  
+    struct Position {  
+        uint96 nonce;  
+        address operator;  
+        address token0;  
+        address token1;  
+        uint24 fee;  
+        int24 tickLower;  
+        int24 tickUpper;  
+        uint128 liquidity;  
+        uint256 feeGrowthInside0LastX128;  
+        uint256 feeGrowthInside1LastX128;  
+        uint128 tokensOwed0;  
+        uint128 tokensOwed1;  
+    }  
+      
+    struct CollectParams {  
+        uint256 tokenId;  
+        address recipient;  
+        uint128 amount0Max;  
+        uint128 amount1Max;  
+    }  
+      
+    function positions(uint256 tokenId) external view returns (Position memory);  
+      
+    function collect(CollectParams calldata params) external payable returns (uint256 amount0, uint256 amount1);  
+      
+    function transferFrom(address from, address to, uint256 tokenId) external;  
+      
+    function safeTransferFrom(address from, address to, uint256 tokenId) external;  
+      
+    function approve(address to, uint256 tokenId) external;  
+      
+    function getApproved(uint256 tokenId) external view returns (address);  
+      
+    function isApprovedForAll(address owner, address operator) external view returns (bool);  
+      
+    function setApprovalForAll(address operator, bool approved) external;  
 }    
     
 /**    
@@ -154,38 +155,40 @@ contract UniV3PositionLocker is IERC721Receiver, Ownable, ReentrancyGuard {
         emit PositionUnlocked(lockId, position.tokenId, msg.sender, block.timestamp);    
     }    
         
-    /**    
-     * @dev Collects fees from a locked position    
-     * @param lockId The lock ID of the position    
-     * @param recipient Address to receive the collected fees    
-     * @param amount0Max Maximum amount of token0 to collect    
-     * @param amount1Max Maximum amount of token1 to collect    
-     * @return amount0 Amount of token0 collected    
-     * @return amount1 Amount of token1 collected    
-     */    
-    function collectFees(    
-        uint256 lockId,    
-        address recipient,    
-        uint128 amount0Max,    
-        uint128 amount1Max    
-    ) external nonReentrant returns (uint256 amount0, uint256 amount1) {    
-        LockedPosition storage position = lockedPositions[lockId];    
-        require(position.owner == msg.sender, "Not the position owner");    
-        require(!position.isWithdrawn, "Position already withdrawn");    
-        require(recipient != address(0), "Invalid recipient");    
-            
-        // Collect the fees    
-        (amount0, amount1) = positionManager.collect(    
-            position.tokenId,    
-            recipient,    
-            amount0Max,    
-            amount1Max    
-        );    
-            
-        emit FeesCollected(lockId, position.tokenId, recipient, amount0, amount1);    
-            
-        return (amount0, amount1);    
-    }    
+    /**  
+     * @dev Collects fees from a locked position  
+     * @param lockId The lock ID of the position  
+     * @param recipient Address to receive the collected fees  
+     * @param amount0Max Maximum amount of token0 to collect  
+     * @param amount1Max Maximum amount of token1 to collect  
+     * @return amount0 Amount of token0 collected  
+     * @return amount1 Amount of token1 collected  
+     */  
+    function collectFees(  
+        uint256 lockId,  
+        address recipient,  
+        uint128 amount0Max,  
+        uint128 amount1Max  
+    ) external nonReentrant returns (uint256 amount0, uint256 amount1) {  
+        LockedPosition storage position = lockedPositions[lockId];  
+        require(position.owner == msg.sender, "Not the position owner");  
+        require(!position.isWithdrawn, "Position already withdrawn");  
+        require(recipient != address(0), "Invalid recipient");  
+              
+        // Create the CollectParams struct and pass it to collect  
+        INonfungiblePositionManager.CollectParams memory params = INonfungiblePositionManager.CollectParams({  
+            tokenId: position.tokenId,  
+            recipient: recipient,  
+            amount0Max: amount0Max,  
+            amount1Max: amount1Max  
+        });  
+          
+        (amount0, amount1) = positionManager.collect(params);  
+              
+        emit FeesCollected(lockId, position.tokenId, recipient, amount0, amount1);  
+              
+        return (amount0, amount1);  
+    }   
         
     /**    
      * @dev Returns information about a locked position    
