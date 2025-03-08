@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT 
+// SPDX-License-Identifier: MIT    
 pragma solidity 0.8.19;    
     
 contract MockPositionManager {    
@@ -50,7 +50,6 @@ contract MockPositionManager {
         return _owners[tokenId];    
     }    
         
-    // Modified collect function to work with individual parameters instead of struct    
     function collect(    
         uint256 tokenId,    
         address recipient,    
@@ -97,4 +96,3 @@ contract MockPositionManager {
         );    
     }    
 }    
-  
