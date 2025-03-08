@@ -47,8 +47,13 @@ interface INonfungiblePositionManager {
   
     function positions(uint256 tokenId) external view returns (Position memory);  
       
-    function collect(CollectParams calldata params) external payable returns (uint256 amount0, uint256 amount1);  
-      
+    function collect(    
+        uint256 tokenId,    
+        address recipient,    
+        uint128 amount0Max,    
+        uint128 amount1Max    
+    ) external payable returns (uint256 amount0, uint256 amount1);   
+    
     function transferFrom(address from, address to, uint256 tokenId) external;  
       
     function safeTransferFrom(address from, address to, uint256 tokenId) external;  
@@ -171,31 +176,29 @@ contract UniV3PositionLocker is IERC721Receiver, Ownable, ReentrancyGuard {
      * @return amount0 Amount of token0 collected  
      * @return amount1 Amount of token1 collected  
      */  
-    function collectFees(  
-        uint256 lockId,  
-        address recipient,  
-        uint128 amount0Max,  
-        uint128 amount1Max  
-    ) external nonReentrant returns (uint256 amount0, uint256 amount1) {  
-        LockedPosition storage position = lockedPositions[lockId];  
-        require(position.owner == msg.sender, "Not the position owner");  
-        require(!position.isWithdrawn, "Position already withdrawn");  
-        require(recipient != address(0), "Invalid recipient");  
-          
-        // Collect the fees  
-        INonfungiblePositionManager.CollectParams memory params = INonfungiblePositionManager.CollectParams({  
-            tokenId: position.tokenId,  
-            recipient: recipient,  
-            amount0Max: amount0Max,  
-            amount1Max: amount1Max  
-        });  
-          
-        (amount0, amount1) = positionManager.collect(params);  
-          
-        emit FeesCollected(lockId, position.tokenId, recipient, amount0, amount1);  
-          
-        return (amount0, amount1);  
-    }  
+    function collectFees(    
+        uint256 lockId,    
+        address recipient,    
+        uint128 amount0Max,    
+        uint128 amount1Max    
+    ) external nonReentrant returns (uint256 amount0, uint256 amount1) {    
+        LockedPosition storage position = lockedPositions[lockId];    
+        require(position.owner == msg.sender, "Not the position owner");    
+        require(!position.isWithdrawn, "Position already withdrawn");    
+        require(recipient != address(0), "Invalid recipient");    
+              
+        // Collect the fees directly with individual parameters    
+        (amount0, amount1) = positionManager.collect(    
+            position.tokenId,    
+            recipient,    
+            amount0Max,    
+            amount1Max    
+        );    
+              
+        emit FeesCollected(lockId, position.tokenId, recipient, amount0, amount1);    
+              
+        return (amount0, amount1);    
+    }   
       
     /**  
      * @dev Returns information about a locked position  
