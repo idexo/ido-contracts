@@ -2,22 +2,6 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");  
 const { constants } = require("@openzeppelin/test-helpers");  
   
-// Mock for INonfungiblePositionManager  
-const MockPositionManagerArtifact = {  
-  abi: [  
-    "function positions(uint256) view returns (tuple(uint96 nonce, address operator, address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint128 liquidity, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128, uint128 tokensOwed0, uint128 tokensOwed1))",  
-    "function collect(tuple(uint256 tokenId, address recipient, uint128 amount0Max, uint128 amount1Max)) payable returns (uint256, uint256)",  
-    "function transferFrom(address, address, uint256)",  
-    "function safeTransferFrom(address, address, uint256)",  
-    "function approve(address, uint256)",  
-    "function getApproved(uint256) view returns (address)",  
-    "function isApprovedForAll(address, address) view returns (bool)",  
-    "function setApprovalForAll(address, bool)",  
-    "function ownerOf(uint256) view returns (address)"  
-  ],  
-  bytecode: "0x"  
-};  
-  
 describe("UniV3PositionLocker", function () {  
   let positionLocker;  
   let mockPositionManager;  
@@ -53,13 +37,7 @@ describe("UniV3PositionLocker", function () {
     [owner, user1, user2] = await ethers.getSigners();  
       
     // Deploy mock position manager  
-    const MockPositionManager = await ethers.getContractFactory(  
-      "MockPositionManager",  
-      {  
-        signer: owner  
-      }  
-    );  
-      
+    const MockPositionManager = await ethers.getContractFactory("MockPositionManager");  
     mockPositionManager = await MockPositionManager.deploy();  
     await mockPositionManager.deployed();  
       
@@ -68,9 +46,7 @@ describe("UniV3PositionLocker", function () {
     await mockPositionManager.setOwner(tokenId, user1.address);  
       
     // Deploy the locker contract  
-    const UniV3PositionLocker = await ethers.getContractFactory(  
-      "UniV3PositionLocker"  
-    );  
+    const UniV3PositionLocker = await ethers.getContractFactory("UniV3PositionLocker");  
     positionLocker = await UniV3PositionLocker.deploy(  
       mockPositionManager.address,  
       lockDuration  
@@ -354,4 +330,4 @@ describe("UniV3PositionLocker", function () {
       expect(selector.slice(0, 10)).to.equal(expectedSelector);  
     });  
   });  
-});
+});  
