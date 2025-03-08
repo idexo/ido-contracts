@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: MIT  
 pragma solidity 0.8.19;  
   
+/**  
+ * @title MockPositionManager  
+ * @notice A simplified mock of the Uniswap V3 NonfungiblePositionManager for testing  
+ */  
 contract MockPositionManager {  
+    // Structs  
     struct Position {  
         uint96 nonce;  
         address operator;  
@@ -24,31 +29,33 @@ contract MockPositionManager {
         uint128 amount1Max;  
     }  
       
+    // Storage   
     mapping(uint256 => Position) private _positions;  
     mapping(uint256 => address) private _owners;  
     mapping(uint256 => address) private _approvals;  
     mapping(address => mapping(address => bool)) private _operatorApprovals;  
-      
+    mapping(address => uint256) private _balances;  
+  
+    // For testing purposes  
     uint256 public collectAmount0;  
     uint256 public collectAmount1;  
       
-    // For testing - set a position  
+    // Testing helpers  
     function setPosition(uint256 tokenId, Position calldata position) external {  
         _positions[tokenId] = position;  
     }  
       
-    // For testing - set an owner  
     function setOwner(uint256 tokenId, address owner) external {  
         _owners[tokenId] = owner;  
+        _balances[owner]++;  
     }  
       
-    // For testing - set collect amounts  
     function setCollectAmounts(uint256 amount0, uint256 amount1) external {  
         collectAmount0 = amount0;  
         collectAmount1 = amount1;  
     }  
       
-    // Uniswap V3 Position Manager functions  
+    // Interface implementation  
     function positions(uint256 tokenId) external view returns (  
         uint96 nonce,  
         address operator,  
@@ -80,57 +87,95 @@ contract MockPositionManager {
         );  
     }  
       
-    function ownerOf(uint256 tokenId) external view returns (address) {  
+    function ownerOf(uint256 tokenId) public view returns (address) {  
+        require(_owners[tokenId] != address(0), "ERC721: owner query for nonexistent token");  
         return _owners[tokenId];  
     }  
       
-    // Implement collect to match Uniswap's interface  
-    function collect(CollectParams calldata params) external payable returns (uint256 amount0, uint256 amount1) {  
-        // Simply return the stored amounts  
-        amount0 = collectAmount0;  
-        amount1 = collectAmount1;  
-        return (amount0, amount1);  
+    function collect(CollectParams calldata) external payable returns (uint256, uint256) {  
+        return (collectAmount0, collectAmount1);  
     }  
       
     function transferFrom(address from, address to, uint256 tokenId) external {  
-        require(_isApprovedOrOwner(msg.sender, tokenId), "Not approved");  
-        _owners[tokenId] = to;  
+        require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: transfer caller is not owner nor approved");  
+        _transfer(from, to, tokenId);  
     }  
       
     function safeTransferFrom(address from, address to, uint256 tokenId) external {  
-        require(_isApprovedOrOwner(msg.sender, tokenId), "Not approved");  
-        _owners[tokenId] = to;  
+        safeTransferFrom(from, to, tokenId, "");  
     }  
       
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes calldata) external {  
-        require(_isApprovedOrOwner(msg.sender, tokenId), "Not approved");  
-        _owners[tokenId] = to;  
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) public {  
+        require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: transfer caller is not owner nor approved");  
+        _safeTransfer(from, to, tokenId, _data);  
     }  
       
     function approve(address to, uint256 tokenId) external {  
-        address owner = _owners[tokenId];  
-        require(msg.sender == owner || _operatorApprovals[owner][msg.sender], "Not authorized");  
+        address owner = ownerOf(tokenId);  
+        require(to != owner, "ERC721: approval to current owner");  
+          
+        require(  
+            msg.sender == owner || isApprovedForAll(owner, msg.sender),  
+            "ERC721: approve caller is not owner nor approved for all"  
+        );  
+          
         _approvals[tokenId] = to;  
     }  
       
-    function getApproved(uint256 tokenId) external view returns (address) {  
+    function getApproved(uint256 tokenId) public view returns (address) {  
+        require(_exists(tokenId), "ERC721: approved query for nonexistent token");  
         return _approvals[tokenId];  
     }  
       
     function setApprovalForAll(address operator, bool approved) external {  
+        require(operator != msg.sender, "ERC721: approve to caller");  
         _operatorApprovals[msg.sender][operator] = approved;  
     }  
       
-    function isApprovedForAll(address owner, address operator) external view returns (bool) {  
+    function isApprovedForAll(address owner, address operator) public view returns (bool) {  
         return _operatorApprovals[owner][operator];  
     }  
       
+    function balanceOf(address owner) external view returns (uint256) {  
+        require(owner != address(0), "ERC721: balance query for the zero address");  
+        return _balances[owner];  
+    }  
+      
+    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {  
+        return   
+            interfaceId == 0x01ffc9a7 || // ERC165  
+            interfaceId == 0x80ac58cd || // ERC721  
+            interfaceId == 0x5b5e139f;   // ERC721Metadata  
+    }  
+      
+    // Internal functions  
+    function _exists(uint256 tokenId) internal view returns (bool) {  
+        return _owners[tokenId] != address(0);  
+    }  
+      
     function _isApprovedOrOwner(address spender, uint256 tokenId) internal view returns (bool) {  
-        address owner = _owners[tokenId];  
-        return (  
-            spender == owner ||  
-            spender == _approvals[tokenId] ||  
-            _operatorApprovals[owner][spender]  
-        );  
+        require(_exists(tokenId), "ERC721: operator query for nonexistent token");  
+        address owner = ownerOf(tokenId);  
+        return (spender == owner || getApproved(tokenId) == spender || isApprovedForAll(owner, spender));  
+    }  
+      
+    function _safeTransfer(address from, address to, uint256 tokenId, bytes memory _data) internal {  
+        _transfer(from, to, tokenId);  
+        // No receiver check needed for mock  
+    }  
+      
+    function _transfer(address from, address to, uint256 tokenId) internal {  
+        require(ownerOf(tokenId) == from, "ERC721: transfer of token that is not own");  
+        require(to != address(0), "ERC721: transfer to the zero address");  
+          
+        // Clear approvals  
+        _approvals[tokenId] = address(0);  
+          
+        // Update balances  
+        _balances[from]--;  
+        _balances[to]++;  
+          
+        // Update owner  
+        _owners[tokenId] = to;  
     }  
 }  

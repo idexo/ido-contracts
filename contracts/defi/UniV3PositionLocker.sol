@@ -5,22 +5,43 @@ import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";  
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";  
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";  
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";  
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";  
   
-// Import Uniswap V3 interfaces directly  
-import "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";  
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";  
+// Simplified Uniswap V3 Position Manager Interface  
+interface INonfungiblePositionManager is IERC721 {  
+    function positions(uint256 tokenId)  
+        external  
+        view  
+        returns (  
+            uint96 nonce,  
+            address operator,  
+            address token0,  
+            address token1,  
+            uint24 fee,  
+            int24 tickLower,  
+            int24 tickUpper,  
+            uint128 liquidity,  
+            uint256 feeGrowthInside0LastX128,  
+            uint256 feeGrowthInside1LastX128,  
+            uint128 tokensOwed0,  
+            uint128 tokensOwed1  
+        );  
+  
+    struct CollectParams {  
+        uint256 tokenId;  
+        address recipient;  
+        uint128 amount0Max;  
+        uint128 amount1Max;  
+    }  
+  
+    function collect(CollectParams calldata params) external payable returns (uint256 amount0, uint256 amount1);  
+}  
   
 /**  
  * @title UniV3PositionLocker  
  * @notice This contract allows users to lock their Uniswap V3 LP Position NFTs for a set period  
  * while still being able to collect trading fees.  
- * @dev Implements IERC721Receiver to receive the NFTs.  
  */  
 contract UniV3PositionLocker is IERC721Receiver, Ownable, ReentrancyGuard {  
-    using SafeERC20 for IERC20;  
-  
     // Position Manager contract  
     INonfungiblePositionManager public immutable positionManager;  
       
@@ -54,7 +75,6 @@ contract UniV3PositionLocker is IERC721Receiver, Ownable, ReentrancyGuard {
     event PositionLocked(uint256 indexed lockId, uint256 indexed tokenId, address indexed owner, uint256 lockedAt);  
     event PositionUnlocked(uint256 indexed lockId, uint256 indexed tokenId, address indexed recipient, uint256 unlockedAt);  
     event FeesCollected(uint256 indexed lockId, uint256 indexed tokenId, address indexed recipient, uint256 amount0, uint256 amount1);  
-    event EmergencyWithdraw(uint256 indexed lockId, uint256 indexed tokenId, address indexed recipient);  
   
     /**  
      * @dev Constructor initializes the contract with position manager address and lock duration  
@@ -115,7 +135,7 @@ contract UniV3PositionLocker is IERC721Receiver, Ownable, ReentrancyGuard {
         position.isWithdrawn = true;  
           
         // Transfer NFT back to owner  
-        positionManager.safeTransferFrom(address(this), msg.sender, position.tokenId);  
+        positionManager.transferFrom(address(this), msg.sender, position.tokenId);  
           
         emit PositionUnlocked(lockId, position.tokenId, msg.sender, block.timestamp);  
     }  
@@ -140,14 +160,13 @@ contract UniV3PositionLocker is IERC721Receiver, Ownable, ReentrancyGuard {
         require(!position.isWithdrawn, "Position already withdrawn");  
         require(recipient != address(0), "Invalid recipient");  
           
-        // Create the CollectParams struct properly using the official Uniswap interface  
-        INonfungiblePositionManager.CollectParams memory params =   
-            INonfungiblePositionManager.CollectParams({  
-                tokenId: position.tokenId,  
-                recipient: recipient,  
-                amount0Max: amount0Max,  
-                amount1Max: amount1Max  
-            });  
+        // Create the CollectParams struct  
+        INonfungiblePositionManager.CollectParams memory params = INonfungiblePositionManager.CollectParams({  
+            tokenId: position.tokenId,  
+            recipient: recipient,  
+            amount0Max: amount0Max,  
+            amount1Max: amount1Max  
+        });  
           
         // Collect fees  
         (amount0, amount1) = positionManager.collect(params);  
@@ -183,18 +202,6 @@ contract UniV3PositionLocker is IERC721Receiver, Ownable, ReentrancyGuard {
     /**  
      * @dev Returns detailed information about a Uniswap V3 position  
      * @param tokenId The token ID of the position  
-     * @return nonce Position nonce  
-     * @return operator Address approved to manage this token  
-     * @return token0 Address of token0  
-     * @return token1 Address of token1  
-     * @return fee Pool fee tier  
-     * @return tickLower Lower tick bound  
-     * @return tickUpper Upper tick bound  
-     * @return liquidity Position liquidity  
-     * @return feeGrowthInside0LastX128 Fee growth of token0 inside position as of last action  
-     * @return feeGrowthInside1LastX128 Fee growth of token1 inside position as of last action  
-     * @return tokensOwed0 Tokens owed to token holder in token0  
-     * @return tokensOwed1 Tokens owed to token holder in token1  
      */  
     function getPositionDetails(uint256 tokenId) external view returns (  
         uint96 nonce,  
