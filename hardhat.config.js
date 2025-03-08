@@ -9,6 +9,7 @@ require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
 require("hardhat-contract-sizer");
+require("dotenv").config();
 
 const fs = require('fs');
 const path = require('path');
@@ -108,7 +109,20 @@ module.exports = {
       blockGasLimit: 100000000,
       allowUnlimitedContractSize: !withOptimizations,
     },
+    sepolia: {
+      url: `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`,  
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      chainId: 11155111,
+    },
+    mainnet: {
+      url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,  
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      chainId: 1
+    }
   },
+  etherscan: {  
+   apiKey: process.env.ETHERSCAN_API_KEY,  
+  }, 
   gasReporter: {
     currency: 'USD',
     outputFile: argv.ci ? 'gas-report.txt' : undefined,

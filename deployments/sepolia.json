@@ -1,0 +1,14 @@
+{
+  "IDOToken": {
+    "address": "0xbAad768eBD30eCCB620B5728889ce3c3d03728cA",
+    "blockNumber": null,
+    "deploymentHash": "0xed3eab913c5a23d4defa7ee566e3f7058595274a37a35ca9f467632aa995816f",
+    "timestamp": "2025-03-07T20:43:12.667Z"
+  },
+  "ProductPaymentContract": {
+    "address": "0x3539fA3aC8424DC9f8D106d7731fde1C63771085",
+    "blockNumber": null,
+    "deploymentHash": "0x9f8bdd209d1c2169ca9427de63fceeca7aaea7e203aa75c36de7c8962eed3a53",
+    "timestamp": "2025-03-07T20:51:48.654Z"
+  }
+}
