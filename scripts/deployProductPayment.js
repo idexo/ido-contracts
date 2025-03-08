@@ -4,7 +4,7 @@ const path = require("path");
   
 // Configuration for different networks  
 const PAYMENT_TOKEN_ADDRESSES = {  
-  mainnet: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // IDO on Ethereum Mainnet  
+  mainnet: "0xf9c53268e9de692ae1b2ea5216e24e1c3ad7cb1e", // IDO on Ethereum Mainnet  
   sepolia: "0xbAad768eBD30eCCB620B5728889ce3c3d03728cA", // IDO on Sepolia 
 };  
   
