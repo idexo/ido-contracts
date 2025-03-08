@@ -49,15 +49,42 @@ contract MockPositionManager {
     }  
       
     // Uniswap V3 Position Manager functions  
-    function positions(uint256 tokenId) external view returns (Position memory) {  
-        return _positions[tokenId];  
+    function positions(uint256 tokenId) external view returns (  
+        uint96 nonce,  
+        address operator,  
+        address token0,  
+        address token1,  
+        uint24 fee,  
+        int24 tickLower,  
+        int24 tickUpper,  
+        uint128 liquidity,  
+        uint256 feeGrowthInside0LastX128,  
+        uint256 feeGrowthInside1LastX128,  
+        uint128 tokensOwed0,  
+        uint128 tokensOwed1  
+    ) {  
+        Position memory position = _positions[tokenId];  
+        return (  
+            position.nonce,  
+            position.operator,  
+            position.token0,  
+            position.token1,  
+            position.fee,  
+            position.tickLower,  
+            position.tickUpper,  
+            position.liquidity,  
+            position.feeGrowthInside0LastX128,  
+            position.feeGrowthInside1LastX128,  
+            position.tokensOwed0,  
+            position.tokensOwed1  
+        );  
     }  
       
     function ownerOf(uint256 tokenId) external view returns (address) {  
         return _owners[tokenId];  
     }  
       
-    // Implement collect to match Uniswap's interface - using a struct parameter  
+    // Implement collect to match Uniswap's interface  
     function collect(CollectParams calldata params) external payable returns (uint256 amount0, uint256 amount1) {  
         // Simply return the stored amounts  
         amount0 = collectAmount0;  
@@ -71,6 +98,11 @@ contract MockPositionManager {
     }  
       
     function safeTransferFrom(address from, address to, uint256 tokenId) external {  
+        require(_isApprovedOrOwner(msg.sender, tokenId), "Not approved");  
+        _owners[tokenId] = to;  
+    }  
+      
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes calldata) external {  
         require(_isApprovedOrOwner(msg.sender, tokenId), "Not approved");  
         _owners[tokenId] = to;  
     }  

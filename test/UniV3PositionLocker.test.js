@@ -27,7 +27,7 @@ describe("UniV3PositionLocker", function () {
     tokensOwed1: ethers.utils.parseUnits("0.1", 18)  
   };  
     
-  // Custom time manipulation function (without hardhat-network-helpers)  
+  // Custom time manipulation function  
   async function increaseTime(seconds) {  
     await ethers.provider.send("evm_increaseTime", [seconds]);  
     await ethers.provider.send("evm_mine");  
@@ -57,6 +57,38 @@ describe("UniV3PositionLocker", function () {
     await mockPositionManager.connect(user1).setApprovalForAll(positionLocker.address, true);  
   });  
     
+  describe("Locking Positions", function () {  
+    it("Should lock a position correctly", async function () {  
+      const lockTx = await positionLocker.connect(user1).lockPosition(tokenId);  
+      const receipt = await lockTx.wait();  
+        
+      // Check for event emission  
+      const event = receipt.events.find(e => e.event === "PositionLocked");  
+      expect(event).to.not.be.undefined;  
+        
+      const lockId = event.args.lockId;  
+      expect(event.args.tokenId).to.equal(tokenId);  
+      expect(event.args.owner).to.equal(user1.address);  
+        
+      // Check stored data  
+      const position = await positionLocker.getLockedPosition(lockId);  
+      expect(position.owner).to.equal(user1.address);  
+      expect(position.tokenId).to.equal(tokenId);  
+      expect(position.isWithdrawn).to.be.false;  
+        
+      // Check token ID to lock ID mapping  
+      const retrievedLockId = await positionLocker.getLockIdForToken(tokenId);  
+      expect(retrievedLockId).to.equal(lockId);  
+    });  
+      
+    it("Should revert when trying to lock an already locked position", async function () {  
+      await positionLocker.connect(user1).lockPosition(tokenId);  
+      await expect(  
+        positionLocker.connect(user1).lockPosition(tokenId)  
+      ).to.be.revertedWith("Token already locked");  
+    });  
+  });  
+    
   describe("Collecting Fees", function () {  
     let lockId;  
       
@@ -64,7 +96,7 @@ describe("UniV3PositionLocker", function () {
       // Lock a position first to get a lock ID  
       const lockTx = await positionLocker.connect(user1).lockPosition(tokenId);  
       const receipt = await lockTx.wait();  
-      const event = receipt.events?.find(e => e.event === "PositionLocked");  
+      const event = receipt.events.find(e => e.event === "PositionLocked");  
       lockId = event.args.lockId;  
         
       // Setup mock collect method  
@@ -85,7 +117,7 @@ describe("UniV3PositionLocker", function () {
       const receipt = await collectTx.wait();  
         
       // Check for event emission  
-      const event = receipt.events?.find(e => e.event === "FeesCollected");  
+      const event = receipt.events.find(e => e.event === "FeesCollected");  
       expect(event).to.not.be.undefined;  
       expect(event.args.lockId).to.equal(lockId);  
       expect(event.args.tokenId).to.equal(tokenId);  
@@ -133,7 +165,7 @@ describe("UniV3PositionLocker", function () {
         )  
       ).to.be.revertedWith("Position already withdrawn");  
     });  
-  });   
+  });  
     
   describe("Unlocking Positions", function () {  
     let lockId;  
@@ -142,7 +174,7 @@ describe("UniV3PositionLocker", function () {
       // Lock a position first to get a lock ID  
       const lockTx = await positionLocker.connect(user1).lockPosition(tokenId);  
       const receipt = await lockTx.wait();  
-      const event = receipt.events?.find(e => e.event === "PositionLocked");  
+      const event = receipt.events.find(e => e.event === "PositionLocked");  
       lockId = event.args.lockId;  
     });  
       
@@ -160,7 +192,7 @@ describe("UniV3PositionLocker", function () {
       const receipt = await unlockTx.wait();  
         
       // Check for event emission  
-      const event = receipt.events?.find(e => e.event === "PositionUnlocked");  
+      const event = receipt.events.find(e => e.event === "PositionUnlocked");  
       expect(event).to.not.be.undefined;  
       expect(event.args.lockId).to.equal(lockId);  
       expect(event.args.tokenId).to.equal(tokenId);  
@@ -179,97 +211,104 @@ describe("UniV3PositionLocker", function () {
         positionLocker.connect(user2).unlockPosition(lockId)  
       ).to.be.revertedWith("Not the position owner");  
     });  
-      
+
     it("Should revert when position is already withdrawn", async function () {  
       // Fast forward to end of lock period  
       await increaseTime(lockDuration + 1);  
-        
-      // Unlock once  
-      await positionLocker.connect(user1).unlockPosition(lockId);  
-        
-      // Try to unlock again  
-      await expect(  
-        positionLocker.connect(user1).unlockPosition(lockId)  
-      ).to.be.revertedWith("Position already withdrawn");  
-    });  
-  });  
-    
-  describe("View Functions", function () {  
-    let lockId;  
+
+    // Unlock once    
+      await positionLocker.connect(user1).unlockPosition(lockId);    
+          
+      // Try to unlock again    
+      await expect(    
+        positionLocker.connect(user1).unlockPosition(lockId)    
+      ).to.be.revertedWith("Position already withdrawn");    
+    });    
+  });    
       
-    beforeEach(async function () {  
-      // Lock a position first to get a lock ID  
-      const lockTx = await positionLocker.connect(user1).lockPosition(tokenId);  
-      const receipt = await lockTx.wait();  
-      const event = receipt.events?.find(e => e.event === "PositionLocked");  
-      lockId = event.args.lockId;  
-    });  
+  describe("Position Details", function () {    
+    let lockId;    
+        
+    beforeEach(async function () {    
+      // Lock a position first to get a lock ID    
+      const lockTx = await positionLocker.connect(user1).lockPosition(tokenId);    
+      const receipt = await lockTx.wait();    
+      const event = receipt.events.find(e => e.event === "PositionLocked");    
+      lockId = event.args.lockId;    
+    });    
+        
+    it("Should return correct position details", async function () {    
+      const position = await positionLocker.getPositionDetails(tokenId);    
+          
+      expect(position.token0).to.equal(samplePosition.token0);    
+      expect(position.token1).to.equal(samplePosition.token1);    
+      expect(position.fee).to.equal(samplePosition.fee);    
+      expect(position.tickLower).to.equal(samplePosition.tickLower);    
+      expect(position.tickUpper).to.equal(samplePosition.tickUpper);    
+      expect(position.liquidity).to.equal(samplePosition.liquidity);    
+      expect(position.feeGrowthInside0LastX128).to.equal(samplePosition.feeGrowthInside0LastX128);    
+      expect(position.feeGrowthInside1LastX128).to.equal(samplePosition.feeGrowthInside1LastX128);    
+      expect(position.tokensOwed0).to.equal(samplePosition.tokensOwed0);    
+      expect(position.tokensOwed1).to.equal(samplePosition.tokensOwed1);    
+    });    
+        
+    it("Should return correct locked position info", async function () {    
+      const lockedPosition = await positionLocker.getLockedPosition(lockId);    
+          
+      expect(lockedPosition.owner).to.equal(user1.address);    
+      expect(lockedPosition.tokenId).to.equal(tokenId);    
+      expect(lockedPosition.isWithdrawn).to.be.false;    
+    });    
+        
+    it("Should return correct lock ID for token ID", async function () {    
+      expect(await positionLocker.getLockIdForToken(tokenId)).to.equal(lockId);    
+    });    
+  });    
       
-    it("Should return correct position details", async function () {  
-      const position = await positionLocker.getPositionDetails(tokenId);  
+  describe("Lock Time Information", function() {    
+    it("Should return correct remaining lock time", async function () {    
+      // Check initial remaining time    
+      const initialRemainingTime = await positionLocker.getRemainingLockTime();    
+      expect(initialRemainingTime).to.be.closeTo(    
+        ethers.BigNumber.from(lockDuration),    
+        60 // allow for small discrepancy due to block timing    
+      );    
+          
+      // Fast forward half the lock period    
+      await increaseTime(lockDuration / 2);    
+          
+      const halfwayRemainingTime = await positionLocker.getRemainingLockTime();    
+      expect(halfwayRemainingTime).to.be.closeTo(    
+        ethers.BigNumber.from(lockDuration / 2),    
+        60 // allow for small discrepancy due to block timing    
+      );    
+          
+      // Fast forward past the lock period    
+      await increaseTime(lockDuration);    
+          
+      const finalRemainingTime = await positionLocker.getRemainingLockTime();    
+      expect(finalRemainingTime).to.equal(0);    
+    });    
         
-      expect(position.token0).to.equal(samplePosition.token0);  
-      expect(position.token1).to.equal(samplePosition.token1);  
-      expect(position.fee).to.equal(samplePosition.fee);  
-      expect(position.tickLower).to.equal(samplePosition.tickLower);  
-      expect(position.tickUpper).to.equal(samplePosition.tickUpper);  
-      expect(position.liquidity).to.equal(samplePosition.liquidity);  
-      expect(position.feeGrowthInside0LastX128).to.equal(samplePosition.feeGrowthInside0LastX128);  
-      expect(position.feeGrowthInside1LastX128).to.equal(samplePosition.feeGrowthInside1LastX128);  
-      expect(position.tokensOwed0).to.equal(samplePosition.tokensOwed0);  
-      expect(position.tokensOwed1).to.equal(samplePosition.tokensOwed1);  
-    });  
+    it("Should have correct lockEndTimestamp set at construction", async function() {    
+      const endTimestamp = await positionLocker.lockEndTimestamp();    
+      const deploymentTime = await positionLocker.deploymentTime();    
+      expect(endTimestamp.sub(deploymentTime)).to.equal(lockDuration);    
+    });    
+  });    
       
-    it("Should return correct locked position info", async function () {  
-      const lockedPosition = await positionLocker.getLockedPosition(lockId);  
-        
-      expect(lockedPosition.owner).to.equal(user1.address);  
-      expect(lockedPosition.tokenId).to.equal(tokenId);  
-      expect(lockedPosition.isWithdrawn).to.be.false;  
-    });  
       
-    it("Should return correct lock ID for token ID", async function () {  
-      expect(await positionLocker.getLockIdForToken(tokenId)).to.equal(lockId);  
-    });  
-  });  
-    
-  describe("Remaining Lock Time", function() {  
-    it("Should return correct remaining lock time", async function () {  
-      // Check initial remaining time  
-      const initialRemainingTime = await positionLocker.getRemainingLockTime();  
-      expect(initialRemainingTime).to.be.closeTo(  
-        ethers.BigNumber.from(lockDuration),  
-        60 // allow for small discrepancy due to block timing  
-      );  
-        
-      // Fast forward half the lock period  
-      await increaseTime(lockDuration / 2);  
-        
-      const halfwayRemainingTime = await positionLocker.getRemainingLockTime();  
-      expect(halfwayRemainingTime).to.be.closeTo(  
-        ethers.BigNumber.from(lockDuration / 2),  
-        60 // allow for small discrepancy due to block timing  
-      );  
-        
-      // Fast forward past the lock period  
-      await increaseTime(lockDuration);  
-        
-      const finalRemainingTime = await positionLocker.getRemainingLockTime();  
-      expect(finalRemainingTime).to.equal(0);  
-    });  
-  });  
-    
-  describe("ERC721 Receiver", function () {  
-    it("Should implement onERC721Received correctly", async function () {  
-      const selector = await positionLocker.onERC721Received(  
-        constants.ZERO_ADDRESS,  
-        constants.ZERO_ADDRESS,  
-        0,  
-        "0x"  
-      );  
-        
-      const expectedSelector = "0x150b7a02"; // bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))  
-      expect(selector.slice(0, 10)).to.equal(expectedSelector);  
-    });  
-  });  
-});  
+  describe("ERC721 Receiver", function () {    
+    it("Should implement onERC721Received correctly", async function () {    
+      const selector = await positionLocker.onERC721Received(    
+        constants.ZERO_ADDRESS,    
+        constants.ZERO_ADDRESS,    
+        0,    
+        "0x"    
+      );    
+          
+      // Check for correct implementation of the interface    
+      expect(selector).to.equal("0x150b7a02");    
+    });    
+  });    
+});    
