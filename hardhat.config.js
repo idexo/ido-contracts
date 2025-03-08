@@ -101,6 +101,9 @@ module.exports = {
       },
       "contracts/paymentsv2/*.sol": {
         version: "0.8.19",
+      },
+      "contracts/defi/*.sol": {
+        version: "0.8.19",
       }
     }
   },
