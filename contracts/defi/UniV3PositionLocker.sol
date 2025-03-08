@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT  
 pragma solidity 0.8.19;  
   
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";  
@@ -7,63 +8,9 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";  
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";  
   
-// Import the updated interface  
-interface INonfungiblePositionManager {  
-    struct Position {  
-        uint96 nonce;  
-        address operator;  
-        address token0;  
-        address token1;  
-        uint24 fee;  
-        int24 tickLower;  
-        int24 tickUpper;  
-        uint128 liquidity;  
-        uint256 feeGrowthInside0LastX128;  
-        uint256 feeGrowthInside1LastX128;  
-        uint128 tokensOwed0;  
-        uint128 tokensOwed1;  
-    }  
-      
-    struct CollectParams {  
-        uint256 tokenId;  
-        address recipient;  
-        uint128 amount0Max;  
-        uint128 amount1Max;  
-    }  
-      
-    function positions(uint256 tokenId) external view returns (  
-        uint96 nonce,  
-        address operator,  
-        address token0,  
-        address token1,  
-        uint24 fee,  
-        int24 tickLower,  
-        int24 tickUpper,  
-        uint128 liquidity,  
-        uint256 feeGrowthInside0LastX128,  
-        uint256 feeGrowthInside1LastX128,  
-        uint128 tokensOwed0,  
-        uint128 tokensOwed1  
-    );  
-      
-    function collect(CollectParams calldata params) external payable returns (uint256 amount0, uint256 amount1);  
-      
-    function transferFrom(address from, address to, uint256 tokenId) external;  
-      
-    function safeTransferFrom(address from, address to, uint256 tokenId) external;  
-      
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes calldata data) external;  
-      
-    function approve(address to, uint256 tokenId) external;  
-      
-    function getApproved(uint256 tokenId) external view returns (address);  
-      
-    function isApprovedForAll(address owner, address operator) external view returns (bool);  
-      
-    function setApprovalForAll(address operator, bool approved) external;  
-      
-    function ownerOf(uint256 tokenId) external view returns (address);  
-}  
+// Import Uniswap V3 interfaces directly  
+import "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";  
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";  
   
 /**  
  * @title UniV3PositionLocker  
@@ -92,22 +39,6 @@ contract UniV3PositionLocker is IERC721Receiver, Ownable, ReentrancyGuard {
         uint256 tokenId;    // Uniswap V3 position token ID  
         uint256 lockedAt;   // When the position was locked  
         bool isWithdrawn;   // Whether the position has been withdrawn  
-    }  
-  
-    // Struct to store position details  
-    struct PositionDetails {  
-        uint96 nonce;  
-        address operator;  
-        address token0;  
-        address token1;  
-        uint24 fee;  
-        int24 tickLower;  
-        int24 tickUpper;  
-        uint128 liquidity;  
-        uint256 feeGrowthInside0LastX128;  
-        uint256 feeGrowthInside1LastX128;  
-        uint128 tokensOwed0;  
-        uint128 tokensOwed1;  
     }  
   
     // Mapping from lock ID to locked position  
@@ -209,13 +140,14 @@ contract UniV3PositionLocker is IERC721Receiver, Ownable, ReentrancyGuard {
         require(!position.isWithdrawn, "Position already withdrawn");  
         require(recipient != address(0), "Invalid recipient");  
           
-        // Create the CollectParams struct  
-        INonfungiblePositionManager.CollectParams memory params = INonfungiblePositionManager.CollectParams({  
-            tokenId: position.tokenId,  
-            recipient: recipient,  
-            amount0Max: amount0Max,  
-            amount1Max: amount1Max  
-        });  
+        // Create the CollectParams struct properly using the official Uniswap interface  
+        INonfungiblePositionManager.CollectParams memory params =   
+            INonfungiblePositionManager.CollectParams({  
+                tokenId: position.tokenId,  
+                recipient: recipient,  
+                amount0Max: amount0Max,  
+                amount1Max: amount1Max  
+            });  
           
         // Collect fees  
         (amount0, amount1) = positionManager.collect(params);  
@@ -251,38 +183,34 @@ contract UniV3PositionLocker is IERC721Receiver, Ownable, ReentrancyGuard {
     /**  
      * @dev Returns detailed information about a Uniswap V3 position  
      * @param tokenId The token ID of the position  
-     * @return details Detailed position information including liquidity, fees, etc.  
+     * @return nonce Position nonce  
+     * @return operator Address approved to manage this token  
+     * @return token0 Address of token0  
+     * @return token1 Address of token1  
+     * @return fee Pool fee tier  
+     * @return tickLower Lower tick bound  
+     * @return tickUpper Upper tick bound  
+     * @return liquidity Position liquidity  
+     * @return feeGrowthInside0LastX128 Fee growth of token0 inside position as of last action  
+     * @return feeGrowthInside1LastX128 Fee growth of token1 inside position as of last action  
+     * @return tokensOwed0 Tokens owed to token holder in token0  
+     * @return tokensOwed1 Tokens owed to token holder in token1  
      */  
-    function getPositionDetails(uint256 tokenId) external view returns (PositionDetails memory details) {  
-        (  
-            uint96 nonce,  
-            address operator,  
-            address token0,  
-            address token1,  
-            uint24 fee,  
-            int24 tickLower,  
-            int24 tickUpper,  
-            uint128 liquidity,  
-            uint256 feeGrowthInside0LastX128,  
-            uint256 feeGrowthInside1LastX128,  
-            uint128 tokensOwed0,  
-            uint128 tokensOwed1  
-        ) = positionManager.positions(tokenId);  
-          
-        return PositionDetails({  
-            nonce: nonce,  
-            operator: operator,  
-            token0: token0,  
-            token1: token1,  
-            fee: fee,  
-            tickLower: tickLower,  
-            tickUpper: tickUpper,  
-            liquidity: liquidity,  
-            feeGrowthInside0LastX128: feeGrowthInside0LastX128,  
-            feeGrowthInside1LastX128: feeGrowthInside1LastX128,  
-            tokensOwed0: tokensOwed0,  
-            tokensOwed1: tokensOwed1  
-        });  
+    function getPositionDetails(uint256 tokenId) external view returns (  
+        uint96 nonce,  
+        address operator,  
+        address token0,  
+        address token1,  
+        uint24 fee,  
+        int24 tickLower,  
+        int24 tickUpper,  
+        uint128 liquidity,  
+        uint256 feeGrowthInside0LastX128,  
+        uint256 feeGrowthInside1LastX128,  
+        uint128 tokensOwed0,  
+        uint128 tokensOwed1  
+    ) {  
+        return positionManager.positions(tokenId);  
     }  
       
     /**  

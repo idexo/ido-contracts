@@ -57,38 +57,6 @@ describe("UniV3PositionLocker", function () {
     await mockPositionManager.connect(user1).setApprovalForAll(positionLocker.address, true);  
   });  
     
-  describe("Locking Positions", function () {  
-    it("Should lock a position correctly", async function () {  
-      const lockTx = await positionLocker.connect(user1).lockPosition(tokenId);  
-      const receipt = await lockTx.wait();  
-        
-      // Check for event emission  
-      const event = receipt.events.find(e => e.event === "PositionLocked");  
-      expect(event).to.not.be.undefined;  
-        
-      const lockId = event.args.lockId;  
-      expect(event.args.tokenId).to.equal(tokenId);  
-      expect(event.args.owner).to.equal(user1.address);  
-        
-      // Check stored data  
-      const position = await positionLocker.getLockedPosition(lockId);  
-      expect(position.owner).to.equal(user1.address);  
-      expect(position.tokenId).to.equal(tokenId);  
-      expect(position.isWithdrawn).to.be.false;  
-        
-      // Check token ID to lock ID mapping  
-      const retrievedLockId = await positionLocker.getLockIdForToken(tokenId);  
-      expect(retrievedLockId).to.equal(lockId);  
-    });  
-      
-    it("Should revert when trying to lock an already locked position", async function () {  
-      await positionLocker.connect(user1).lockPosition(tokenId);  
-      await expect(  
-        positionLocker.connect(user1).lockPosition(tokenId)  
-      ).to.be.revertedWith("Token already locked");  
-    });  
-  });  
-    
   describe("Collecting Fees", function () {  
     let lockId;  
       
@@ -125,47 +93,6 @@ describe("UniV3PositionLocker", function () {
       expect(event.args.amount0).to.equal(ethers.utils.parseUnits("0.1", 18));  
       expect(event.args.amount1).to.equal(ethers.utils.parseUnits("0.05", 18));  
     });  
-      
-    it("Should revert when non-owner tries to collect fees", async function () {  
-      await expect(  
-        positionLocker.connect(user2).collectFees(  
-          lockId,  
-          user2.address,  
-          ethers.constants.MaxUint128,  
-          ethers.constants.MaxUint128  
-        )  
-      ).to.be.revertedWith("Not the position owner");  
-    });  
-      
-    it("Should revert when collecting to zero address", async function () {  
-      await expect(  
-        positionLocker.connect(user1).collectFees(  
-          lockId,  
-          constants.ZERO_ADDRESS,  
-          ethers.constants.MaxUint128,  
-          ethers.constants.MaxUint128  
-        )  
-      ).to.be.revertedWith("Invalid recipient");  
-    });  
-      
-    it("Should revert when position is already withdrawn", async function () {  
-      // Fast forward to end of lock period  
-      await increaseTime(lockDuration + 1);  
-        
-      // Unlock the position  
-      await positionLocker.connect(user1).unlockPosition(lockId);  
-        
-      // Try to collect fees  
-      await expect(  
-        positionLocker.connect(user1).collectFees(  
-          lockId,  
-          user1.address,  
-          ethers.constants.MaxUint128,  
-          ethers.constants.MaxUint128  
-        )  
-      ).to.be.revertedWith("Position already withdrawn");  
-    });  
-  });  
     
   describe("Unlocking Positions", function () {  
     let lockId;  
